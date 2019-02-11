@@ -1,0 +1,35 @@
+
+
+Warzone 2 is a concept for a browser-based, hexagonal grid tower defense game.
+
+The working title is informal and will be changed. 
+It comes from a browser flash game called Warzone Tower Defense.
+
+Javascript, html5 Canvas will be the host.
+
+        Concept:
+
+    In warzone tower defense (the original), the most powerful tower you can 
+purchase is the wall block. It isn't a proper tower at 1/4 the real-estate -
+not to mention the fact it does not have offensive capabilities. The best 
+strategy revolves around figuring out the optimal defensive structure to erect
+with wall blocks. Warzone 2 wants to continue with this strong gameplay theme
+of the construction of defensive structures. This differs from the typical
+tower defense in that the towers really aren't the primary focus. The focus
+is the landscape + defensive structre on and around which you build the towers. 
+
+    Supporting this theme is a hexagonal 2D grid - 3D would be too avant-garde. 
+Having 50% more directional choice for units will in theory make for much more 
+interesting defensive structures. Along with it is random map generation.
+
+    Hex tiles will have a variety of properties:
+
+            - Height Level [-2 .. 2]
+        Tiles can be raised or lowered relative to others. This will effect
+        building, towers, enemy pathing and more.
+        
+            - Plot
+        Tiles can contain natural resources or hazards on top of its natural
+        texture. 
+
+            - 
