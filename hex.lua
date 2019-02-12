@@ -45,6 +45,12 @@ local HEX_DIRECTIONS = {vec2( 1 ,  0),
 
 -- HEX UTILITY FUNCTIONS -------------------------------------------------------
 
+function hex_equals(a, b)
+    return a.s == b.s and a.t == b.t
+end
+
+
+
 local function hex_round(s, t)
     rs = round(s)
     rt = round(t)
@@ -113,7 +119,7 @@ end
   ]]
 
 -- returns parallelogram-shaped map. 
-function map_parallelogram_init(layout, width, height)
+function grammap_init(layout, width, height)
     map = {}
     setmetatable(map, {__index={layout=layout, 
                                 width=width, 
@@ -128,7 +134,7 @@ function map_parallelogram_init(layout, width, height)
 end
 
 -- returns triangular map. 
-function map_triangular_init(layout, size)
+function trimap_init(layout, size)
     map = {}
     setmetatable(map, {__index={layout=layout, 
                                 size=size,
@@ -142,7 +148,7 @@ function map_triangular_init(layout, size)
 end
 
 -- returns hexagonal map. length of map is radius * 2 + 1 
-function map_hexagonal_init(layout, radius) 
+function hexmap_init(layout, radius) 
     map = {}
     setmetatable(map, {__index={layout=layout, 
                                 radius=radius,
@@ -159,30 +165,28 @@ function map_hexagonal_init(layout, radius)
 end
 
 -- returns rectangular map. 
-function map_rectangular_init(layout, width, height)
+function rectmap_init(layout, width, height)
     map = {}
-    mt = {__index = {layout = layout, width = width, height = height,
-                   
-                   retrieve = function(pix)
-                       hex = pixel_to_hex(pix, layout)
-                       print(tostring(hex))
-                       print(map[tostring(hex)])
-                       return vec2(hex.s, hex.t + math.floor(hex.s / 2))  
-                   end,
-                   
-                   store = function(hex)
-                       pix = hex_to_pixel(hex, layout)
-                       return vec2(pix.x - math.floor(pix.y / 2), pix.y)
-                   end}}
+    mt = {__index={layout=layout, width=width, height=height,
+               
+            -- get hex in map from pixel coordinate                    
+            retrieve=function(pix)
+                return pixel_to_hex(pix, layout)
+            end,
 
+            -- store pixel in map from hex coordinate
+            store=function(hex)
+                map[hex]=hex_to_pixel(hex - vec2(0, math.floor(hex.s/2)), layout) 
+            end
+            }}
+    
+    setmetatable(map, mt) 
+        
     for s = 0, width do
-        soffset = math.floor(s/2)
-
-        for t = -soffset, height - soffset do
-            map[tostring(vec2(s, t))] = hex_to_pixel(vec2(s, t), layout)
+        for t = 0, height do
+            map.store(vec2(s, t))
         end
     end
-    setmetatable(map, mt) 
     return map 
 end
 

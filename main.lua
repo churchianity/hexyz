@@ -7,18 +7,21 @@ require "hex"
 
 ----- [[ DUMMY FUNCTIONS ]] ----------------------------------------------------
 
-function show_hex_coords(map)
-    test_scene:action(function()
+function show_hex_coords()
+    gui_scene:action(function()
         mouse_position = vec2(win:mouse_position().x, win:mouse_position().y)
         hex = map.retrieve(mouse_position)
-        test_scene:remove("text")
-        test_scene:append(am.translate(win.right - 30, win.top - 10) 
+        gui_scene:remove("text")
+        gui_scene:append(am.translate(win.left + 30, win.top - 10) 
                         ^ am.text(string.format("%d,%d", hex.s, hex.t)))
     end)
 end
 
 function rcolor()
-    return vec4(math.random(20, 80) / 100)
+    return vec4(math.random(20, 80) / 100,
+                math.random(20, 80) / 100,
+                math.random(20, 80) / 100,
+                1)
 end
 
 ----- [[ BLAH BLAH LBAH ]] -----------------------------------------------
@@ -32,25 +35,48 @@ win = am.window {
 
 ----- [[ MAP RENDERING ]] ------------------------------------------------
 
-function game_scene(layout)
-    map = map_rectangular_init(layout, 45, 31) 
-    hexagons = am.group()
+function map_init(layout)
+    map = rectmap_init(layout, 45, 31) 
 
-    for _,hex in pairs(map) do
-        hexagons:append(
-            am.circle(hex, layout.size.x, rcolor(), 6):tag(tostring(hex)))
-    end
-    return hexagons
+    map_scene:action(function() 
+        for _,hex in pairs(map) do
+            if hex_equals(_, vec2(23, 16)) then
+                print("yay")
+            else
+                map_scene:append(am.circle(hex, layout.size.x, rcolor(), 6))
+            end
+        end
+        
+        map_scene:append(am.rect(268, win.top, win.right, win.bottom, vec4(0.4, 0.6, 0.8, 1)))
+        
+        local coalburner = [[
+        .........
+        ..kkkkk..
+        .k.....k.
+        k..wo...k
+        k..ooo..k
+        k...o...k
+        .k.....k.
+        ..kkkkk..
+        .........
+        ]]
+        
+        map_scene:append(am.translate(280, 200) ^ am.scale(10) ^ am.sprite(coalburner))
+        
+        print(win.right - 268)
+
+        return true
+    end)
 end
 
 ----- [[ MAIN ]] -----------------------------------------------------------
 
 map = {}
-game_scene = game_scene(layout_init(vec2(win.left, win.bottom)))
 
-test_scene = am.group()
+gui_scene = am.group()
+map_scene = am.group(); map_init(layout_init(vec2(win.left, win.bottom)))
 
-win.scene = am.group{test_scene, game_scene}
+win.scene = am.group{map_scene, gui_scene}
 
 show_hex_coords(map)
 
