@@ -19,14 +19,7 @@ function rcolor()
     return vec4(math.random(20, 80) / 100)
 end
 
-function show_hex_coords()
-    win.scene:action(function()
-        x, y = unpack(pixel_to_hex(win:mouse_position().x, win:mouse_position().y, layout))
-        test_scene = (
-        am.translate(vec2(unpack(hex_to_pixel(x, y, layout))))
-        ^ am.text(string.format("%d, %d", x, y)))
-    end)
-end
+----- [[ BLAH BLAH LBAH ]] -----------------------------------------------
 
 local win = am.window {
     title = "Warzone 2: Electric Boogaloo",
@@ -35,34 +28,29 @@ local win = am.window {
     width = 1280 * 3 / 4, -- 960
     height = 800 * 3 / 4} -- 600
 
-local layout = layout({11, 11}, 
-                      FLAT_ORIENTATION,
-                      vec2(win.left, win.bottom),
-                      45, 31)
+local layout = layout_init({win.left, win.bottom}) 
 
 ----- [[ MAP RENDERING ]] ------------------------------------------------
 
 function render_map(layout)
-    coords = rect_map_store(layout)
-    map = am.group()
+    map = map_rectangular_init(layout, 45, 31) 
+    hexagons = am.group()
 
-    for _,v in pairs(coords) do
-        map:append(am.circle(vec2(unpack(v)), layout.size[1], rcolor(), 6))
+    for _,v in pairs(map) do
+        hexagons:append(am.circle(vec2(unpack(v)), layout.size[1], rcolor(), 6))
     end
-    return map
+    return hexagons
 end
 
 ----- [[ MAIN ]] -----------------------------------------------------------
 
-local game_scene        = render_map(layout)
-local test_scene        = am.group()
+local game_scene = render_map(layout)
+local test_scene = am.group()
 
 win.scene = am.group{test_scene, game_scene}
 
 test_scene:action(function() 
     x, y = unpack(pixel_to_hex(win:mouse_position().x, win:mouse_position().y, layout))
-    test_scene:replace("text", 
-    am.translate(vec2(unpack(hex_to_pixel(x, y, layout))))
-    ^ am.text(string.format("%d, %d", x, y)))
-    am.delay(1)
+    test_scene:remove_all("text")
+    test_scene:append(am.translate(vec2(unpack(hex_to_pixel(x, y, layout)))) ^ am.text(string.format("%d, %d", x, y)))
 end)
