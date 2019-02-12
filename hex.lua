@@ -14,6 +14,7 @@
     additional things such as equality, and distance are implemented here.
     
     +support for parallelogram, triangular, hexagonal and rectangular maps.
+    +support for arbitrary maps with gaps via hashmaps-like storage
     +support for simple irregular hexagons (horizontal and vertical stretching).
 
     classes are used sparsely. maps implement a few constructors, for storing
@@ -49,9 +50,15 @@ function hex_equals(a, b)
     return a.s == b.s and a.t == b.t
 end
 
+function hex_length(hex)
+    return round(math.abs(hex.s) + math.abs(hex.r) + math.abs(-hex.s - hex.t)/2)
+end
 
+function hex_distance(a, b)
+    return hex_length(a - b)
+end
 
-local function hex_round(s, t)
+function hex_round(s, t)
     rs = round(s)
     rt = round(t)
     rz = round(-s - t)
@@ -114,17 +121,34 @@ end
 
 --[[ _init functions return a table of tables;
      a map of points in a chosen shape and specified layout.
-     the shape, as well as the layout used is stored in a metatable
-     for reuse.
+     
+     grammap_init       -       parallelogram map
+     trimap_init        -       triangular map
+     hexmap_init        -       hexagonal map
+     rectmap_init       -       rectangular map
+
+     calling .retrieve(pix) on your map will get the hexagon at that pixel.
+     calling .store(hex) on your map will store the hex as pixel coords.
   ]]
 
 -- returns parallelogram-shaped map. 
 function grammap_init(layout, width, height)
     map = {}
-    setmetatable(map, {__index={layout=layout, 
-                                width=width, 
-                                height=height,
-                                shape="parallelogram"}})
+    mt = {__index={layout=layout, 
+
+            -- get hex in map from pixel coordinate
+            retrieve=function(pix)
+                return pixel_to_hex(pix, layout)
+            end,
+
+            -- store pixel in map from hex coordinate
+            store=function(hex)
+                map[hex]=hex_to_pixel(hex, layout)             
+            end
+            }}
+    
+    setmetatable(map, mt)
+    
     for s = 0, width do
         for t = 0, height do
             table.insert(map, hex_to_pixel(vec2(s, t), layout)) 
@@ -136,12 +160,22 @@ end
 -- returns triangular map. 
 function trimap_init(layout, size)
     map = {}
-    setmetatable(map, {__index={layout=layout, 
-                                size=size,
-                                shape="triangular"}})
+    mt = {__index={layout=layout,
+    
+            -- get hex in map from pixel coordinate
+            retrieve=function(pix)
+                return pixel_to_hex(pix, layout)
+            end,
+
+            -- store pixel in map from hex coordinate
+            store=function(hex)
+                map[hex]=hex_to_pixel(hex, layout)
+            end
+            }}
+    
     for s = 0, size do
         for t = size - s, size do
-            table.insert(map, hex_to_pixel(vec2(s, t), layout))
+            map.store(vec2(s, t))
         end
     end
     return map
@@ -150,9 +184,21 @@ end
 -- returns hexagonal map. length of map is radius * 2 + 1 
 function hexmap_init(layout, radius) 
     map = {}
-    setmetatable(map, {__index={layout=layout, 
-                                radius=radius,
-                                shape="hexagonal"}})
+    mt = {__index={layout=layout,
+            
+            -- get hex in map from pixel coordinate
+            retrieve=function(pix)
+                return pixel_to_hex(pix, layout)
+            end,
+
+            -- store pixel in map from hex coordinate
+            store=function(hex)
+                map[hex]=hex_to_pixel(hex, layout)        
+            end
+            }}
+
+    setmetatable(map, mt)
+
     for s = -radius, radius do
         t1 = math.max(-radius, -s - radius)
         t2 = math.min(radius, -s + radius)
@@ -167,7 +213,7 @@ end
 -- returns rectangular map. 
 function rectmap_init(layout, width, height)
     map = {}
-    mt = {__index={layout=layout, width=width, height=height,
+    mt = {__index={layout=layout,
                
             -- get hex in map from pixel coordinate                    
             retrieve=function(pix)

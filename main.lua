@@ -9,11 +9,15 @@ require "hex"
 
 function show_hex_coords()
     gui_scene:action(function()
-        mouse_position = vec2(win:mouse_position().x, win:mouse_position().y)
-        hex = map.retrieve(mouse_position)
         gui_scene:remove("text")
-        gui_scene:append(am.translate(win.left + 30, win.top - 10) 
-                        ^ am.text(string.format("%d,%d", hex.s, hex.t)))
+        
+        mouse_position = vec2(win:mouse_position().x, win:mouse_position().y)
+
+        if mouse_position.x < 268 then
+            hex = map.retrieve(mouse_position)
+            gui_scene:append(am.translate(win.left + 30, win.top - 10) 
+                            ^ am.text(string.format("%d,%d", hex.s, hex.t)))
+        end
     end)
 end
 
@@ -61,9 +65,9 @@ function map_init(layout)
         .........
         ]]
         
-        map_scene:append(am.translate(280, 200) ^ am.scale(10) ^ am.sprite(coalburner))
+        map_scene:append(am.translate(350, 200) ^ am.scale(10) ^ am.sprite(coalburner))
         
-        print(win.right - 268)
+        --print(win.right - 268)
 
         return true
     end)
