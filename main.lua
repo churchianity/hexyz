@@ -67,6 +67,13 @@ function map_init(layout)
         
         map_scene:append(am.translate(350, 200) ^ am.scale(10) ^ am.sprite(coalburner))
         
+        map_scene:append(am.particles2d({source_pos=vec2(400, win.top),
+                                         source_pos_var=vec2(0, 600),
+                                         angle=math.pi/4,
+                                         start_color=vec4(0.9),
+                                         gravity=vec2(100),
+                                         start_color_var=rcolor(),
+                                         start_size=5}))
         --print(win.right - 268)
 
         return true
