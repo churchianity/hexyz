@@ -1,38 +1,26 @@
 ----- [[ AXIAL/CUBE COORDINATE SYSTEM FOR AMULET/LUA]] -------------------------
 --[[                                                     author@churchianity.ca
         -- INTRODUCTION
-    this is a library for making grids of hexagons using lua.
-    it has made exclusive (though not thorough) use of standard lua 
-    5.2 functionality, making it as portable as possible. it 
-    doesn't even use a point class, simply returning tables 
-    of integers, which can later be unpacked into your amulet 
-    vectors, or whatever else you want to use. in honor of amulet,
-    when necessary to name cube/hex coordinates, (s, t, z) is the
-    convention.
-
-    only returning tables can result in some nasty looking lines 
-    with lots of table unpacks, but if your graphics library likes 
-    traditional lua types, you will be better off. 
-
-    it supports triangular, hexagonal, rectangular, and 
-    parallelogram map shapes. 
+    this is a hexagonal grid library for amulet/lua.
+    it uses axial coordinates or cube/hex coordinates when necessary.
+    by amulet convention, hexes are either vec2(s, t) or vec3(s, t, z)
+    but nearly always the former. 
     
-    it supports non-regular hexagons, though it's trickier to get
-    working in amulet. TODO work on this.
+    in some rare cases, coordinates will be passed individually, usually
+    because they are only passed internally and should never be adjusted
+    directly.
 
-        -- NOTE ON ORIENTATION + AMULET
-    because of the way amulet draws hexagons (amulet essentially
-    draws a 6-sided circle from a centerpoint, instead of of a 
-    series of lines connecting points), the flat orientation is 
-    default and recommended. other orientations are possible 
-    with am.rotate, but can cause aliasing issues. TODO work on this.
-        -- TODO NOTE - 
-    amulet has another draw function I neglected, simply am.draw.
-    i don't understand how it works, but it seems to be able to
-    draw arbitrary polygons via a list of vertices. so.
+    in amulet, vector arithmetic already works via: + - * / 
+    additional things such as equality, and distance are implemented here.
+    
+    +support for parallelogram, triangular, hexagonal and rectangular maps.
+    +support for simple irregular hexagons (horizontal and vertical stretching).
+
+    classes are used sparsely. maps implement a few constructors, for storing
+    your maps elsewhere. 
 
         -- RESOURCES USED TO DEVELOP THIS LIBRARY
-    https://redblobgames.com/grid/hexagons    - simply amazing. amit is a god. 
+    https://redblobgames.com/grid/hexagons    - simply amazing. 
     http://amulet.xyz/doc                     - amulet documentation
     TODO that place that had the inner circle/outer circle ratio?? 
 
@@ -41,23 +29,23 @@
 ----- [[ GENERALLY USEFUL FUNCTIONS ]] -----------------------------------------
 
 -- just incase you don't already have a rounding function.  
-function round(n)
+local function round(n)
     return n % 1 >= 0.5 and math.ceil(n) or math.floor(n)
 end
 
 ---- [[ HEX CONSTANTS ]] -------------------------------------------------------
 
 -- all possible vector directions from a given hex by edge
-HEX_DIRECTIONS = {{ 1 ,  0}, 
-                  { 1 , -1}, 
-                  { 0 , -1},
-                  {-1 ,  0}, 
-                  {-1 ,  1}, 
-                  { 0 ,  1}}
+local HEX_DIRECTIONS = {vec2( 1 ,  0), 
+                        vec2( 1 , -1), 
+                        vec2( 0 , -1),
+                        vec2(-1 ,  0), 
+                        vec2(-1 ,  1), 
+                        vec2( 0 ,  1)}
 
 -- HEX UTILITY FUNCTIONS -------------------------------------------------------
 
-function hex_round(s, t)
+local function hex_round(s, t)
     rs = round(s)
     rt = round(t)
     rz = round(-s - t)
@@ -74,7 +62,7 @@ function hex_round(s, t)
         rz = -rs - rt
     end
 
-    return {rs, rt}
+    return vec2(rs, rt)
 end
 
 ----- [[ LAYOUT, ORIENTATION & COORDINATE CONVERSION  ]] -----------------------
@@ -89,30 +77,29 @@ local POINTY = {3.0^0.5,  3.0^0.5/2.0,  0.0,  3.0/2.0,
 
 -- layout. 
 function layout_init(origin, size, orientation)
-    return {origin      = origin or {0, 0},
-            size        = size or {11, 11},
+    return {origin      = origin or vec2(0),
+            size        = size or vec2(11),
             orientation = orientation or FLAT}
 end    
 
 -- hex to screen
-function hex_to_pixel(s, t, layout)
+function hex_to_pixel(hex, layout)
     M = layout.orientation
     
-    x = (M[1] * s + M[2] * t) * layout.size[1]
-    y = (M[3] * s + M[4] * t) * layout.size[2]
+    x = (M[1] * hex.s + M[2] * hex.t) * layout.size.x
+    y = (M[3] * hex.s + M[4] * hex.t) * layout.size.y
 
-    return {x + layout.origin[1], y + layout.origin[2]}
+    return vec2(x + layout.origin.x, y + layout.origin.y)
 end
 
 -- screen to hex
-function pixel_to_hex(x, y, layout)
+function pixel_to_hex(pix, layout)
     M = layout.orientation
 
-    px = {(x - layout.origin[1]) / layout.size[1], 
-          (y - layout.origin[2]) / layout.size[2]}
+    pix = (pix - layout.origin) / layout.size 
 
-    s = M[5] * px[1] + M[6] * px[2]
-    t = M[7] * px[1] + M[8] * px[2]
+    s = M[5] * pix.x + M[6] * pix.y
+    t = M[7] * pix.x + M[8] * pix.y
 
     return hex_round(s, t) 
 end
@@ -129,12 +116,12 @@ end
 function map_parallelogram_init(layout, width, height)
     map = {}
     setmetatable(map, {__index={layout=layout, 
-                                shape="parallelogram",
-                                width=width,
-                                height=height}})
+                                width=width, 
+                                height=height,
+                                shape="parallelogram"}})
     for s = 0, width do
         for t = 0, height do
-            table.insert(map, hex_to_pixel(s, t, layout)) 
+            table.insert(map, hex_to_pixel(vec2(s, t), layout)) 
         end
     end
     return map
@@ -144,11 +131,11 @@ end
 function map_triangular_init(layout, size)
     map = {}
     setmetatable(map, {__index={layout=layout, 
-                                shape="triangular",
-                                size=size}})
+                                size=size,
+                                shape="triangular"}})
     for s = 0, size do
         for t = size - s, size do
-            table.insert(map, hex_to_pixel(s, t, layout))
+            table.insert(map, hex_to_pixel(vec2(s, t), layout))
         end
     end
     return map
@@ -158,14 +145,14 @@ end
 function map_hexagonal_init(layout, radius) 
     map = {}
     setmetatable(map, {__index={layout=layout, 
-                                shape="hexagonal",
-                                radius=radius}})
+                                radius=radius,
+                                shape="hexagonal"}})
     for s = -radius, radius do
         t1 = math.max(-radius, -s - radius)
         t2 = math.min(radius, -s + radius)
 
         for t = t1, t2 do
-            table.insert(map, hex_to_pixel(s, t, layout))
+            table.insert(map, hex_to_pixel(vec2(s, t), layout))
         end
     end
     return map
@@ -174,49 +161,28 @@ end
 -- returns rectangular map. 
 function map_rectangular_init(layout, width, height)
     map = {}
-    setmetatable(map, {__index={layout=layout, 
-                                shape="rectangular",
-                                width=width,
-                                height=height}})
+    mt = {__index = {layout = layout, width = width, height = height,
+                   
+                   retrieve = function(pix)
+                       hex = pixel_to_hex(pix, layout)
+                       print(tostring(hex))
+                       print(map[tostring(hex)])
+                       return vec2(hex.s, hex.t + math.floor(hex.s / 2))  
+                   end,
+                   
+                   store = function(hex)
+                       pix = hex_to_pixel(hex, layout)
+                       return vec2(pix.x - math.floor(pix.y / 2), pix.y)
+                   end}}
+
     for s = 0, width do
         soffset = math.floor(s/2)
 
         for t = -soffset, height - soffset do
-            table.insert(map, hex_to_pixel(s, t, layout))
+            map[tostring(vec2(s, t))] = hex_to_pixel(vec2(s, t), layout)
         end
     end
-    return map
-end
-
--- places single hex into map table, if it is not already present.
-function map_store(map)
-
-end
-
--- retrieves single hex from map table. explodes if can't find it.
-function map_retrieve(map, hex)
-    if map.shape == "rectangular" then
-        if map.layout.orientation == FLAT then
-            return {hex[1] + math.floor(hex[2]/2), hex[2]}            
-        else
-            return {hex[1], hex[2] + math.floor(hex[1]/2)}
-        end
-    elseif map.shape == "hexagonal" then
-        if map.layout.orientation == FLAT then
-
-        else
-
-        end
-    elseif map.shape == "parallelogram" then
-        if map.layout.orientation == FLAT then
-
-        else
-
-        end
-    else 
-
-    end
-    
-    
+    setmetatable(map, mt) 
+    return map 
 end
 
