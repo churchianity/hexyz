@@ -49,8 +49,9 @@ local test_scene = am.group()
 
 win.scene = am.group{test_scene, game_scene}
 
-test_scene:action(function() 
-    x, y = unpack(pixel_to_hex(win:mouse_position().x, win:mouse_position().y, layout))
+test_scene:action(function()
+    hexpos = pixel_to_hex(win:mouse_position().x, win:mouse_position().y, layout)
+    x, y = unpack(map_retrieve(map, hexpos))
     test_scene:remove_all("text")
-    test_scene:append(am.translate(vec2(unpack(hex_to_pixel(x, y, layout)))) ^ am.text(string.format("%d, %d", x, y)))
+    test_scene:append(am.translate(x, y) ^ am.text(string.format("%d, %d", hexpos[1], hexpos[2])))
 end)

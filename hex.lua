@@ -2,15 +2,17 @@
 --[[                                                     author@churchianity.ca
         -- INTRODUCTION
     this is a library for making grids of hexagons using lua.
-    it has made use of exclusively standard lua 5.2 functionality,
-    making it as portable as possible. it doesn't even use a point 
-    class, (or classes/metatables at all) simply returning tables 
+    it has made exclusive (though not thorough) use of standard lua 
+    5.2 functionality, making it as portable as possible. it 
+    doesn't even use a point class, simply returning tables 
     of integers, which can later be unpacked into your amulet 
-    vectors, or whatever else you want to use. 
+    vectors, or whatever else you want to use. in honor of amulet,
+    when necessary to name cube/hex coordinates, (s, t, z) is the
+    convention.
 
-    this can result in some nasty looking lines with lots of table 
-    unpacks, but if your graphics library likes traditional lua
-    types, you will be better off. 
+    only returning tables can result in some nasty looking lines 
+    with lots of table unpacks, but if your graphics library likes 
+    traditional lua types, you will be better off. 
 
     it supports triangular, hexagonal, rectangular, and 
     parallelogram map shapes. 
@@ -24,6 +26,10 @@
     series of lines connecting points), the flat orientation is 
     default and recommended. other orientations are possible 
     with am.rotate, but can cause aliasing issues. TODO work on this.
+        -- TODO NOTE - 
+    amulet has another draw function I neglected, simply am.draw.
+    i don't understand how it works, but it seems to be able to
+    draw arbitrary polygons via a list of vertices. so.
 
         -- RESOURCES USED TO DEVELOP THIS LIBRARY
     https://redblobgames.com/grid/hexagons    - simply amazing. amit is a god. 
@@ -74,18 +80,18 @@ end
 ----- [[ LAYOUT, ORIENTATION & COORDINATE CONVERSION  ]] -----------------------
 
 -- forward & inverse matrices used for the flat orientation.
-FLAT_ORIENTATION = {3.0/2.0,  0.0,  3.0^0.5/2.0,  3.0^0.5, 
-                    2.0/3.0,  0.0,  -1.0/3.0   ,  3.0^0.5/3.0}
+local FLAT = {3.0/2.0,  0.0,  3.0^0.5/2.0,  3.0^0.5, 
+              2.0/3.0,  0.0,  -1.0/3.0   ,  3.0^0.5/3.0}
 
 -- forward & inverse matrices used for the pointy orientation. 
-POINTY_ORIENTATION = {3.0^0.5,  3.0^0.5/2.0,  0.0,  3.0/2.0,  
-                      3.0^0.5/3.0,  -1.0/3.0,  0.0,  2.0/3.0}
+local POINTY = {3.0^0.5,  3.0^0.5/2.0,  0.0,  3.0/2.0,  
+                3.0^0.5/3.0,  -1.0/3.0,  0.0,  2.0/3.0}
 
 -- layout. 
 function layout_init(origin, size, orientation)
     return {origin      = origin or {0, 0},
             size        = size or {11, 11},
-            orientation = orientation or FLAT_ORIENTATION}
+            orientation = orientation or FLAT}
 end    
 
 -- hex to screen
@@ -122,8 +128,10 @@ end
 -- returns parallelogram-shaped map. 
 function map_parallelogram_init(layout, width, height)
     map = {}
-    setmetatable(map, {__index={layout=layout, shape=parallelogram}})
-
+    setmetatable(map, {__index={layout=layout, 
+                                shape="parallelogram",
+                                width=width,
+                                height=height}})
     for s = 0, width do
         for t = 0, height do
             table.insert(map, hex_to_pixel(s, t, layout)) 
@@ -135,8 +143,9 @@ end
 -- returns triangular map. 
 function map_triangular_init(layout, size)
     map = {}
-    setmetatable(map, {__index={layout=layout, shape=triangular}})
-    
+    setmetatable(map, {__index={layout=layout, 
+                                shape="triangular",
+                                size=size}})
     for s = 0, size do
         for t = size - s, size do
             table.insert(map, hex_to_pixel(s, t, layout))
@@ -148,8 +157,9 @@ end
 -- returns hexagonal map. length of map is radius * 2 + 1 
 function map_hexagonal_init(layout, radius) 
     map = {}
-    setmetatable(map, {__index={layout=layout, shape=hexagonal}})
-    
+    setmetatable(map, {__index={layout=layout, 
+                                shape="hexagonal",
+                                radius=radius}})
     for s = -radius, radius do
         t1 = math.max(-radius, -s - radius)
         t2 = math.min(radius, -s + radius)
@@ -164,8 +174,10 @@ end
 -- returns rectangular map. 
 function map_rectangular_init(layout, width, height)
     map = {}
-    setmetatable(map, {__index={layout=layout, shape=rectangular}})
-    
+    setmetatable(map, {__index={layout=layout, 
+                                shape="rectangular",
+                                width=width,
+                                height=height}})
     for s = 0, width do
         soffset = math.floor(s/2)
 
@@ -181,8 +193,30 @@ function map_store(map)
 
 end
 
--- retrieves single hex from map table, if it is present.
-function map_retrieve(map)
+-- retrieves single hex from map table. explodes if can't find it.
+function map_retrieve(map, hex)
+    if map.shape == "rectangular" then
+        if map.layout.orientation == FLAT then
+            return {hex[1] + math.floor(hex[2]/2), hex[2]}            
+        else
+            return {hex[1], hex[2] + math.floor(hex[1]/2)}
+        end
+    elseif map.shape == "hexagonal" then
+        if map.layout.orientation == FLAT then
 
+        else
+
+        end
+    elseif map.shape == "parallelogram" then
+        if map.layout.orientation == FLAT then
+
+        else
+
+        end
+    else 
+
+    end
+    
+    
 end
 
