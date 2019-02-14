@@ -1,22 +1,23 @@
 ----- [[ WARZONE 2 - HEXAGONAL GRID RESOURCE BASED TOWER DEFENSE GAME]] --------
 --[[                                                    author@churchianity.ca
-
   ]]
 
 require "hex"
 require "util"
 
-local world 
-
-
-local guibgcolor = vec4(0.5, 0.5, 0.2, 0)
-
 local win = am.window{
     -- BASE RESOLUTION = 3/4 * WXGA Standard 16:10
     width = 1280 * 3 / 4, -- 960px
     height = 800 * 3 / 4, -- 600px
-   
+
     title = "Warzone 2: Electric Boogaloo"}
+
+local title = am.group()
+local world = am.group()
+local layout = hex_layout(vec2(-368, win.bottom))
+local map = hex_rectangular_map(45, 31)
+local titlemap = hex_spiral_map(vec2(0), 10)
+local titlelayout = hex_layout(vec2(win.right, win.bottom))
 
 function show_axes()
     xaxis = am.line(vec2(win.left, 0), vec2(win.right, 0))
@@ -25,17 +26,6 @@ function show_axes()
 end
 
 function world_init()
-    world = am.group()
-    local layout = layout_init(vec2(-402, win.bottom))
-    local map = rectmap_init(45, 31)
-    local lgui = am.group(
-                 am.rect(win.left, win.top, -402, win.bottom, guibgcolor))
-    local rgui = am.group(
-                 am.rect(win.right, win.top, 402, win.bottom, guibgcolor))
-
-    world:append(lgui)
-    world:append(rgui)
-
     world:action(coroutine.create(function()
         for hex,_ in pairs(map) do
             world:append(am.circle(hex_to_pixel(hex, layout), 11, rrgb(1), 6))
@@ -46,9 +36,25 @@ function world_init()
 end
 
 function init()
-    world_init()
-    show_axes()
-    win.scene = world
+    local rotatable = am.group(am.rotate(45):tag"rotatable")
+    local backdrop = am.group{rotatable}
+
+    for _,hex in pairs(titlemap) do
+        local center = hex_to_pixel(hex, titlelayout)
+        rotatable:append(am.circle(center, 11, rrgb(1), 6))
+    end
+
+    local line1 = am.text("WARZONE 2")
+    local line2 = am.text("Electric Boogaloo")
+    local line3 = am.text("by Nick Hayashi")
+    local title = am.group{backdrop,
+        am.translate(0, 150) ^ am.scale(4) ^ line1,
+        am.translate(0, 100) ^ am.scale(3) ^ line2,
+        am.translate(0, 60)  ^ am.scale(1) ^ line3
+    }:action(function()
+        rotatable"rotatable".angle = (am.frame_time / 5)
+   end)
+   win.scene = title
 end
 
 ----- [[ MAIN ]] ---------------------------------------------------------------
