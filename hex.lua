@@ -7,8 +7,9 @@
     but nearly always the former.
 
         -- RESOURCES USED TO DEVELOP THIS LIBRARY, AND FOR WHICH I AM GRATEFUL
-    https://redblobgames.com/grid/hexagons    - simply amazing.
-    http://amulet.xyz/doc                     - amulet documentation
+    https://catlikecoding.com/unity/tutorials/hex-map/
+    https://redblobgames.com/grid/hexagons
+    http://amulet.xyz/doc
   ]]
 
 ----- [[ GENERALLY USEFUL FUNCTIONS ]] -----------------------------------------
@@ -36,6 +37,15 @@ end
 -- return hexagon adjacent to |hex| in integer index |direction|.
 function hex_neighbour(hex, direction)
     return hex + HEX_DIRECTIONS[(6 + (direction % 6)) % 6 + 1]
+end
+
+-- TODO
+function hex_rotate_left(hex)
+
+end
+
+function hex_rotate_right(hex)
+
 end
 
 -- rounds hexes. without this, pixel_to_hex returns fractional coordinates.
@@ -75,7 +85,7 @@ local POINTY = {M = mat2(3.0^0.5,  3.0^0.5/2.0,  0.0,   3.0/2.0),
 -- stores layout information that does not pertain to map shape 
 function hex_layout(origin, size, orientation)
     return {origin      = origin      or vec2(0),
-            size        = size        or vec2(11),
+            size        = size        or vec2(12),
             orientation = orientation or FLAT}
 end    
 
@@ -141,10 +151,10 @@ function hex_spiral_map(center, radius)
     return map
 end
 
--- returns unordered parallelogram-shaped map of |width| and |height|. 
+-- returns unordered parallelogram-shaped map of |width| and |height|.
 function hex_parallelogram_map(width, height)
     local map = {}
-    local mt = {__index={width=width, height=height}} 
+    local mt = {__index={width=width, height=height}}
 
     setmetatable(map, mt)
 
@@ -171,8 +181,8 @@ function hex_triangular_map(size)
     return map
 end
 
--- returns unordered hexagonal map of |radius|.  
-function hex_hexagonal_map(radius) 
+-- returns unordered hexagonal map of |radius|.
+function hex_hexagonal_map(radius)
     local map = {}
     local mt = {__index={radius=radius}}
 
@@ -189,18 +199,18 @@ function hex_hexagonal_map(radius)
     return map
 end
 
--- returns unordered rectangular map of |width| and |height|. 
+-- returns unordered rectangular map of |width| and |height|.
 function hex_rectangular_map(width, height)
     local map = {}
     local mt = {__index={width=width, height=height}}
 
-    setmetatable(map, mt) 
+    setmetatable(map, mt)
 
     for s = 0, width do
         for t = 0, height do
             map[vec2(s, t - math.floor(s/2))] = true
         end
     end
-    return map 
+    return map
 end
 
