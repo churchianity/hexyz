@@ -1,16 +1,3 @@
------ [[ AXIAL/CUBE COORDINATE HEXAGON LIBRARY FOR AMULET/LUA]] ----------------
---[[                                                     author@churchianity.ca
-        -- INTRODUCTION
-    this is a hexagonal grid library for amulet/lua.
-    it uses axial coordinates or cube/hex coordinates when necessary.
-    by amulet convention, hexes are either vec2(s, t) or vec3(s, t, z)
-    but nearly always the former.
-
-        -- RESOURCES USED TO DEVELOP THIS LIBRARY, AND FOR WHICH I AM GRATEFUL
-    https://catlikecoding.com/unity/tutorials/hex-map/
-    https://redblobgames.com/grid/hexagons
-    http://amulet.xyz/doc
-  ]]
 
 ----- [[ GENERALLY USEFUL FUNCTIONS ]] -----------------------------------------
 
@@ -22,51 +9,53 @@ end
 ----- [[ HEX CONSTANTS & UTILITY FUNCTIONS ]] ----------------------------------
 
 -- all possible vector directions from a given hex by edge
-local HEX_DIRECTIONS = {vec2( 1 ,  0),
-                        vec2( 1 , -1),
-                        vec2( 0 , -1),
-                        vec2(-1 ,  0),
-                        vec2(-1 ,  1),
-                        vec2( 0 ,  1)}
+local CUBE_DIRECTIONS = {vec2( 1 ,  0),
+                         vec2( 1 , -1),
+                         vec2( 0 , -1),
+                         vec2(-1 ,  0),
+                         vec2(-1 ,  1),
+                         vec2( 0 ,  1)}
 
 -- return hex vector direction via integer index |direction|.
-function hex_direction(direction)
-    return HEX_DIRECTIONS[(6 + (direction % 6)) % 6 + 1]
+function cube_direction(direction)
+    return CUBE_DIRECTIONS[(6 + (direction % 6)) % 6 + 1]
 end
 
 -- return hexagon adjacent to |hex| in integer index |direction|.
-function hex_neighbour(hex, direction)
+function cube_neighbour(hex, direction)
     return hex + HEX_DIRECTIONS[(6 + (direction % 6)) % 6 + 1]
 end
 
--- TODO
-function hex_rotate_left(hex)
+-- TODO rotations are different depending on the coordinate system you use.
+-- implement this for cube/axial, and doubled.
+function cube_rotate_left(hex)
 
 end
 
-function hex_rotate_right(hex)
+function cube_rotate_right(hex)
 
 end
 
--- rounds hexes. without this, pixel_to_hex returns fractional coordinates.
-function hex_round(s, t)
-    local rs = round(s)
-    local rt = round(t)
-    local rz = round(-s - t)
+-- rounds a float coordinate trio |x, y, z| to its nearest integer coordinate trio.
+-- TODO make work with a table {x, y, z} and vec3(x, y, z)
+function cube_round(x, y, z)
+    local rx = round(x)
+    local ry = round(y)
+    local rz = round(z)
 
-    local sdelta = math.abs(rs - s)
-    local tdelta = math.abs(rt - t)
-    local zdelta = math.abs(rz - (-s - t))
+    local xdelta = math.abs(rx - x)
+    local ydelta = math.abs(ry - y)
+    local zdelta = math.abs(rz - z)
 
-    if sdelta > tdelta and sdelta > zdelta then
-        rs = -rt - rz
-    elseif tdelta > zdelta then
-        rt = -rs - rz
+    if xdelta > ydelta and xdelta > zdelta then
+        rx = -ry - rz
+    elseif ydelta > zdelta then
+        rx = -ry - rz
     else
-        rz = -rs - rt
+        rz = -rx - ry
     end
 
-    return vec2(rs, rt)
+    return vec3(rx, ry, rz)
 end
 
 ----- [[ LAYOUT, ORIENTATION & COORDINATE CONVERSION  ]] -----------------------
@@ -81,26 +70,25 @@ local POINTY = {M = mat2(3.0^0.5,  3.0^0.5/2.0,  0.0,   3.0/2.0),
                 W = mat2(3.0^0.5/3.0,  -1.0/3.0,  0.0,  2.0/3.0),
                 start_angle = 0.5}
 
--- TODO encapsulate hex_to_pixel and pixel_to_hex in layout table.
--- stores layout information that does not pertain to map shape 
-function hex_layout(origin, size, orientation)
+-- stores layout: information that does not pertain to map shape 
+function layout(origin, size, orientation)
     return {origin      = origin      or vec2(0),
-            size        = size        or vec2(12),
+            size        = size        or vec2(11),
             orientation = orientation or FLAT}
 end    
 
 -- hex to screen
-function hex_to_pixel(hex, layout)
+function cube_to_pixel(cube, layout)
     local M = layout.orientation.M
 
-    local x = (M[1][1] * hex.s + M[1][2] * hex.t) * layout.size.x
-    local y = (M[2][1] * hex.s + M[2][2] * hex.t) * layout.size.y
+    local x = (M[1][1] * cube.x + M[1][2] * cube.y) * layout.size.x
+    local y = (M[2][1] * cube.x + M[2][2] * cube.y) * layout.size.y
 
     return vec2(x + layout.origin.x, y + layout.origin.y)
 end
 
 -- screen to hex
-function pixel_to_hex(pix, layout)
+function pixel_to_cube(pix, layout)
     local W = layout.orientation.W
 
     local pix = (pix - layout.origin) / layout.size 
@@ -108,28 +96,47 @@ function pixel_to_hex(pix, layout)
     local s = W[1][1] * pix.x + W[1][2] * pix.y
     local t = W[2][1] * pix.x + W[2][2] * pix.y
 
-    return hex_round(s, t) 
+    return cube_round(s, t, -s - t) 
 end
 
--- TODO test
-function hex_corner_offset(layout, corner)
+function hex_corner_offset(corner, layout)
     local angle = 2.0 * math.pi * layout.orientation.start_angle + corner / 6
     return vec2(layout.size.x * math.cos(angle), layout.size.y * math.sin(angle))
 end
 
--- TODO make do stuff
-function hex_corners(layout, hex)
+function hex_corners(hex, layout)
     local corners = {}
+end
+
+function cube_to_offset(cube)
+
+end
+
+function offset_to_cube(off)
+
+end
+
+function cube_to_doubled(cube)
+    return vec2(cube.x, 2 * (-cube.x - cube.y) + cube.x)
+end
+
+function doubled_to_cube(dbl)
+    return vec2(dbl.x, (dbl.y - dbl.x) / 2)
 end
 
 ----- [[ MAP STORAGE & RETRIEVAL ]] --------------------------------------------
 --[[
+    TODO make all functions work regardless of layout. as it stands, they kind
+    of do, just not always nicely.
   ]]
--- TODO make all functions work regardless of layout.
 
 -- returns ordered ring-shaped map of |radius| from |center|.
-function hex_ring_map(center, radius)
+function ring_map(center, radius)
     local map = {}
+    local mt = {__index={center=center, radius=radius}}
+
+    setmetatable(map, mt)
+
     local walk = center + HEX_DIRECTIONS[6] * radius
 
     for i = 1, 6 do
@@ -141,9 +148,15 @@ function hex_ring_map(center, radius)
     return map
 end
 
--- returns ordered hexagonal map of |radius| rings from |center|.
-function hex_spiral_map(center, radius)
+--[[ returns ordered hexagonal map of |radius| rings from |center|.
+     the only difference between hex_spiral_map and hex_hexagonal_map is that
+     hex_spiral_map is ordered, in a spiral path from the |center|.
+  ]]
+function spiral_map(center, radius)
     local map = {center}
+    local mt = {__index={center=center, radius=radius}}
+
+    setmetatable(map, mt)
 
     for i = 1, radius do
         table.append(map, hex_ring_map(center, i))
@@ -152,7 +165,7 @@ function hex_spiral_map(center, radius)
 end
 
 -- returns unordered parallelogram-shaped map of |width| and |height|.
-function hex_parallelogram_map(width, height)
+function parallelogram_map(width, height)
     local map = {}
     local mt = {__index={width=width, height=height}}
 
@@ -167,7 +180,7 @@ function hex_parallelogram_map(width, height)
 end
 
 -- returns unordered triangular map of |size|.
-function hex_triangular_map(size)
+function triangular_map(size)
     local map = {}
     local mt = {__index={size=size}}
 
@@ -182,7 +195,7 @@ function hex_triangular_map(size)
 end
 
 -- returns unordered hexagonal map of |radius|.
-function hex_hexagonal_map(radius)
+function hexagonal_map(radius)
     local map = {}
     local mt = {__index={radius=radius}}
 
@@ -200,7 +213,7 @@ function hex_hexagonal_map(radius)
 end
 
 -- returns unordered rectangular map of |width| and |height|.
-function hex_rectangular_map(width, height)
+function rectangular_map(width, height)
     local map = {}
     local mt = {__index={width=width, height=height}}
 
@@ -213,4 +226,7 @@ function hex_rectangular_map(width, height)
     end
     return map
 end
+
+----- [[ TESTS ]] --------------------------------------------------------------
+
 
