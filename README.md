@@ -31,7 +31,7 @@ Some map shapes: parallelogram, rectangular, hexagonal, triangular. (and more)
     
 * storage system based on map shape - see chart:
    
-| :SHAPE:           |                 :MAP STORAGE:                 | 
+|       SHAPE       |                  MAP STORAGE                  | 
 | ----------------- | --------------------------------------------- |
 | parallelogram     |   unordered, hash-like OR ordered, array-like |   
 | rectangular       |   unordered, hash-like OR ordered, array-like |   
