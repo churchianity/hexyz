@@ -31,15 +31,15 @@ Some map shapes: parallelogram, rectangular, hexagonal, triangular. (and more)
     
 * storage system based on map shape - see chart:
    
-*      SHAPE         :                MAP STORAGE                        
-*
-*  parallelogram     :   unordered, hash-like OR ordered, array-like     
-*  rectangular       :   unordered, hash-like OR ordered, array-like     
-*  hexagonal         :   unordered, hash-like OR ordered, array-like     
-*  triangular        :   unordered, hash-like OR ordered, array-like     
-*  ring              :   ordered, array-like                             
-*  spiral            :   ordered, array-like**                              
-*  arbitrary         :   unordered, hash-like                            
+| :SHAPE:           |                 :MAP STORAGE:                 | 
+| ----------------- | --------------------------------------------- |
+| parallelogram     |   unordered, hash-like OR ordered, array-like |   
+| rectangular       |   unordered, hash-like OR ordered, array-like |   
+| hexagonal         |   unordered, hash-like OR ordered, array-like |   
+| triangular        |   unordered, hash-like OR ordered, array-like |   
+| ring              |   ordered, array-like                         |   
+| spiral            |   ordered, array-like**                       |      
+| arbitrary         |   unordered, hash-like                        |   
     
     ** note that a spiral map is just a hexagonal one with a particular order.
 
