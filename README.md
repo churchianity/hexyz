@@ -1,4 +1,3 @@
-# hex.lua
 
 ## INTRODUCTION [1.1]
 
@@ -10,7 +9,7 @@ if you want an actual good resource, go to [1.9].
 
 ## GETTING STARTED [1.2] 
 
-//TODO
+* TODO
 
 ## COORDINATE SYSTEMS [1.3]
     
@@ -29,7 +28,7 @@ so you can use what your graphics library likes best!
     
 Some map shapes: parallelogram, rectangular, hexagonal, triangular. (and more)
     
-* storage system based on map shape - see chart:
+The storage system used is based on the map shape - see chart:
    
 |       SHAPE       |                  MAP STORAGE                  | 
 | ----------------- | --------------------------------------------- |
@@ -45,8 +44,35 @@ Some map shapes: parallelogram, rectangular, hexagonal, triangular. (and more)
 
 ## CONVENTIONS AND TERMINOLOGY [1.8] 
 
-because so many different kinds of coordinate pairs, trios
+If you have read amit's guide to hexagon grids, (see [1.9]), a lot of the 
+terminology will be familiar to you - I utilize many conventions he does in
+his guide. That being said...
 
+Because so many different kinds of coordinate groupings are used in this library,
+and they are all fundamentally tables/vectors/arrays of integers, it can be hard
+to remember what they are all referring to. 
+
+The following table shows what each table/vector/array refers to in the code:
+
+| NAME |                       REFERS TO                            |  
+| ---- | ---------------------------------------------------------- |
+| cube | xyz, used for most maps, with constraint x+y+z=0. **       |
+| pix  | xy, true screen pixel coordinates                          |
+| dbl  | xy, 'doubled', used for rectangular maps                   |
+| off  | xy, 'offset', used for UI implementations                  |
+| ---- | ---------------------------------------------------------- |
+| map  | xy, table of unit hexagon centerpoints arranged in a shape |
+
+    ** note that 'axial' coordinates are a subset of cube coordinates, where
+    you simply omit the z value. for many algorithms this is done, but instead
+    of using some reference name 'axial', I just used the name 'cube' for both 
+    cases. I found this to be clearer and less prone to end-user error. when
+    an algorithm asks for a cube, give it a cube. if you want to know if it works
+    with axial as well, look at the code and see if it uses a 'z' value.
+
+Other terminology:   
+
+* TODO
 
 ## RESOURCES USED TO DEVELOP THIS LIBRARY, AND FOR WHICH I AM GRATEFUL [1.9] 
     
