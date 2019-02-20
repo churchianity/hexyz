@@ -15,7 +15,7 @@ local win = am.window{
     resizable = false
     }
 
-local layout    = layout(vec2(-268, win.bottom))
+local layout    = layout(vec2(-268, win.top - 10))
 local map       = rectangular_map(45, 31)
 local world     = am.group{}:tag"world"
 
@@ -59,7 +59,7 @@ KwkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkK
 KkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkK
 KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK
 ]]
------ [[ FUNCTIONS ]] ----------------------------------------------------------
+----- FUNCTIONS ----------------------------------------------------------
 
 function show_axes()
     local xaxis = am.line(vec2(win.left, 0), vec2(win.right, 0))
@@ -71,11 +71,11 @@ function show_hex_coords()
     win.scene:action(function()
         win.scene:remove("coords")
         
-        local mouse = axial_to_doubled(pixel_to_hex(win:mouse_position(), layout))
+        local mouse = cube_to_offset(pixel_to_cube(win:mouse_position(), layout))
         
-        if mouse.x > 0 and mouse.x < 45 and mouse.y < 0 and mouse.y > -63 then
+        if mouse.x > 0 and mouse.x < 45 and mouse.y > 0 and mouse.y < 31 then
             local coords = am.group{
-                am.translate(win.left + 30, win.top - 10)
+                am.translate(win.right - 25, win.top - 10)
                 ^ am.text(string.format("%d,%d", mouse.x, mouse.y)):tag"coords"}
                 win.scene:append(coords)
         end 
@@ -84,8 +84,16 @@ end
 
 function init()
     for hex,_ in pairs(map) do
-        local pix = hex_to_pixel(hex, layout)
-        world:append(am.circle(pix, 11, rhue(1), 6)) 
+        local pix = cube_to_pixel(hex, layout)
+        local helper = cube_to_offset(hex)
+        local r = math.random()
+        local g = math.random()
+        local b = math.random()
+        local a = 1 - ((helper.x + 23)^2)/500 + ((helper.y + 16)^2)/500
+        local color = vec4(r, g, b, a) 
+        local tag = tostring(hex.x, hex.y)
+
+        world:append(am.circle(pix, layout.size.x, color, 6):tag(tag)) 
     end
     
     win.scene = world

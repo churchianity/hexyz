@@ -6,6 +6,13 @@ local function round(n)
     return n % 1 >= 0.5 and math.ceil(n) or math.floor(n)
 end
 
+----- [[ UI FUNCTIONS ]] -------------------------------------------------------
+
+
+
+
+
+
 ----- [[ HEX CONSTANTS & UTILITY FUNCTIONS ]] ----------------------------------
 
 -- all possible vector directions from a given hex by edge
@@ -41,7 +48,7 @@ end
 function cube_round(x, y, z)
     local rx = round(x)
     local ry = round(y)
-    local rz = round(z)
+    local rz = round(z) or round(-x - y)
 
     local xdelta = math.abs(rx - x)
     local ydelta = math.abs(ry - y)
@@ -50,7 +57,7 @@ function cube_round(x, y, z)
     if xdelta > ydelta and xdelta > zdelta then
         rx = -ry - rz
     elseif ydelta > zdelta then
-        rx = -ry - rz
+        ry = -rx - rz
     else
         rz = -rx - ry
     end
@@ -109,7 +116,7 @@ function hex_corners(hex, layout)
 end
 
 function cube_to_offset(cube)
-
+    return vec2(cube.x, -cube.x - cube.y + (cube.x + (cube.x % 2)) / 2)
 end
 
 function offset_to_cube(off)
@@ -171,9 +178,9 @@ function parallelogram_map(width, height)
 
     setmetatable(map, mt)
 
-    for s = 0, width do
-        for t = 0, height do
-            map[vec2(s, t)] = true
+    for i = 0, width do
+        for j = 0, height do
+            map[vec2(i, -j)] = true
         end
     end
     return map
@@ -186,9 +193,9 @@ function triangular_map(size)
 
     setmetatable(map, mt)
 
-    for s = 0, size do
-        for t = size - s, size do
-            map[vec2(s, t)] = true
+    for i = 0, size do
+        for j = size - s, size do
+            map[vec2(i, j)] = true
         end
     end
     return map
@@ -201,12 +208,12 @@ function hexagonal_map(radius)
 
     setmetatable(map, mt)
 
-    for s = -radius, radius do
-        local t1 = math.max(-radius, -s - radius)
-        local t2 = math.min(radius, -s + radius)
+    for i = -radius, radius do
+        local j1 = math.max(-radius, -i - radius)
+        local j2 = math.min(radius, -i + radius)
 
-        for t = t1, t2 do
-            map[vec2(s, t)] = true
+        for j = j1, j2 do
+            map[vec2(i, j)] = true
         end
     end
     return map
@@ -219,9 +226,9 @@ function rectangular_map(width, height)
 
     setmetatable(map, mt)
 
-    for s = 0, width do
-        for t = 0, height do
-            map[vec2(s, t - math.floor(s/2))] = true
+    for i = 0, width do
+        for j = 0, height do
+            map[vec2(i, -j - math.floor(i/2))] = true
         end
     end
     return map
