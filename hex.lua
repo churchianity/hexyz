@@ -6,13 +6,6 @@ local function round(n)
     return n % 1 >= 0.5 and math.ceil(n) or math.floor(n)
 end
 
------ [[ UI FUNCTIONS ]] -------------------------------------------------------
-
-
-
-
-
-
 ----- [[ HEX CONSTANTS & UTILITY FUNCTIONS ]] ----------------------------------
 
 -- all possible vector directions from a given hex by edge
@@ -62,7 +55,7 @@ function cube_round(x, y, z)
         rz = -rx - ry
     end
 
-    return vec3(rx, ry, rz)
+    return vec2(rx, ry)
 end
 
 ----- [[ LAYOUT, ORIENTATION & COORDINATE CONVERSION  ]] -----------------------
@@ -88,10 +81,10 @@ end
 function cube_to_pixel(cube, layout)
     local M = layout.orientation.M
 
-    local x = (M[1][1] * cube.x + M[1][2] * cube.y) * layout.size.x
-    local y = (M[2][1] * cube.x + M[2][2] * cube.y) * layout.size.y
+    local x = (M[1][1] * cube[1] + M[1][2] * cube[2]) * layout.size[1]
+    local y = (M[2][1] * cube[1] + M[2][2] * cube[2]) * layout.size[2]
 
-    return vec2(x + layout.origin.x, y + layout.origin.y)
+    return vec2(x + layout.origin[1], y + layout.origin[2])
 end
 
 -- screen to hex
@@ -100,35 +93,30 @@ function pixel_to_cube(pix, layout)
 
     local pix = (pix - layout.origin) / layout.size 
 
-    local s = W[1][1] * pix.x + W[1][2] * pix.y
-    local t = W[2][1] * pix.x + W[2][2] * pix.y
+    local s = W[1][1] * pix[1] + W[1][2] * pix[2]
+    local t = W[2][1] * pix[1] + W[2][2] * pix[2]
 
     return cube_round(s, t, -s - t) 
 end
 
+-- TODO test, learn am.draw
 function hex_corner_offset(corner, layout)
     local angle = 2.0 * math.pi * layout.orientation.start_angle + corner / 6
-    return vec2(layout.size.x * math.cos(angle), layout.size.y * math.sin(angle))
+    return vec2(layout.size[1] * math.cos(angle), 
+                layout.size[2] * math.sin(angle))
 end
 
+-- TODO this thing
 function hex_corners(hex, layout)
     local corners = {}
 end
 
 function cube_to_offset(cube)
-    return vec2(cube.x, -cube.x - cube.y + (cube.x + (cube.x % 2)) / 2)
+    return vec2(cube[1], -cube[1] - cube[2] + (cube[1] + (cube[1] % 2)) / 2)
 end
 
 function offset_to_cube(off)
-
-end
-
-function cube_to_doubled(cube)
-    return vec2(cube.x, 2 * (-cube.x - cube.y) + cube.x)
-end
-
-function doubled_to_cube(dbl)
-    return vec2(dbl.x, (dbl.y - dbl.x) / 2)
+    return vec2(off[1], off[2] - off[1] * (off[1] % 2) / 2)
 end
 
 ----- [[ MAP STORAGE & RETRIEVAL ]] --------------------------------------------
@@ -236,4 +224,26 @@ end
 
 ----- [[ TESTS ]] --------------------------------------------------------------
 
+function test_all()
+    test_rectangular_map()
+end
 
+
+
+function test_rectangular_map()
+    local map = rectangular_map(8, 5)
+    local layout = layout()
+
+    for hex,_ in pairs(map) do
+        print(cube_to_pixel(hex, layout))
+    end
+
+    for i = 0, 10 do
+        local mouse = pixel_to_cube(vec2(math.random(map.width) * 22, 
+                                         math.random(map.height) * 10),
+                                         layout)
+        print(mouse)
+    end
+
+
+end

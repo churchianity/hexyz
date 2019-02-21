@@ -1,11 +1,11 @@
------ [[ WARZONE 2 - HEXAGONAL GRID RESOURCE BASED TOWER DEFENSE GAME]] --------
---[[                                                    author@churchianity.ca
-  ]]
+----- WARZONE 2 - HEXAGONAL GRID RESOURCE BASED TOWER DEFENSE GAME -------------
+--                                                        author@churchianity.ca
+  
 
 require"hex"
 require"util"
 
------- [[ GLOBALS ]] -----------------------------------------------------------
+------ GLOBALS -----------------------------------------------------------------
 
 local win = am.window{
     -- BASE RESOLUTION = 3/4 * WXGA Standard 16:10
@@ -18,8 +18,6 @@ local win = am.window{
 local layout    = layout(vec2(-268, win.top - 10))
 local map       = rectangular_map(45, 31)
 local world     = am.group{}:tag"world"
-
------ [[ SPRITES ]] ------------------------------------------------------------
 
 -- modified ethan shoonover solarized colortheme
 am.ascii_color_map = {
@@ -70,32 +68,49 @@ end
 function show_hex_coords()
     win.scene:action(function()
         win.scene:remove("coords")
+        win.scene:remove("select")
         
-        local mouse = cube_to_offset(pixel_to_cube(win:mouse_position(), layout))
+        local hex = pixel_to_cube(win:mouse_position(), layout)
+        local mouse = cube_to_offset(hex)
         
-        if mouse.x > 0 and mouse.x < 45 and mouse.y > 0 and mouse.y < 31 then
+        if mouse.x > 0 and mouse.x < map.width and 
+           mouse.y > 0 and mouse.y < map.height then
             local coords = am.group{
                 am.translate(win.right - 25, win.top - 10)
                 ^ am.text(string.format("%d,%d", mouse.x, mouse.y)):tag"coords"}
                 win.scene:append(coords)
+            
+            local mask = vec4(1, 1, 1, 0.2)
+            local pix = cube_to_pixel(hex, layout)
+            world:append(am.circle(pix, layout.size.x, mask, 6):tag"select") 
         end 
     end)
 end
 
 function init()
-    for hex,_ in pairs(map) do
-        local pix = cube_to_pixel(hex, layout)
-        local helper = cube_to_offset(hex)
-        local r = math.random()
-        local g = math.random()
-        local b = math.random()
-        local a = 1 - ((helper.x + 23)^2)/500 + ((helper.y + 16)^2)/500
-        local color = vec4(r, g, b, a) 
-        local tag = tostring(hex.x, hex.y)
+    world:action(coroutine.create(function()
+        local gui = am.rect(win.left, win.top, -268, win.bottom):tag"gui"
+        world:append(gui)
+        
+        for hex,_ in pairs(map) do
+            local pix = cube_to_pixel(hex, layout)
+            local off = cube_to_offset(hex)
+            local tag = tostring(hex)
+            local color 
 
-        world:append(am.circle(pix, layout.size.x, color, 6):tag(tag)) 
-    end
-    
+            if off.x == 0 or off.x == map.width or
+                off.y == 0 or off.y == map.height then
+                color = rhue(0.3)
+            else
+                color = rhue(1 - math.max(((off.x-23)/30)^2, ((off.y-16)/20)^2))
+            end
+
+            world"gui".color = vec4(0, 43/255, 54/255, am.frame_time / 20)
+            world:prepend(am.circle(pix, layout.size.x, color, 6):tag(tag))
+            
+            am.wait(am.delay(0.01))
+        end
+    end))
     win.scene = world
 end
 
@@ -103,3 +118,4 @@ end
 
 init()
 show_hex_coords()
+
