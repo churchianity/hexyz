@@ -1,12 +1,16 @@
 
------ [[ GENERALLY USEFUL FUNCTIONS ]] -----------------------------------------
+--[[============================================================================
+                    ----- GENERALLY USEFUL FUNCTIONS -----
+==============================================================================]]
 
 -- rounds numbers. would've been cool to have math.round in lua.
 local function round(n)
     return n % 1 >= 0.5 and math.ceil(n) or math.floor(n)
 end
 
------ [[ HEX CONSTANTS & UTILITY FUNCTIONS ]] ----------------------------------
+--[[============================================================================
+                ----- HEX CONSTANTS AND UTILITY FUNCTIONS -----
+==============================================================================]]
 
 -- all possible vector directions from a given hex by edge
 local CUBE_DIRECTIONS = {vec2( 1 ,  0),
@@ -23,22 +27,19 @@ end
 
 -- return hexagon adjacent to |hex| in integer index |direction|.
 function cube_neighbour(hex, direction)
-    return hex + HEX_DIRECTIONS[(6 + (direction % 6)) % 6 + 1]
+    return hex + CUBE_DIRECTIONS[(6 + (direction % 6)) % 6 + 1]
 end
 
--- TODO rotations are different depending on the coordinate system you use.
--- implement this for cube/axial, and doubled.
+-- TODO cube rotations
 function cube_rotate_left(hex)
-
 end
 
 function cube_rotate_right(hex)
-
 end
 
--- rounds a float coordinate trio |x, y, z| to its nearest integer coordinate trio.
--- TODO make work with a table {x, y, z} and vec3(x, y, z)
-function cube_round(x, y, z)
+-- rounds a float coordinate trio |x, y, z| to nearest integer coordinate trio
+-- only ever used internally; no need to use a vector. 
+local function cube_round(x, y, z)
     local rx = round(x)
     local ry = round(y)
     local rz = round(z) or round(-x - y)
@@ -58,7 +59,9 @@ function cube_round(x, y, z)
     return vec2(rx, ry)
 end
 
------ [[ LAYOUT, ORIENTATION & COORDINATE CONVERSION  ]] -----------------------
+--[[============================================================================
+                ----- ORIENTATION & LAYOUT -----
+==============================================================================]]
 
 -- forward & inverse matrices used for the flat orientation.
 local FLAT = {M = mat2(3.0/2.0,  0.0,  3.0^0.5/2.0,  3.0^0.5    ),
@@ -111,19 +114,25 @@ function hex_corners(hex, layout)
     local corners = {}
 end
 
+--
 function cube_to_offset(cube)
     return vec2(cube[1], -cube[1] - cube[2] + (cube[1] + (cube[1] % 2)) / 2)
 end
 
+-- 
 function offset_to_cube(off)
     return vec2(off[1], off[2] - off[1] * (off[1] % 2) / 2)
 end
 
------ [[ MAP STORAGE & RETRIEVAL ]] --------------------------------------------
---[[
-    TODO make all functions work regardless of layout. as it stands, they kind
-    of do, just not always nicely.
-  ]]
+--[[============================================================================
+                         ----- MAPS & STORAGE -----
+==============================================================================]]
+
+-- information about the maps' dimensions are stored in a metatable, so you can
+-- retrieve details about arbitrary maps after they are created.
+
+-- TODO make all functions work regardless of layout. as it stands, they kind
+-- of do, just not always nicely.
 
 -- returns ordered ring-shaped map of |radius| from |center|.
 function ring_map(center, radius)
@@ -143,10 +152,9 @@ function ring_map(center, radius)
     return map
 end
 
---[[ returns ordered hexagonal map of |radius| rings from |center|.
-     the only difference between hex_spiral_map and hex_hexagonal_map is that
-     hex_spiral_map is ordered, in a spiral path from the |center|.
-  ]]
+-- returns ordered hexagonal map of |radius| rings from |center|.
+-- the only difference between hex_spiral_map and hex_hexagonal_map is that
+-- hex_spiral_map is ordered, in a spiral path from the |center|.
 function spiral_map(center, radius)
     local map = {center}
     local mt = {__index={center=center, radius=radius}}
@@ -222,28 +230,11 @@ function rectangular_map(width, height)
     return map
 end
 
------ [[ TESTS ]] --------------------------------------------------------------
+--[[============================================================================
+                         ----- TESTS -----
+==============================================================================]]
 
 function test_all()
-    test_rectangular_map()
+    print("it works trust me")
 end
 
-
-
-function test_rectangular_map()
-    local map = rectangular_map(8, 5)
-    local layout = layout()
-
-    for hex,_ in pairs(map) do
-        print(cube_to_pixel(hex, layout))
-    end
-
-    for i = 0, 10 do
-        local mouse = pixel_to_cube(vec2(math.random(map.width) * 22, 
-                                         math.random(map.height) * 10),
-                                         layout)
-        print(mouse)
-    end
-
-
-end
