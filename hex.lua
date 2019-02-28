@@ -1,7 +1,7 @@
 
 --[[============================================================================
                     ----- GENERALLY USEFUL FUNCTIONS -----
-==============================================================================]]
+============================================================================]]--
 
 -- rounds numbers. would've been cool to have math.round in lua.
 local function round(n)
@@ -10,7 +10,7 @@ end
 
 --[[============================================================================
                 ----- HEX CONSTANTS AND UTILITY FUNCTIONS -----
-==============================================================================]]
+============================================================================]]--
 
 -- all possible vector directions from a given hex by edge
 local CUBE_DIRECTIONS = {vec2( 1 ,  0),
@@ -30,15 +30,17 @@ function cube_neighbour(hex, direction)
     return hex + CUBE_DIRECTIONS[(6 + (direction % 6)) % 6 + 1]
 end
 
--- TODO cube rotations
+-- return cube coords at location 60deg away to the left; counter-clockwise
 function cube_rotate_left(hex)
+    return vec2(hex.x + hex.y, -hex.x)
 end
 
+-- return cube coords at location 60deg away to the right; clockwise
 function cube_rotate_right(hex)
+    return vec2(-hex.y, hex.x + hex.y)
 end
 
 -- rounds a float coordinate trio |x, y, z| to nearest integer coordinate trio
--- only ever used internally; no need to use a vector. 
 local function cube_round(x, y, z)
     local rx = round(x)
     local ry = round(y)
@@ -46,7 +48,7 @@ local function cube_round(x, y, z)
 
     local xdelta = math.abs(rx - x)
     local ydelta = math.abs(ry - y)
-    local zdelta = math.abs(rz - z)
+    local zdelta = math.abs(rz - z or round(-x - y))
 
     if xdelta > ydelta and xdelta > zdelta then
         rx = -ry - rz
@@ -55,30 +57,29 @@ local function cube_round(x, y, z)
     else
         rz = -rx - ry
     end
-
     return vec2(rx, ry)
 end
 
 --[[============================================================================
                 ----- ORIENTATION & LAYOUT -----
-==============================================================================]]
+============================================================================]]--
 
--- forward & inverse matrices used for the flat orientation.
+-- forward & inverse matrices used for the flat orientation
 local FLAT = {M = mat2(3.0/2.0,  0.0,  3.0^0.5/2.0,  3.0^0.5    ),
               W = mat2(2.0/3.0,  0.0,  -1.0/3.0   ,  3.0^0.5/3.0),
               start_angle = 0.0}
 
--- forward & inverse matrices used for the pointy orientation.
-local POINTY = {M = mat2(3.0^0.5,  3.0^0.5/2.0,  0.0,   3.0/2.0),
+-- forward & inverse matrices used for the pointy orientation
+local POINTY = {M = mat2(3.0^0.5,   3.0^0.5/2.0,  0.0,  3.0/2.0),
                 W = mat2(3.0^0.5/3.0,  -1.0/3.0,  0.0,  2.0/3.0),
                 start_angle = 0.5}
 
--- stores layout: information that does not pertain to map shape 
+-- stores layout: information that does not pertain to map shape
 function layout(origin, size, orientation)
     return {origin      = origin      or vec2(0),
             size        = size        or vec2(11),
             orientation = orientation or FLAT}
-end    
+end
 
 -- hex to screen
 function cube_to_pixel(cube, layout)
@@ -99,13 +100,13 @@ function pixel_to_cube(pix, layout)
     local s = W[1][1] * pix[1] + W[1][2] * pix[2]
     local t = W[2][1] * pix[1] + W[2][2] * pix[2]
 
-    return cube_round(s, t, -s - t) 
+    return cube_round(s, t, -s - t)
 end
 
 -- TODO test, learn am.draw
 function hex_corner_offset(corner, layout)
     local angle = 2.0 * math.pi * layout.orientation.start_angle + corner / 6
-    return vec2(layout.size[1] * math.cos(angle), 
+    return vec2(layout.size[1] * math.cos(angle),
                 layout.size[2] * math.sin(angle))
 end
 
@@ -114,25 +115,34 @@ function hex_corners(hex, layout)
     local corners = {}
 end
 
---
+-- offset coordinates are prettier to look at
 function cube_to_offset(cube)
     return vec2(cube[1], -cube[1] - cube[2] + (cube[1] + (cube[1] % 2)) / 2)
 end
 
--- 
+-- back to cube coordinates
 function offset_to_cube(off)
     return vec2(off[1], off[2] - off[1] * (off[1] % 2) / 2)
 end
 
 --[[============================================================================
                          ----- MAPS & STORAGE -----
-==============================================================================]]
 
--- information about the maps' dimensions are stored in a metatable, so you can
--- retrieve details about arbitrary maps after they are created.
+  MAPS STORE CUBE COORDINATES. MAPS STORE CUBE COORDINATES. MAPS STORE CUBE COOR
 
--- TODO make all functions work regardless of layout. as it stands, they kind
--- of do, just not always nicely.
+  This means, you are not to draw using the coordinates stored in your map.
+  You are to draw using the cube_to_pixel of those coordinates.
+
+  If you wish to draw a hexagon to the screen, you must first use cube_to_pixel
+  to retrieve the center of the hexagon on each set of cube coordinates stored
+  in your map.
+
+  Information about the maps' dimensions are stored in a metatable, so you can
+  retrieve details about arbitrary maps after they are created.
+
+  TODO make all functions work regardless of layout. as it stands, they kind
+  of do, just not always nicely.
+============================================================================]]--
 
 -- returns ordered ring-shaped map of |radius| from |center|.
 function ring_map(center, radius)
@@ -141,12 +151,12 @@ function ring_map(center, radius)
 
     setmetatable(map, mt)
 
-    local walk = center + HEX_DIRECTIONS[6] * radius
+    local walk = center + CUBE_DIRECTIONS[6] * radius
 
     for i = 1, 6 do
         for j = 1, radius do
             table.insert(map, walk)
-            walk = hex_neighbour(walk, i)
+            walk = cube_neighbour(walk, i)
         end
     end
     return map
@@ -162,7 +172,7 @@ function spiral_map(center, radius)
     setmetatable(map, mt)
 
     for i = 1, radius do
-        table.append(map, hex_ring_map(center, i))
+        table.append(map, ring_map(center, i))
     end
     return map
 end
@@ -231,8 +241,19 @@ function rectangular_map(width, height)
 end
 
 --[[============================================================================
+                         ----- PATHFINDING -----
+============================================================================]]--
+
+
+
+
+
+
+
+
+--[[============================================================================
                          ----- TESTS -----
-==============================================================================]]
+============================================================================]]--
 
 function test_all()
     print("it works trust me")

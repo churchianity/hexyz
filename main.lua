@@ -1,86 +1,177 @@
 
 require"hex"
 require"util"
+require"sprites"
 
 --[[============================================================================
-                            ----- GLOBALS -----
-==============================================================================]]
+                    ----- COLOR CONSTANTS -----
+============================================================================]]--
+local EIGENGRAU = vec4(0.08, 0.08, 0.11, 1)
 
-local win = am.window{
-    -- base resolution = 3/4 * WXGA standard 16:10
-    width = 1280 * 3 / 4, -- 960px
-    height = 800 * 3 / 4, -- 600px
-    
-    clear_color = vec4(0.01, 34/255, 45/255, 0),
-    title = "Warzone 2: Electric Boogaloo",
-    resizable = false,
-    }
+-- Ethan Schoonover Solarized Colorscheme
+local BASE03  = vec4(0   , 0.16, 0.21, 1)
+local BASE02  = vec4(0.02, 0.21, 0.25, 1)
+local BASE01  = vec4(0.34, 0.43, 0.45, 1)
+local BASE00  = vec4(0.39, 0.48, 0.51, 1)
+local BASE0   = vec4(0.51, 0.58, 0.58, 1)
+local BASE1   = vec4(0.57, 0.63, 0.63, 1)
+local BASE2   = vec4(0.93, 0.90, 0.83, 1)
+local BASE3   = vec4(0.99, 0.96, 0.89, 1)
+local YELLOW  = vec4(0.70, 0.53, 0   , 1)
+local ORANGE  = vec4(0.79, 0.29, 0.08, 1)
+local RED     = vec4(0.86, 0.19, 0.18, 1)
+local MAGENTA = vec4(0.82, 0.21, 0.50, 1)
+local VIOLET  = vec4(0.42, 0.44, 0.76, 1)
+local BLUE    = vec4(0.14, 0.54, 0.82, 1)
+local CYAN    = vec4(0.16, 0.63, 0.59, 1)
+local GREEN   = vec4(0.52, 0.60, 0   , 1)
 
+am.ascii_color_map =
+{
+    E = EIGENGRAU,
+    K = BASE03,
+    k = BASE02,
+    L = BASE01,
+    l = BASE00,
+    s = BASE0,
+    S = BASE1,
+    w = BASE2,
+    W = BASE3,
+    y = YELLOW,
+    o = ORANGE,
+    r = RED,
+    m = MAGENTA,
+    v = VIOLET,
+    b = BLUE,
+    c = CYAN,
+    g = GREEN
+}
+
+--[[============================================================================
+                    ----- WINDOW SETUP -----
+============================================================================]]--
+local win = am.window
+{   -- base resolution = 3/4 * WXGA standard 16:10
+    width = 1280 * 3/4,                     -- 960px
+    height = 800 * 3/4,                     -- 600px
+
+    clear_color = BASE03
+}
+
+--[[============================================================================
+
+============================================================================]]--
+local map       = rectangular_map(45, 31)
 local layout    = layout(vec2(-268, win.top - 10))
-local map       
-local world     = am.group{}:tag"world"
 
 --[[============================================================================
-                            ----- FUNCTIONS -----
-==============================================================================]]
+                    ----- SCENE GRAPH / NODES -----
+============================================================================]]--
+local panel; local world; local game;                                       --[[
 
-function show_hex_coords()
+  panel
+    |
+    #------> game ------> win.scene
+    |
+  world
+
+--==========================================================================]]--
+local backdrop; local menu; local title;                                    --[[
+
+ backdrop
+    |
+    #------> title ------> win.scene
+    |
+   menu
+
+--[[============================================================================
+                    ----- FUNCTIONS -----
+============================================================================]]--
+function keep_time()
+    local offset = am.current_time()
+
     world:action(function()
-        world:remove("coords")
-        world:remove("select")
-        
-        local hex = pixel_to_cube(win:mouse_position(), layout)
-        local mouse = cube_to_offset(hex)
-        
-        if mouse.x > 0 and mouse.x < map.width and 
-           mouse.y > 0 and mouse.y < map.height then
-            local coords = am.group{
-                am.translate(win.right - 25, win.top - 10)
-                ^ am.text(string.format("%d,%d", mouse.x, mouse.y)):tag"coords"}
-                world:append(coords)
-            
-            local mask = vec4(1, 1, 1, 0.2)
-            local pix = cube_to_pixel(hex, layout)
-            world:append(am.circle(pix, layout.size.x, mask, 6):tag"select") 
-        end 
+        world:remove("time")
+
+        local time_str = string.format("%.2f", am.current_time() - offset)
+
+        world:append(
+            am.translate(-374, win.top - 10)
+            ^ am.text(time_str):tag"time")
     end)
 end
 
-function world_init()
-    world:action(coroutine.create(function()
-        -- init guiblock 
-        local bg = am.rect(win.left, win.top, -268, win.bottom):tag"bg"
-        world:append(bg)
-        
-        -- init map
-        map = rectangular_map(45, 31)
-        for hex,elevation in pairs(map) do
+-- TODO refactor to something like - poll-mouse or mouse-hover event
+function show_coords()
+    game:action(function()
+        game:remove("coords")
+        game:remove("select")
+
+        local hex = pixel_to_cube(win:mouse_position(), layout)
+        local mouse = cube_to_offset(hex)
+
+        if mouse.x > 0 and mouse.x < map.width and
+           mouse.y > 0 and mouse.y < map.height then
+
+            local text = am.text(string.format("%d,%d", mouse.x, mouse.y))
+            local coords = am.group{
+                am.translate(win.right - 25, win.top - 10)
+                ^ am.text(string.format("%d,%d", mouse.x, mouse.y)):tag"coords"}
+
+            world:append(coords)
+
+            local color = vec4(1, 1, 1, 0.2)
             local pix = cube_to_pixel(hex, layout)
+            world:append(am.circle(pix, layout.size.x, color, 6):tag"select")
+        end
+    end)
+end
+
+function title_init()
+    backdrop = am.group{}:tag"backdrop"
+    menu = am.group{}:tag"menu"
+    title = am.group{menu, backdrop}:tag"title"
+end
+
+
+function game_init()
+    world = am.group{}:tag"world"
+    panel = am.group{}:tag"panel"
+    game = am.group{world, panel}:tag"game"
+
+    local hexes = {}
+    for cube,_ in pairs(map) do
+        hexes[math.perlin(cube)] = cube_to_pixel(cube, layout)
+    end
+
+    world:action(coroutine.create(function()
+        panel:append(am.rect(win.left, win.top, -268, win.bottom):tag"bg")
+
+        for noise, hex in pairs(hexes) do
             local off = cube_to_offset(hex)
             local tag = tostring(hex)
-            local color
-            local mask 
-
-            -- testing noise with color
-            color = vec4(1, 1, 1, (elevation + 1) / 2)
 
             -- determine cell shading mask based on map position
-            --mask = vec4(0, 0, 0, math.max(((off.x-23)/30)^2, ((off.y-16)/20)^2))
-            --color = color - mask
+            local mask = vec4(0, 0, 0, math.max(((off.x-23)/30)^2,
+                                                ((off.y-16)/20)^2))
 
-            world"bg".color = vec4(0, 43/255, 54/255, am.frame_time)
-            world:prepend(am.circle(pix, layout.size.x, color, 6):tag(tag))
+            -- determine cell color based on noise
+            local color = vec4(math.random()) - mask
+
+            panel"bg".color = BASE03/am.frame_time
+
+            world:prepend(am.circle(hex, 11, color, 6):tag(tag))
             am.wait(am.delay(0.01))
         end
-        show_hex_coords()
+        show_coords()
+        keep_time()
     end))
-    win.scene = world
+    win.scene = game
 end
 
 --[[============================================================================
                             ----- MAIN -----
-==============================================================================]]
+============================================================================]]--
 
-world_init()
-
+game_init()
 
