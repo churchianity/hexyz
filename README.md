@@ -5,7 +5,7 @@ this is a library for using hexagonal grids in amulet/lua.
 it is extremely incomplete. the following list of features is
 either implemented shoddily, or not at all.
 
-if you want an actual good resource, go to [RESOURCES USED TO DEVELOP THIS LIBRARY, AND FOR WHICH I AM GRATEFUL](#amit's guide to hexagonal grids).
+if you want an actual good resource, go to [amit's guide to hexagonal grids](#resources-used-to-develop-this-library,-and-for-which-i-am-grateful).
 
 ## GETTING STARTED
 
