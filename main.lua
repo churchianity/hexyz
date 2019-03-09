@@ -48,7 +48,7 @@ am.ascii_color_map =
 }
 
 --[[============================================================================
-                    ----- WINDOW SETUP -----
+                    ----- SETUP -----
 ============================================================================]]--
 local win = am.window
 {   -- base resolution = 3/4 * WXGA standard 16:10
@@ -58,29 +58,26 @@ local win = am.window
     clear_color = BASE03
 }
 
---[[============================================================================
-
-============================================================================]]--
 local map       = rectangular_map(45, 31)
 local layout    = layout(vec2(-268, win.top - 10))
 
 --[[============================================================================
                     ----- SCENE GRAPH / NODES -----
 ============================================================================]]--
-local panel; local world; local game;                                       --[[
+local panel; local world; local game                                        --[[
 
   panel
     |
-    #------> game ------> win.scene
+    +------> game ------> win.scene
     |
   world
 
---==========================================================================]]--
-local backdrop; local menu; local title;                                    --[[
+                                                                            ]]--
+local backdrop; local menu; local title                                     --[[
 
  backdrop
     |
-    #------> title ------> win.scene
+    +------> title ------> win.scene
     |
    menu
 
@@ -105,11 +102,12 @@ end
 function show_coords()
     game:action(function()
         game:remove("coords")
-        game:remove("select")
+        game:remove("selected")
 
         local hex = pixel_to_cube(win:mouse_position(), layout)
         local mouse = cube_to_offset(hex)
 
+        -- check mouse is within bounds of game map
         if mouse.x > 0 and mouse.x < map.width and
            mouse.y > 0 and mouse.y < map.height then
 
@@ -120,9 +118,9 @@ function show_coords()
 
             world:append(coords)
 
-            local color = vec4(1, 1, 1, 0.2)
+            local color = vec4(1)
             local pix = cube_to_pixel(hex, layout)
-            world:append(am.circle(pix, layout.size.x, color, 6):tag"select")
+            world:append(am.circle(pix, layout.size.x, color, 6):tag"selected")
         end
     end)
 end
@@ -135,37 +133,44 @@ end
 
 
 function game_init()
+    -- setup nodes
     world = am.group{}:tag"world"
     panel = am.group{}:tag"panel"
     game = am.group{world, panel}:tag"game"
 
-    local hexes = {}
-    for cube,_ in pairs(map) do
-        hexes[math.perlin(cube)] = cube_to_pixel(cube, layout)
-    end
-
+    -- render world
     world:action(coroutine.create(function()
+
+        -- background panel for gui elements
         panel:append(am.rect(win.left, win.top, -268, win.bottom):tag"bg")
 
-        for noise, hex in pairs(hexes) do
-            local off = cube_to_offset(hex)
-            local tag = tostring(hex)
-
-            -- determine cell shading mask based on map position
-            local mask = vec4(0, 0, 0, math.max(((off.x-23)/30)^2,
-                                                ((off.y-16)/20)^2))
+        -- begin map generation
+        for hex,noise in pairs(map) do
 
             -- determine cell color based on noise
-            local color = vec4(math.random()) - mask
+            local color = vec4((noise + 1) / 2)
 
-            panel"bg".color = BASE03/am.frame_time
+            -- determine cell shading mask based on map position
+            local off = cube_to_offset(hex)
+            local mask = vec4(0, 0, 0, math.max(((off.x-23)/30)^2,
+                                                ((off.y-16)/20)^2))
+            -- determine hexagon center for drawing
+            local center = cube_to_pixel(hex, layout)
 
-            world:prepend(am.circle(hex, 11, color, 6):tag(tag))
+            -- prepend hexagon to screen
+            world:prepend(am.circle(center, 11, color, 6):tag(tostring(hex)))
             am.wait(am.delay(0.01))
+
+            -- fade in bg panel
+            panel"bg".color = BASE03/am.frame_time
         end
-        show_coords()
-        keep_time()
+
+        show_coords()   -- mouse-hover events
+        keep_time()     -- scoring
+
     end))
+
+    -- make it so
     win.scene = game
 end
 

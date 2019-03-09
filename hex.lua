@@ -13,21 +13,21 @@ end
 ============================================================================]]--
 
 -- all possible vector directions from a given hex by edge
-local CUBE_DIRECTIONS = {vec2( 1 ,  0),
+local CUBE_DIRECTIONS = {vec2( 0 ,  1),
+                         vec2( 1 ,  0),
                          vec2( 1 , -1),
                          vec2( 0 , -1),
                          vec2(-1 ,  0),
-                         vec2(-1 ,  1),
-                         vec2( 0 ,  1)}
+                         vec2(-1 ,  1)}
 
 -- return hex vector direction via integer index |direction|.
 function cube_direction(direction)
-    return CUBE_DIRECTIONS[(6 + (direction % 6)) % 6 + 1]
+    return CUBE_DIRECTIONS[(direction % 6) % 6 + 1]
 end
 
 -- return hexagon adjacent to |hex| in integer index |direction|.
 function cube_neighbour(hex, direction)
-    return hex + CUBE_DIRECTIONS[(6 + (direction % 6)) % 6 + 1]
+    return hex + CUBE_DIRECTIONS[(direction % 6) % 6 + 1]
 end
 
 -- return cube coords at location 60deg away to the left; counter-clockwise
@@ -95,7 +95,7 @@ end
 function pixel_to_cube(pix, layout)
     local W = layout.orientation.W
 
-    local pix = (pix - layout.origin) / layout.size 
+    local pix = (pix - layout.origin) / layout.size
 
     local s = W[1][1] * pix[1] + W[1][2] * pix[2]
     local t = W[2][1] * pix[1] + W[2][2] * pix[2]
@@ -126,8 +126,7 @@ function offset_to_cube(off)
 end
 
 --[[============================================================================
-                         ----- MAPS & STORAGE -----
-
+    ----- MAPS & STORAGE -----
   MAPS STORE CUBE COORDINATES. MAPS STORE CUBE COORDINATES. MAPS STORE CUBE COOR
 
   This means, you are not to draw using the coordinates stored in your map.
@@ -135,14 +134,26 @@ end
 
   If you wish to draw a hexagon to the screen, you must first use cube_to_pixel
   to retrieve the center of the hexagon on each set of cube coordinates stored
-  in your map.
+  in your map. Then, depending on how you are going to draw, either call
+  am.circle with |sides| = 6, or gather the vertices with hex_corners and
+  use am.draw - TODO, haven't used am.draw yet.
 
   Information about the maps' dimensions are stored in a metatable, so you can
-  retrieve details about arbitrary maps after they are created.
+  retrieve details about maps after they are created.
 
+    ----- NOISE -----
+  To simplify terrain generation, unordered, hash-like maps automatically
+  calculate and store perlin noise as their values. You can modify the nature
+  of the noise by providing different |frequencies| as a tables of values, for
+  example: {1, 2, 4, 8} or {1, 0.5, 0.25, 0.125}. These just increase the
+  complexity of the curvature of the noise. The default is {1}.
+
+    ----- TODO -----
   TODO make all functions work regardless of layout. as it stands, they kind
   of do, just not always nicely.
+
 ============================================================================]]--
+----- ORDERED MAPS -----
 
 -- returns ordered ring-shaped map of |radius| from |center|.
 function ring_map(center, radius)
@@ -163,8 +174,9 @@ function ring_map(center, radius)
 end
 
 -- returns ordered hexagonal map of |radius| rings from |center|.
--- the only difference between hex_spiral_map and hex_hexagonal_map is that
--- hex_spiral_map is ordered, in a spiral path from the |center|.
+-- the only difference between spiral_map and hexagonal_map is that
+-- spiral_map is ordered, in a spiral path from the |center|.
+
 function spiral_map(center, radius)
     local map = {center}
     local mt = {__index={center=center, radius=radius}}
@@ -177,7 +189,9 @@ function spiral_map(center, radius)
     return map
 end
 
--- returns unordered parallelogram-shaped map of |width| and |height|.
+----- UNORDERED, HASH-LIKE MAPS -----
+
+-- returns unordered parallelogram-shaped map of |width| and |height| with perlin noise
 function parallelogram_map(width, height)
     local map = {}
     local mt = {__index={width=width, height=height}}
@@ -186,13 +200,13 @@ function parallelogram_map(width, height)
 
     for i = 0, width do
         for j = 0, height do
-            map[vec2(i, -j)] = true
+            map[vec2(i, j)] = true
         end
     end
     return map
 end
 
--- returns unordered triangular map of |size|.
+-- returns unordered triangular map of |size| with perlin noise
 function triangular_map(size)
     local map = {}
     local mt = {__index={size=size}}
@@ -207,7 +221,7 @@ function triangular_map(size)
     return map
 end
 
--- returns unordered hexagonal map of |radius|.
+-- returns unordered hexagonal map of |radius| with perlin noise
 function hexagonal_map(radius)
     local map = {}
     local mt = {__index={radius=radius}}
@@ -225,20 +239,59 @@ function hexagonal_map(radius)
     return map
 end
 
--- returns unordered rectangular map of |width| and |height|.
-function rectangular_map(width, height)
+-- returns unordered rectangular map of |width| and |height| with perlin noise
+function rectangular_map(width, height, frequencies)
+
     local map = {}
     local mt = {__index={width=width, height=height}}
+    local frequencies = frequencies or {1}
 
     setmetatable(map, mt)
 
     for i = 0, width do
         for j = 0, height do
-            map[vec2(i, -j - math.floor(i/2))] = true
+
+            -- calculate noise
+            local idelta = assert(i / width, "width must be greater than 0")
+            local jdelta = assert(j / height, "height must be greater than 0")
+            local noise = 0
+
+            for _,freq in pairs(frequencies) do
+                noise = noise + 1/freq * math.perlin(vec2(freq * idelta,
+                                                          freq * jdelta))
+            end
+
+            -- this is what makes it a rectangle
+            local hex = vec2(i, j - math.floor(i/2))
+
+            -- store hex in the map paired with its associated noise value
+            map[hex] = noise
         end
     end
     return map
 end
+
+--[[============================================================================
+                             ----- NOISE -----
+============================================================================]]--
+
+function simplex_map(frequency, exponent, width, height)
+    local map = {}
+
+    for i = 0, height do
+        for j = 0, width do
+            local idelta = i/width - 0.5
+            local jdelta = j/height - 0.5
+            map[vec2(i, j)] = math.simplex(idelta, jdelta)
+        end
+    end
+end
+
+
+
+
+
+
 
 --[[============================================================================
                          ----- PATHFINDING -----
