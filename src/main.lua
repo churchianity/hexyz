@@ -1,10 +1,8 @@
 
 require"hex"
-require"util"
-require"sprites"
 
 --[[============================================================================
-                    ----- COLOR CONSTANTS -----
+    ----- COLOR CONSTANTS -----
 ============================================================================]]--
 local EIGENGRAU = vec4(0.08, 0.08, 0.11, 1)
 
@@ -48,21 +46,23 @@ am.ascii_color_map =
 }
 
 --[[============================================================================
-                    ----- SETUP -----
+    ----- SETUP -----
 ============================================================================]]--
 local win = am.window
-{   -- base resolution = 3/4 * WXGA standard 16:10
+{
+    -- base resolution = 3/4 * WXGA standard 16:10
     width = 1280 * 3/4,                     -- 960px
     height = 800 * 3/4,                     -- 600px
 
     clear_color = BASE03
 }
 
-local map       = rectangular_map(45, 31)
-local layout    = layout(vec2(-268, win.top - 10))
+local map       = rectangular_map(45, 31, {2, 4, 8})
+local layout    = layout(vec2(-268, win.bottom))
+local home      = hex_to_pixel(vec2(23, 4), layout)
 
 --[[============================================================================
-                    ----- SCENE GRAPH / NODES -----
+    ----- SCENE GRAPH / NODES -----
 ============================================================================]]--
 local panel; local world; local game                                        --[[
 
@@ -82,17 +82,19 @@ local backdrop; local menu; local title                                     --[[
    menu
 
 --[[============================================================================
-                    ----- FUNCTIONS -----
+    ----- FUNCTIONS -----
 ============================================================================]]--
+
+--
 function keep_time()
     local offset = am.current_time()
 
-    world:action(function()
-        world:remove("time")
+    game:action(function()
+        game:remove("time")
 
         local time_str = string.format("%.2f", am.current_time() - offset)
 
-        world:append(
+        game:append(
             am.translate(-374, win.top - 10)
             ^ am.text(time_str):tag"time")
     end)
@@ -104,34 +106,35 @@ function show_coords()
         game:remove("coords")
         game:remove("selected")
 
-        local hex = pixel_to_cube(win:mouse_position(), layout)
-        local mouse = cube_to_offset(hex)
+        local hex = pixel_to_hex(win:mouse_position(), layout)
+        local mouse = hex_to_offset(hex)
 
         -- check mouse is within bounds of game map
         if mouse.x > 0 and mouse.x < map.width and
-           mouse.y > 0 and mouse.y < map.height then
+           -mouse.y > 0 and -mouse.y < map.height then -- north is positive
 
             local text = am.text(string.format("%d,%d", mouse.x, mouse.y))
             local coords = am.group{
                 am.translate(win.right - 25, win.top - 10)
-                ^ am.text(string.format("%d,%d", mouse.x, mouse.y)):tag"coords"}
+                ^ am.text(string.format("%d,%d", mouse.x,-mouse.y)):tag"coords"}
 
             world:append(coords)
 
-            local color = vec4(1)
-            local pix = cube_to_pixel(hex, layout)
+            local color = vec4(0, 0, 0, 0.2)
+            local pix = hex_to_pixel(hex, layout)
             world:append(am.circle(pix, layout.size.x, color, 6):tag"selected")
         end
     end)
 end
 
+--
 function title_init()
     backdrop = am.group{}:tag"backdrop"
     menu = am.group{}:tag"menu"
     title = am.group{menu, backdrop}:tag"title"
 end
 
-
+--
 function game_init()
     -- setup nodes
     world = am.group{}:tag"world"
@@ -148,34 +151,65 @@ function game_init()
         for hex,noise in pairs(map) do
 
             -- determine cell color based on noise
-            local color = vec4((noise + 1) / 2)
+            local color
+
+            -- impassable
+            if noise < -0.5 then
+                color = vec4(0.10, 0.30, 0.20, (noise + 1) / 2)
+
+            -- passable
+            elseif noise < 0 then
+                color = vec4(0.10, 0.25, 0.05, (noise + 1.9) / 2)
+
+            -- passable
+            elseif noise < 0.5 then
+                color = vec4(0.25, 0.20, 0.10, (noise + 1.9) / 2)
+
+            -- impassable
+            else
+                color = vec4(0.10, 0.30, 0.20, (noise + 1) / 2)
+            end
 
             -- determine cell shading mask based on map position
-            local off = cube_to_offset(hex)
-            local mask = vec4(0, 0, 0, math.max(((off.x-23)/30)^2,
-                                                ((off.y-16)/20)^2))
+            local off = hex_to_offset(hex)
+            local mask = vec4(0, 0, 0, math.max(((off.x-23)/45)^2,
+                                               ((-off.y-16)/31)^2))
+            color = color - mask
+
             -- determine hexagon center for drawing
-            local center = cube_to_pixel(hex, layout)
+            local center = hex_to_pixel(hex, layout)
 
             -- prepend hexagon to screen
             world:prepend(am.circle(center, 11, color, 6):tag(tostring(hex)))
-            am.wait(am.delay(0.01))
 
             -- fade in bg panel
-            panel"bg".color = BASE03/am.frame_time
+            panel"bg".color = BASE03
+
+            -- sleep
+            --am.wait(am.delay(0.01))
         end
+        -- home base
+        world:append(am.translate(home)
+                     ^ am.rotate(0):tag"homer"
+                     ^ am.circle(vec2(0), 22, ORANGE, 3)):tag"home"
+
+        world:append(am.translate(home)
+                     ^ am.rotate(60):tag"homer2"
+                     ^ am.circle(vec2(0), 22, YELLOW, 3)):tag"home"
+
+        world:action(function()
+            world"homer".angle = am.frame_time / 6
+            world"homer2".angle = am.frame_time / 3
+        end)
 
         show_coords()   -- mouse-hover events
         keep_time()     -- scoring
-
     end))
-
-    -- make it so
-    win.scene = game
+    win.scene = game -- make it so
 end
 
 --[[============================================================================
-                            ----- MAIN -----
+    ----- MAIN -----
 ============================================================================]]--
 
 game_init()
