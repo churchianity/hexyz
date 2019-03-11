@@ -156,9 +156,6 @@ end
 -- returns ordered ring-shaped map of |radius| from |center|.
 function ring_map(center, radius)
     local map = {}
-    local mt = {__index={center=center, radius=radius}}
-
-    setmetatable(map, mt)
 
     local walk = center + HEX_DIRECTIONS[6] * radius
 
@@ -168,137 +165,118 @@ function ring_map(center, radius)
             walk = hex_neighbour(walk, i)
         end
     end
+    setmetatable(map, {__index={center=center, radius=radius}})
     return map
 end
 
 -- returns ordered spiral hexagonal map of |radius| rings from |center|.
 function spiral_map(center, radius)
     local map = {center}
-    local mt = {__index={center=center, radius=radius}}
-
-    setmetatable(map, mt)
 
     for i = 1, radius do
         table.append(map, ring_map(center, i))
     end
+    setmetatable(map, {__index={center=center, radius=radius}})
     return map
 end
 
 -- returns unordered parallelogram-shaped map of |width| and |height| with simplex noise
-function parallelogram_map(width, height, frequencies)
-    local map = {}
-    local mt = {__index={width=width, height=height, frequencies=frequencies}}
-    local frequencies = frequencies or {1}
+function parallelogram_map(width, height, seed)
+    local seed = seed or math.random(width * height)
 
-    setmetatable(map, mt)
+    -- fill the map
+    local map = {}
 
     for i = 0, width do
         for j = 0, height do
 
-            -- calculate noise
-            local idelta = assert(i / width, "width must be greater than 0")
-            local jdelta = assert(j / height, "height must be greater than 0")
+            -- generate noise
+            local idelta = i / width
+            local jdelta = j / height
             local noise = 0
 
-            for _,freq in pairs(frequencies) do
-                noise = noise
-                        + assert(1/freq, "frequencies must be non-zero")
-                        * math.simplex(vec2(freq * idelta, freq * jdelta))
+            for oct = 1, math.max(width, height) do
+                noise = noise + 1/4^oct * math.simplex(vec2(idelta + seed * width, jdelta + seed * height) * 2^oct)
             end
 
             -- straightforward iteration produces a parallelogram
             map[vec2(i, j)] = noise
         end
     end
+    setmetatable(map, {__index={width=width, height=height, seed=seed}})
     return map
 end
 
 -- returns unordered triangular map of |size| with simplex noise
-function triangular_map(size, frequencies)
-    local map = {}
-    local mt = {__index={size=size, frequencies=frequencies}}
-    local frequencies = frequencies or {1}
+function triangular_map(size, seed)
+    local seed = seed or math.random(size)
 
-    setmetatable(map, mt)
+    -- fill the map
+    local map = {}
 
     for i = 0, size do
         for j = size - i, size do
 
-            -- calculate noise
-            local idelta = assert(i / size, "size must be greater than 0")
-            local jdelta = assert(j / -size, "size must be greater than 0")
+            -- generate noise
+            local idelta = i / size
+            local jdelta = j / size
             local noise = 0
 
-            for _,freq in pairs(frequencies) do
-                noise = noise
-                        + assert(1/freq, "frequencies must be non-zero")
-                        * math.simplex(vec2(freq * idelta, freq * jdelta))
+            for oct = 1, size do
+                noise = noise + 1/3^oct * math.simplex(vec2(idelta + seed * size, jdelta + seed * size) * 2^oct)
             end
+
             map[vec2(i, j)] = noise
         end
     end
+    setmetatable(map, {__index={size=size, seed=seed}})
     return map
 end
 
 -- returns unordered hexagonal map of |radius| with simplex noise
-function hexagonal_map(radius, frequencies)
-    local map = {}
-    local mt = {__index={radius=radius, frequencies=frequencies}}
-    local frequencies = frequencies or {1}
+function hexagonal_map(radius, seed)
+    local seed = seed or math.random(radius * 2)
 
-    setmetatable(map, mt)
+    -- fill the map
+    local map = {}
 
     for i = -radius, radius do
         local j1 = math.max(-radius, -i - radius)
         local j2 = math.min(radius, -i + radius)
 
         for j = j1, j2 do
-
-            -- calculate noise
-            local idelta = assert(i / radius*2, "radius must be greater than 0")
-            local jdelta = assert(j / (j2-j1), "radius must be greater than 0")
-            local noise = 0
-
-            for _,freq in pairs(frequencies) do
-                noise = noise
-                        + assert(1/freq, "frequencies must be non-zero")
-                        * math.perlin(vec2(freq * idelta, freq * jdelta))
-            end
-
-            -- populate
-            map[vec2(i, j)] = noise
+            map[vec2(i, j)] = true
         end
     end
+    setmetatable(map, {__index={radius=radius, seed=seed}})
     return map
 end
 
 -- returns unordered rectangular map of |width| and |height| with simplex noise
-function rectangular_map(width, height, frequencies)
+function rectangular_map(width, height, seed)
+    local seed = seed or math.random(width * height)
 
+    -- fill the map
     local map = {}
-    local mt = {__index={width=width, height=height, frequencies=frequencies}}
-    local frequencies = frequencies or {1}
-
-    setmetatable(map, mt)
 
     for i = 0, width do
         for j = 0, height do
 
-            -- calculate noise
-            local idelta = assert(i / width, "width must be greater than 0")
-            local jdelta = assert(j / height, "height must be greater than 0")
+            -- generate noise
+            local idelta = i / width
+            local jdelta = j / height
             local noise = 0
 
-            for _,freq in pairs(frequencies) do
-                noise = noise
-                    + assert(1/freq, "frequencies must be non-zero")
-                    * math.simplex(vec2(freq * idelta, freq * jdelta))
+            for oct = 1, math.max(width, height) do
+                noise = noise + 2/3^oct * math.simplex(vec2(idelta + seed * width, jdelta + seed * height) * 2^oct)
+
             end
 
             -- store hex in the map paired with its associated noise value
             map[vec2(i, j - math.floor(i/2))] = noise
         end
     end
+    setmetatable(map, {__index={width=width, height=height, seed=seed}})
     return map
 end
 

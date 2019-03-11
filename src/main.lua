@@ -1,6 +1,8 @@
 
 require"hexyz"
 
+math.randomseed(os.time())
+
 --[[============================================================================
     ----- COLOR CONSTANTS -----
 ============================================================================]]--
@@ -24,7 +26,7 @@ local BLUE    = vec4(0.14, 0.54, 0.82, 1)
 local CYAN    = vec4(0.16, 0.63, 0.59, 1)
 local GREEN   = vec4(0.52, 0.60, 0   , 1)
 
-am.ascii_color_map =
+table.merge(am.ascii_color_map,
 {
     E = EIGENGRAU,
     K = BASE03,
@@ -35,15 +37,42 @@ am.ascii_color_map =
     S = BASE1,
     w = BASE2,
     W = BASE3,
-    y = YELLOW,
-    o = ORANGE,
-    r = RED,
-    m = MAGENTA,
-    v = VIOLET,
-    b = BLUE,
-    c = CYAN,
-    g = GREEN
-}
+    Y = YELLOW,
+    O = ORANGE,
+    R = RED,
+    M = MAGENTA,
+    V = VIOLET,
+    B = BLUE,
+    C = CYAN,
+    G = GREEN
+})
+
+local beetle =
+[[
+. . . . . . . . . . . . . . . . . . .
+. . . . . . . . . . . . . . . . . . .
+. . . . . . . . . y . . . . . . . . .
+. . . . . . . . y . y . . . . . . . .
+. . . . . . . . y y y . . . . . . . .
+. . . . . . . y y . y y . . . . . . .
+. . . . . . . y y . y y . . . . . . .
+. . . . . . y O y O y O y . . . . . .
+. . . . . . o O y o y O o . . . . . .
+. . o . . o y o O O O o y o . . o . .
+. . . o . o W o O O O o W o . o . . .
+. . . . o O o O O O O O o O o . . . .
+. . . . o o O O O O O O O o o . . . .
+. . . . . . o O O O O O o . . . . . .
+. . o o o o O o o o o o O o o o o . .
+. . . . . o O O o o o O O o o . . . .
+. . . . . o O O O o O O O o . . . . .
+. . . . . o O O O o O O O o . . . . .
+. . . . . . o O O o O O o . . . . . .
+. . . . . o o o O o O o o o . . . . .
+. . . o o o . . o O o . . o o o . . .
+. . . . . . . . . . . . . . . . . . .
+. . . . . . . . . . . . . . . . . . .
+]]
 
 --[[============================================================================
     ----- SETUP -----
@@ -57,7 +86,7 @@ local win = am.window
     clear_color = BASE03
 }
 
-local map       = rectangular_map(45, 31, {2, 4, 8})
+local map       = rectangular_map(45, 31)
 local layout    = layout(vec2(-268, win.bottom))
 local home      = hex_to_pixel(vec2(23, 4), layout)
 
@@ -159,7 +188,7 @@ function game_init()
 
             -- passable
             elseif noise < 0 then
-                color = vec4(0.10, 0.25, 0.05, (noise + 1.9) / 2)
+                color = vec4(0.10, 0.25, (noise + 1.9) / 18, (noise + 1.9) / 2)
 
             -- passable
             elseif noise < 0.5 then
@@ -188,18 +217,14 @@ function game_init()
             -- sleep
             --am.wait(am.delay(0.01))
         end
+
         -- home base
         world:append(am.translate(home)
-                     ^ am.rotate(0):tag"homer"
-                     ^ am.circle(vec2(0), 22, ORANGE, 3)):tag"home"
-
-        world:append(am.translate(home)
-                     ^ am.rotate(60):tag"homer2"
-                     ^ am.circle(vec2(0), 22, YELLOW, 3)):tag"home"
+                     ^ am.rotate(0):tag"home_rotate"
+                     ^ am.circle(vec2(0), 22, MAGENTA, 5)):tag"home"
 
         world:action(function()
-            world"homer".angle = am.frame_time / 6
-            world"homer2".angle = am.frame_time / 3
+            world"home_rotate".angle = am.frame_time / 5
         end)
 
         show_coords()   -- mouse-hover events
