@@ -91,39 +91,19 @@ local layout    = layout(vec2(-268, win.bottom))
 local home      = hex_to_pixel(vec2(23, 4), layout)
 
 --[[============================================================================
-    ----- SCENE GRAPH / NODES -----
-============================================================================]]--
-local panel; local world; local game                                        --[[
-
-  panel
-    |
-    +------> game ------> win.scene
-    |
-  world
-
-                                                                            ]]--
-local backdrop; local menu; local title                                     --[[
-
- backdrop
-    |
-    +------> title ------> win.scene
-    |
-   menu
-
---[[============================================================================
     ----- FUNCTIONS -----
 ============================================================================]]--
 
 --
-function keep_time()
+function keep_score()
     local offset = am.current_time()
 
-    game:action(function()
-        game:remove("time")
+    world:action(function()
+        world:remove("time")
 
         local time_str = string.format("%.2f", am.current_time() - offset)
 
-        game:append(
+        world:append(
             am.translate(-374, win.top - 10)
             ^ am.text(time_str):tag"time")
     end)
@@ -131,9 +111,9 @@ end
 
 -- TODO refactor to something like - poll-mouse or mouse-hover event
 function show_coords()
-    game:action(function()
-        game:remove("coords")
-        game:remove("selected")
+    world:action(function()
+        world:remove("coords")
+        world:remove("selected")
 
         local hex = pixel_to_hex(win:mouse_position(), layout)
         local mouse = hex_to_offset(hex)
@@ -156,53 +136,42 @@ function show_coords()
     end)
 end
 
---
-function title_init()
-    backdrop = am.group{}:tag"backdrop"
-    menu = am.group{}:tag"menu"
-    title = am.group{menu, backdrop}:tag"title"
-end
-
---
-function game_init()
-    -- setup nodes
+-- generate map, no seed means random map
+function render_map(seed)
+    -- setup
     world = am.group{}:tag"world"
-    panel = am.group{}:tag"panel"
-    game = am.group{world, panel}:tag"game"
+    map = rectangular_map(45, 31, seed)
 
     -- render world
     world:action(coroutine.create(function()
 
-        -- background panel for gui elements
-        panel:append(am.rect(win.left, win.top, -268, win.bottom):tag"bg")
-
         -- begin map generation
-        for hex,noise in pairs(map) do
+        for hex,elevation in pairs(map) do
 
-            -- determine cell color based on noise
+            -- determine cell
             local color
 
-            -- impassable
-            if noise < -0.5 then
-                color = vec4(0.10, 0.30, 0.20, (noise + 1) / 2)
+                -- lowest elevation : impassable
+            if elevation < -0.5 then
+                color = vec4(0.10, 0.30, 0.20, (elevation + 1) / 2)
 
-            -- passable
-            elseif noise < 0 then
-                color = vec4(0.10, 0.25, (noise + 1.9) / 18, (noise + 1.9) / 2)
+                -- med-low elevation : passable
+            elseif elevation < 0 then
+                color = vec4(0.10, 0.25, 0.10, (elevation + 1.9) / 2)
 
-            -- passable
-            elseif noise < 0.5 then
-                color = vec4(0.25, 0.20, 0.10, (noise + 1.9) / 2)
+                -- med-high elevation : passable
+            elseif elevation< 0.5 then
+                color = vec4(0.25, 0.20, 0.10, (elevation + 1.9) / 2)
 
-            -- impassable
+                -- highest elevation : impassable
             else
-                color = vec4(0.10, 0.30, 0.20, (noise + 1) / 2)
+                color = vec4(0.10, 0.30, 0.20, (elevation + 1) / 2)
             end
 
-            -- determine cell shading mask based on map position
+            -- subtly shade edges of map. offset coords are easier to work with
             local off = hex_to_offset(hex)
-            local mask = vec4(0, 0, 0, math.max(((off.x-23)/45)^2,
-                                               ((-off.y-16)/31)^2))
+            local mask = vec4(0, 0, 0, math.max(((off.x - 23) / 45)^2,
+                                               ((-off.y - 16) / 31)^2))
             color = color - mask
 
             -- determine hexagon center for drawing
@@ -210,32 +179,26 @@ function game_init()
 
             -- prepend hexagon to screen
             world:prepend(am.circle(center, 11, color, 6):tag(tostring(hex)))
-
-            -- fade in bg panel
-            panel"bg".color = BASE03
-
-            -- sleep
-            --am.wait(am.delay(0.01))
         end
-
         -- home base
         world:append(am.translate(home)
                      ^ am.rotate(0):tag"home_rotate"
                      ^ am.circle(vec2(0), 22, MAGENTA, 5)):tag"home"
 
+        world:append(am.scale(5) ^ am.sprite(beetle))
+
         world:action(function()
             world"home_rotate".angle = am.frame_time / 5
         end)
-
         show_coords()   -- mouse-hover events
-        keep_time()     -- scoring
+        keep_score()     -- scoring
     end))
-    win.scene = game -- make it so
+    win.scene = world -- make it so
 end
 
 --[[============================================================================
     ----- MAIN -----
 ============================================================================]]--
 
-game_init()
+render_map()
 

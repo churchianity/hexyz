@@ -14,11 +14,11 @@ end
 
 -- all possible vector directions from a given hex by edge
 local HEX_DIRECTIONS = {vec2( 0 ,  1),
-                         vec2( 1 ,  0),
-                         vec2( 1 , -1),
-                         vec2( 0 , -1),
-                         vec2(-1 ,  0),
-                         vec2(-1 ,  1)}
+                        vec2( 1 ,  0),
+                        vec2( 1 , -1),
+                        vec2( 0 , -1),
+                        vec2(-1 ,  0),
+                        vec2(-1 ,  1)}
 
 -- return hex vector direction via integer index |direction|.
 function hex_direction(direction)
@@ -268,8 +268,9 @@ function rectangular_map(width, height, seed)
             local noise = 0
 
             for oct = 1, math.max(width, height) do
-                noise = noise + 2/3^oct * math.simplex(vec2(idelta + seed * width, jdelta + seed * height) * 2^oct)
-
+                noise = noise + 2/3^oct * math.simplex(vec2(idelta + seed*width,
+                                                            jdelta + seed*height
+                                                            * 2^oct))
             end
 
             -- store hex in the map paired with its associated noise value

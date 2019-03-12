@@ -3,7 +3,7 @@
 
 This is a small and simple library for using hexagonal grids in amulet + lua. I wrote it for a tower defense game I'm making.
 
-It's not really well documented. If you want an actual good resource, go to [amit's guide to hexagonal grids](https://redblobgames.com/grid/hexagons).
+It's not really well documented. If you want an actual good resource, go to [amit's guide to hexagonal grids](https://redblobgames.com/grids/hexagons).
 So much of what is here I derived from amit's work.
 
 
@@ -45,7 +45,7 @@ The noise values on the hashmaps are seeded. You can optionally provide a seed a
 
 * [Hex Map 1](https://catlikecoding.com/unity/tutorials/hex-map/) - unity tutorial for hexagon grids with some useful generalized math.
 
-* [Hexagonal Grids](https://redblobgames.com/grid/hexagons) - THE resource on hexagonal grids on the internet.
+* [Hexagonal Grids](https://redblobgames.com/grids/hexagons) - THE resource on hexagonal grids on the internet.
 
 * [Amulet Docs](http://amulet.xyz/doc) - amulet documentation.
 
