@@ -6,11 +6,6 @@ local function round(n) return n % 1 >= 0.5 and math.ceil(n) or math.floor(n) en
     ----- HEX CONSTANTS AND UTILITY FUNCTIONS -----
 ============================================================================]]--
 
--- Hex Equality - Meant to Operate on two Amulet Vectors (vec2)
-function hex_equals(a, b) return a[1] == b[1] and a[2] == b[2] end
-function hex_not_equals(a, b) return not hex_equals(a, b) end
-
-
 -- All Non-Diagonal Vector Directions from a Given Hex by Edge
 HEX_DIRECTIONS = {vec2( 1 , -1), vec2( 1 ,  0), vec2(0 ,  1),
                   vec2(-1 ,  1), vec2(-1 ,  0), vec2(0 , -1)}
@@ -113,7 +108,7 @@ end
 
 -- Offset Coordinates Look Nice / are Useful for UI-Implementations
 function hex_to_offset(hex)
-   return vec2(hex[1], -hex[1]-hex[2] + (hex[1] + (hex[1] % 2)) / 2) end
+   return vec2(hex[1], -hex[1] - hex[2] + (hex[1] + (hex[1] % 2)) / 2) end
 
 
 -- ... Back to Cube Coordinates
@@ -157,7 +152,7 @@ end
 -- Used to Retrieve Noise Values in Hashmap; t[vec2(x, y)] will always find nil
 function hash_retrieve(map, hex)
    for h,n in pairs(map) do
-      if hex_equals(hex, h) then
+      if hex == h then
          return n
       end
    end
@@ -224,7 +219,6 @@ function hexagonal_map(radius, seed)
    local seed = seed or math.random(radius * 2 * math.pi)
 
    local map = {}
-   local mt = {__index={radius=radius, seed=seed}}
    for i = -radius, radius do
       local j1 = math.max(-radius, -i - radius)
       local j2 = math.min(radius, -i + radius)
@@ -245,7 +239,7 @@ function hexagonal_map(radius, seed)
          map[vec2(i, j)] = noise
       end
    end
-   setmetatable(map, mt)
+   setmetatable(map, {__index={radius=radius, seed=seed}})
    return map
 end
 
@@ -255,8 +249,6 @@ function rectangular_map(width, height, seed)
    local seed = seed or math.random(width * height)
 
    local map = {}
-   local mt = {__index={width=width, height=height, seed=seed}}
-
    for i = 0, width do
       for j = 0, height do
 
@@ -274,7 +266,7 @@ function rectangular_map(width, height, seed)
          map[vec2(i, j - math.floor(i/2))] = noise
       end
    end
-   setmetatable(map, mt)
+   setmetatable(map, {__index={width=width, height=height, seed=seed}})
    return map
 end
 
