@@ -64,7 +64,7 @@ local POINTY = {M = mat2(3.0^0.5,   3.0^0.5/2.0,  0.0,  3.0/2.0),
                 angle = 0.5}
 
 -- Hex to Screen -- Orientation Must be Either POINTY or FLAT
-function hex_to_pixel(hex, size, orientation_M)
+function hex_to_pixel(hex, size, orientation_M, offset)
    local M = orientation_M or FLAT.M
 
    local x = (M[1][1] * hex[1] + M[1][2] * hex[2]) * size[1]
@@ -149,15 +149,15 @@ function spiral_map(center, radius)
 end
 
 
--- Used to Retrieve Noise Values in Hashmap; t[vec2(x, y)] will always find nil
-function hash_retrieve(map, hex)
-   for h,n in pairs(map) do
-      if hex == h then
-         return n
+function hash_retrieve(map, entry)
+   for k,v in pairs(map) do
+      if k == entry then
+         return v
       end
    end
    return nil
 end
+
 
 
 -- Returns Unordered Parallelogram-Shaped Map of |width| and |height| with Simplex Noise
@@ -250,6 +250,7 @@ function rectangular_map(width, height, seed)
 
    local map = {}
    for i = 0, width do
+      map[i] = {}
       for j = 0, height do
 
          -- Begin to Calculate Noise
@@ -263,7 +264,10 @@ function rectangular_map(width, height, seed)
             local pos = vec2(idelta + seed * width, jdelta + seed * height)
             noise = noise + f * math.simplex(pos * l)
          end
-         map[vec2(i, j - math.floor(i/2))] = noise
+         j = j - math.floor(i/2) -- this is what makes it rectangular
+
+         -- store two dimensions as a single number
+         map[i][j] = noise
       end
    end
    setmetatable(map, {__index={width=width, height=height, seed=seed}})
