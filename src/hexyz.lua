@@ -3,9 +3,9 @@
 local function round(n) return n % 1 >= 0.5 and math.ceil(n) or math.floor(n) end
 
 --[[============================================================================
-    ----- HEX CONSTANTS AND UTILITY FUNCTIONS -----
-============================================================================]]--
+    -- HEX CONSTANTS AND UTILITY FUNCTIONS
 
+]]
 -- All Non-Diagonal Vector Directions from a Given Hex by Edge
 HEX_DIRECTIONS = {vec2( 1 , -1), vec2( 1 ,  0), vec2(0 ,  1),
                   vec2(-1 ,  1), vec2(-1 ,  0), vec2(0 , -1)}
@@ -48,11 +48,10 @@ local function hex_round(x, y, z)
       rz = -rx - ry end
    return vec2(rx, ry)
 end
-
 --[[==========================================================================--
-    ----- ORIENTATION & LAYOUT -----
-============================================================================]]--
+      -- ORIENTATION & LAYOUT
 
+]]
 -- Forward & Inverse Matrices used for the Flat Orientation
 local FLAT = {M = mat2(3.0/2.0,  0.0,  3.0^0.5/2.0,  3.0^0.5    ),
               W = mat2(2.0/3.0,  0.0,  -1.0/3.0   ,  3.0^0.5/3.0),
@@ -64,11 +63,11 @@ local POINTY = {M = mat2(3.0^0.5,   3.0^0.5/2.0,  0.0,  3.0/2.0),
                 angle = 0.5}
 
 -- Hex to Screen -- Orientation Must be Either POINTY or FLAT
-function hex_to_pixel(hex, size, orientation_M, offset)
+function hex_to_pixel(hex, size, orientation_M)
    local M = orientation_M or FLAT.M
 
-   local x = (M[1][1] * hex[1] + M[1][2] * hex[2]) * size[1]
-   local y = (M[2][1] * hex[1] + M[2][2] * hex[2]) * size[2]
+   local x = (M[1][1] * hex[1] + M[1][2] * hex[2]) * (size and size[1] or 11)
+   local y = (M[2][1] * hex[1] + M[2][2] * hex[2]) * (size and size[2] or 11)
 
    return vec2(x, y)
 end
@@ -78,7 +77,7 @@ end
 function pixel_to_hex(pix, size, orientation_W)
    local W = orientation_W or FLAT.W
 
-   local pix = pix / size
+   local pix = pix / (size or vec2(11))
 
    local x = W[1][1] * pix[1] + W[1][2] * pix[2]
    local y = W[2][1] * pix[1] + W[2][2] * pix[2]
@@ -111,15 +110,14 @@ function hex_to_offset(hex)
    return vec2(hex[1], -hex[1] - hex[2] + (hex[1] + (hex[1] % 2)) / 2) end
 
 
--- ... Back to Cube Coordinates
+-- Back to Cube Coordinates
 function offset_to_hex(off)
    return vec2(off[1], off[2] - math.floor((off[1] - 1 * (off[1] % 2))) / 2) end
 
-
 --[[============================================================================
-    ----- MAPS & STORAGE -----
-============================================================================]]--
+    -- MAPS & STORAGE
 
+]]
 -- Returns Ordered Ring-Shaped Map of |radius| from |center|
 function ring_map(center, radius)
    local map = {}
@@ -149,23 +147,13 @@ function spiral_map(center, radius)
 end
 
 
-function hash_retrieve(map, entry)
-   for k,v in pairs(map) do
-      if k == entry then
-         return v
-      end
-   end
-   return nil
-end
-
-
-
 -- Returns Unordered Parallelogram-Shaped Map of |width| and |height| with Simplex Noise
 function parallelogram_map(width, height, seed)
    local seed = seed or math.random(width * height)
 
    local map = {}
    for i = 0, width do
+      map[i] = {}
       for j = 0, height do
 
          -- Calculate Noise
@@ -179,7 +167,7 @@ function parallelogram_map(width, height, seed)
             local pos = vec2(idelta + seed * width, jdelta + seed * height)
             noise = noise + f * math.simplex(pos * l)
          end
-         map[vec2(i, j)] = noise
+         map[i][j] = noise
       end
    end
    setmetatable(map, {__index={width=width, height=height, seed=seed}})
@@ -193,6 +181,7 @@ function triangular_map(size, seed)
 
    local map = {}
    for i = 0, size do
+      map[i] = {}
       for j = size - i, size do
 
          -- Generate Noise
@@ -206,7 +195,7 @@ function triangular_map(size, seed)
             local pos = vec2(idelta + seed * size, jdelta + seed * size)
             noise = noise + f * math.simplex(pos * l)
          end
-         map[vec2(i, j)] = noise
+         map[i][j] = noise
       end
    end
    setmetatable(map, {__index={size=size, seed=seed}})
@@ -220,6 +209,8 @@ function hexagonal_map(radius, seed)
 
    local map = {}
    for i = -radius, radius do
+      map[i] = {}
+
       local j1 = math.max(-radius, -i - radius)
       local j2 = math.min(radius, -i + radius)
 
@@ -234,9 +225,10 @@ function hexagonal_map(radius, seed)
             local f = 2/3^oct
             local l = 2^oct
             local pos = vec2(idelta + seed * radius, jdelta + seed * radius)
+
             noise = noise + f * math.simplex(pos * l)
          end
-         map[vec2(i, j)] = noise
+         map[i][j] = noise
       end
    end
    setmetatable(map, {__index={radius=radius, seed=seed}})
