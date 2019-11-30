@@ -130,8 +130,7 @@ function ring_map(center, radius)
          walk = hex_neighbour(walk, i)
       end
    end
-   setmetatable(map, {__index={center=center, radius=radius}})
-   return map
+   return setmetatable(map, {__index={center=center, radius=radius}})
 end
 
 
@@ -142,8 +141,7 @@ function spiral_map(center, radius)
    for i = 1, radius do
       table.append(map, ring_map(center, i))
    end
-   setmetatable(map, {__index={center=center, radius=radius}})
-   return map
+   return setmetatable(map, {__index={center=center, radius=radius}})
 end
 
 
@@ -170,8 +168,7 @@ function parallelogram_map(width, height, seed)
          map[i][j] = noise
       end
    end
-   setmetatable(map, {__index={width=width, height=height, seed=seed}})
-   return map
+   return setmetatable(map, {__index={width=width, height=height, seed=seed}})
 end
 
 
@@ -198,8 +195,7 @@ function triangular_map(size, seed)
          map[i][j] = noise
       end
    end
-   setmetatable(map, {__index={size=size, seed=seed}})
-   return map
+   return setmetatable(map, {__index={size=size, seed=seed}})
 end
 
 
@@ -231,8 +227,7 @@ function hexagonal_map(radius, seed)
          map[i][j] = noise
       end
    end
-   setmetatable(map, {__index={radius=radius, seed=seed}})
-   return map
+   return setmetatable(map, {__index={radius=radius, seed=seed}})
 end
 
 
@@ -262,8 +257,7 @@ function rectangular_map(width, height, seed)
          map[i][j] = noise
       end
    end
-   setmetatable(map, {__index={width=width, height=height, seed=seed}})
-   return map
+   return setmetatable(map, {__index={width=width, height=height, seed=seed}})
 end
 
 --[[==========================================================================--
