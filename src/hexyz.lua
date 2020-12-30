@@ -1,36 +1,81 @@
 
 
---[[============================================================================
-    -- HEX CONSTANTS AND UTILITY FUNCTIONS
+--============================================================================
+-- HEX CONSTANTS AND UTILITY FUNCTIONS
 
-]]
+-- wherever 'orientation' appears as an argument, use one of these two, or set a default just below
+ORIENTATION = {
+    -- Forward & Inverse Matrices used for the Flat Orientation
+    FLAT = {
+        M = mat2(3.0/2.0,  0.0,  3.0^0.5/2.0,  3.0^0.5    ),
+        W = mat2(2.0/3.0,  0.0,  -1.0/3.0   ,  3.0^0.5/3.0),
+        angle = 0.0
+    },
+
+    -- Forward & Inverse Matrices used for the Pointy Orientation
+    POINTY = {
+        M = mat2(3.0^0.5,   3.0^0.5/2.0,  0.0,  3.0/2.0),
+        W = mat2(3.0^0.5/3.0,  -1.0/3.0,  0.0,  2.0/3.0),
+        angle = 0.5
+    }
+}
+
+-- whenver |orientation| appears as an argument, if it isn't provided, this is used instead.
+local DEFAULT_ORIENTATION = ORIENTATION.FLAT
+
 -- 'size' here is distance from the centerpoint to any vertex in pixel
 local DEFAULT_HEX_SIZE = 20
 
--- wherever orientation appears as an argument, if it isn't provided, use this
-local orientation = FLAT
-
-function get_default_hex_size()
-    return DEFAULT_HEX_SIZE
-end
-
+-- actual width (longest contained horizontal line) of the hexagon
 function hex_width(size, orientation)
-    if orientation == FLAT then
+    local orientation = orientation or DEFAULT_ORIENTATION
+
+    if orientation == ORIENTATION.FLAT then
         return size * 2
 
-    elseif orientation == POINTY then
+    elseif orientation == ORIENTATION.POINTY then
         return math.sqrt(3) * size
     end
 end
 
+-- actual height (tallest contained vertical line) of the hexagon
 function hex_height(size, orientation)
-    return hex_width(size, orientation == FLAT and POINTY or FLAT)
+    local orientation = orientation or DEFAULT_ORIENTATION
+
+    -- hex_width in one orientation == the height in the opposite orientation
+    return hex_width(size, orientation == ORIENTATION.FLAT and ORIENTATION.POINTY or ORIENTATION.FLAT)
 end
 
--- returns actual width and height of a hexagon given it's |size| which is the distance
--- from the centerpoint to any vertex in pixels
+-- returns actual width and height of a hexagon given it's |size| which is the distance from the centerpoint to any vertex in pixels
 function hex_dimensions(size, orientation)
+    local orientation = orientation or DEFAULT_ORIENTATION
     return vec2(hex_width(size, orientation), hex_height(size, orientation))
+end
+
+-- distance between two horizontally adjacent hexagon centerpoints
+function hex_horizontal_spacing(size, orientation)
+    local orientation = orientation or DEFAULT_ORIENTATION
+
+    if orientation == ORIENTATION.FLAT then
+        return hex_width(size, orientation) * 3/4
+
+    elseif orietnation == ORIENTATION.POINTY then
+        return hex_height(size, orientation)
+    end
+end
+
+-- distance between two vertically adjacent hexagon centerpoints
+function hex_vertical_spacing(size, orientation)
+    local orientation = orientation or DEFAULT_ORIENTATION
+
+    -- hex_horizontal_spacing in one orientation == the vertical spacing in the opposite orientation
+    return hex_horizontal_spacing(size, orientation == ORIENTATION.FLAT and ORIENTATION.POINTY or ORIENTATION.FLAT)
+end
+
+-- returns the distance between adjacent hexagon centers in a grid
+function hex_spacing(size, orientation)
+    local orientation = orientation or DEFAULT_ORIENTATION
+    return vec2(hex_horizontal_spacing(size, orientation), hex_vertical_spacing(size, orientation))
 end
 
 -- All Non-Diagonal Vector Directions from a Given Hex by Edge
@@ -76,27 +121,10 @@ local function hex_round(x, y, z)
 
     return vec2(rx, ry)
 end
---[[==========================================================================--
--- ORIENTATION & LAYOUT
-
-]]
--- Forward & Inverse Matrices used for the Flat Orientation
-local FLAT = {
-    M = mat2(3.0/2.0,  0.0,  3.0^0.5/2.0,  3.0^0.5    ),
-    W = mat2(2.0/3.0,  0.0,  -1.0/3.0   ,  3.0^0.5/3.0),
-    angle = 0.0
-}
-
--- Forward & Inverse Matrices used for the Pointy Orientation
-local POINTY = {
-    M = mat2(3.0^0.5,   3.0^0.5/2.0,  0.0,  3.0/2.0),
-    W = mat2(3.0^0.5/3.0,  -1.0/3.0,  0.0,  2.0/3.0),
-    angle = 0.5
-}
 
 -- Hex to Screen -- Orientation Must be Either POINTY or FLAT
 function hex_to_pixel(hex, size, orientation)
-    local M = orientation.M
+    local M = orientation and orientation.M or DEFAULT_ORIENTATION.M
 
     local x = (M[1][1] * hex[1] + M[1][2] * hex[2]) * (size and size[1] or DEFAULT_HEX_SIZE)
     local y = (M[2][1] * hex[1] + M[2][2] * hex[2]) * (size and size[2] or DEFAULT_HEX_SIZE)
@@ -106,7 +134,7 @@ end
 
 -- Screen to Hex -- Orientation Must be Either POINTY or FLAT
 function pixel_to_hex(pix, size, orientation)
-    local W = orientation.W
+    local W = orientation and orientation.W or DEFAULT_ORIENTATION.W
 
     local pix = pix / (size or vec2(DEFAULT_HEX_SIZE))
 
@@ -118,12 +146,14 @@ end
 
 -- TODO test, learn am.draw
 function hex_corner_offset(corner, size, orientation)
+    local orientation = orientation or DEFAULT_ORIENTATION
     local angle = 2.0 * math.pi * orientation.angle + corner / 6
     return vec2(size[1] * math.cos(angle), size[2] * math.sin(angle))
 end
 
 -- TODO test this thing
 function hex_corners(hex, size, orientation)
+    local orientation = orientation or DEFAULT_ORIENTATION
     local corners = {}
     local center = hex_to_pixel(hex, size, orientation)
     for i = 0, 5 do
@@ -139,10 +169,9 @@ function hex_to_offset(hex)
 function offset_to_hex(off)
     return vec2(off[1], off[2] - math.floor((off[1] - 1 * (off[1] % 2))) / 2) end
 
---[[============================================================================
+--============================================================================
 -- MAPS & STORAGE
 
-]]
 -- Returns Ordered Ring-Shaped Map of |radius| from |center|
 function ring_map(center, radius)
     local map = {}
@@ -157,7 +186,6 @@ function ring_map(center, radius)
     end
     return setmetatable(map, {__index={center=center, radius=radius}})
 end
-
 
 -- Returns Ordered Spiral Hexagonal Map of |radius| Rings from |center|
 function spiral_map(center, radius)
@@ -195,7 +223,6 @@ function parallelogram_map(width, height, seed)
     return setmetatable(map, {__index={width=width, height=height, seed=seed}})
 end
 
-
 -- Returns Unordered Triangular (Equilateral) Map of |size| with Simplex Noise
 function triangular_map(size, seed)
     local seed = seed or math.random(size * math.cos(size) / 2)
@@ -221,7 +248,6 @@ function triangular_map(size, seed)
     end
     return setmetatable(map, {__index={size=size, seed=seed}})
 end
-
 
 -- Returns Unordered Hexagonal Map of |radius| with Simplex Noise
 function hexagonal_map(radius, seed)
@@ -276,18 +302,9 @@ function rectangular_map(width, height, seed)
             end
             j = j - math.floor(i/2) -- this is what makes it rectangular
 
-            -- store two dimensions as a single number
             map[i][j] = noise
         end
     end
     return setmetatable(map, {__index={width=width, height=height, seed=seed}})
 end
-
---[[==========================================================================--
------ PATHFINDING -----
-============================================================================]]--
-
--- big ol' TODO
-
-
 

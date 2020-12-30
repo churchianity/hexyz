@@ -16,7 +16,6 @@ win = am.window{
 }
 --[[============================================================================]]
 -- Local 'Globals'
-
 local home
 
 
@@ -36,7 +35,7 @@ function poll_mouse()
 
                 else
                     map[hex.x][hex.y] = 2
-                    win.scene"world":append(am.circle(hex_to_pixel(hex), get_default_hex_size(), COLORS.BLACK, 6))
+                    win.scene"world":append(am.circle(hex_to_pixel(hex), CELL_SIZE, COLORS.BLACK, 6))
                 end
             end
             win.scene"coords".text = string.format("%2d,%2d", off.x, -off.y)
@@ -59,9 +58,9 @@ function main_action(main_scene)
 end
 
 function game_init()
-    local score = am.translate(-264, win.top - 50) ^ am.text("", "left"):tag"score"
-    local coords = am.translate(440, win.top - 50) ^ am.text(""):tag"coords"
-    local hex_cursor = am.circle(vec2(win.left, win.top), get_default_hex_size(), vec4(0.4), 6):tag"hex_cursor"
+    local score = am.translate(win.left, win.top - 50) ^ am.text("", "left"):tag"score"
+    local coords = am.translate(win.right, win.top - 50) ^ am.text("", "right"):tag"coords"
+    local hex_cursor = am.circle(vec2(win.left, win.top), CELL_SIZE, vec4(0.4), 6):tag"hex_cursor"
     local curtain = am.rect(win.left, win.top, win.right, win.bottom, COLORS.BLUE_STONE):tag"curtain"
 
     local main_scene = am.group{

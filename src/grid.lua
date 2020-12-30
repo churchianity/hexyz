@@ -1,7 +1,8 @@
 
 require "colors"
 
-local WORLD_GRID_DIMENSIONS = vec2(46, 32)
+WORLD_GRID_DIMENSIONS = vec2(46, 32)
+CELL_SIZE = 20
 local world_grid_map
 
 -- ensure home-base is somewhat of an open area.
@@ -50,10 +51,14 @@ function color_at(elevation)
    end
 end
 
+function worldspace_coordinate_offset()
+    return vec2(-hex_height(CELL_SIZE))
+end
+
 function random_map(seed)
    world_grid_map = rectangular_map(WORLD_GRID_DIMENSIONS.x, WORLD_GRID_DIMENSIONS.y, seed);
    math.randomseed(world_grid_map.seed)
-   local world = am.translate(vec2(win.left + 200, win.bottom -60)) ^ am.group():tag"world"
+   local world = am.translate(worldspace_coordinate_offset()) ^ am.group(am.circle(vec2(0), 32, COLORS.WHITE)):tag"world"
 
    for i,_ in pairs(world_grid_map) do
       for j,elevation in pairs(world_grid_map[i]) do
@@ -64,7 +69,7 @@ function random_map(seed)
                                             ((-off.y - WORLD_GRID_DIMENSIONS.y/2) / WORLD_GRID_DIMENSIONS.y) ^ 2))
          local color = color_at(elevation) - mask
 
-         local node = am.circle(hex_to_pixel(vec2(i, j)), get_default_hex_size(), vec4(0), 6)
+         local node = am.circle(hex_to_pixel(vec2(i, j)), CELL_SIZE, vec4(0), 6)
          :action(am.tween(2, { color=color }, am.ease.out(am.ease.hyperbola)))
 
          world:append(node)

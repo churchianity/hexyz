@@ -1,5 +1,7 @@
 
 
+MOB_HURTBOX_RADIUS = 4
+
 
 -- determines when, where, and how often to spawn mobs.
 function spawner(world)
@@ -20,7 +22,7 @@ function spawner(world)
             local e = map[spawn_position.x][spawn_position.y]
         until e and e < 0.5 and e > -0.5
 
-        local mob = am.translate(-278, -318) ^ am.circle(hex_to_pixel(spawn_position), 4)
+        local mob = am.translate(-278, -318) ^ am.circle(hex_to_pixel(spawn_position), MOB_HURTBOX_RADIUS)
         world:append(mob"circle":action(coroutine.create(live)))
     end
 end
