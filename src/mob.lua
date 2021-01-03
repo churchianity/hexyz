@@ -3,49 +3,55 @@ MOBS = {}
 
 -- check if a |tile| is passable by |mob|
 function can_pass_through(mob, tile)
-    return tile and tile.elevation and tile.elevation < 0.5 and tile.elevation > -0.5
+    return tile.elevation < 0.5 and tile.elevation > -0.5
 end
 
-function get_path(mob, starting_hex, goal_hex)
-    local moves = {}
+function get_movement_cost(mob, start_hex, goal_hex)
+    return 1
+end
 
-    local visited = {}
-    visited[starting_hex.x] = {}
-    visited[starting_hex.x][starting_hex.y] = true
 
-    repeat
-        local neighbours = hex_neighbours(pixel_to_hex(mob.position))
-        local candidates = {}
 
-        -- get list of candidates: hex positions to consider moving to.
-        for _,neighbour in pairs(neighbours) do
-            if can_pass_through(mob, get_tile(neighbour.x, neighbour.y)) then
-                if not (visited[neighbour.h] and visited[neighbour.x][neighbour.y]) then
-                    table.insert(candidates, neighbour)
-                else
-                    --table.insert(candidates, neighbour)
+function Astar(mob, start_hex, goal_hex)
+    local function heuristic(start_hex, goal_hex)
+        return math.distance(start_hex, goal_hex)
+    end
+
+    local came_from = {}
+    came_from[start_hex.x] = {}
+    came_from[start_hex.x][start_hex.y] = false
+
+    local frontier = {}
+    frontier[1] = { position = start_hex, priority = 0 }
+
+    local cost_so_far = {}
+    cost_so_far[start_hex.x] = {}
+    cost_so_far[start_hex.x][start_hex.y] = 0
+
+    while not (#frontier == 0) do
+        local current = table.remove(frontier, 1)
+
+
+        if current.position == goal_hex then log('found it!') break end
+
+        for _,_next in pairs(hex_neighbours(current.position)) do
+            local tile = get_tile(_next.x, _next.y)
+
+            if tile then
+                local new_cost = cost_so_far[current.position.x][current.position.y]
+                               + get_movement_cost(mob, current.position, _next)
+
+                if not twoD_get(cost_so_far, _next.x, _next.y) or new_cost < twoD_get(cost_so_far, _next.x, _next.y) then
+                    twoD_set(cost_so_far, _next.x, _next.y, new_cost)
+                    local priority = new_cost + heuristic(goal_hex, _next)
+                    table.insert(frontier, { position = _next, priority = priority })
+                    twoD_set(came_from, _next.x, _next.y, current)
                 end
             end
         end
 
-        -- choose where to move
-        local move = candidates[1]
-        for _,hex in pairs(candidates) do
-            if math.distance(hex, goal_hex) < math.distance(move, goal_hex) then
-                move = hex
-            end
-        end
-
-        if move then
-            table.insert(moves, move)
-            visited[move.x] = {}
-            visited[move.x][move.y] = true
-        end
-
-        --if move == goal then log('made it!') return end
-    until move == goal_hex
-
-    return moves
+    end
+    return came_from
 end
 
 function get_spawn_hex(mob)
@@ -81,12 +87,26 @@ function make_mob()
     local mob = {}
 
     local spawn_hex = get_spawn_hex(mob)
-    log(spawn_hex)
     local spawn_position = hex_to_pixel(spawn_hex) + WORLDSPACE_COORDINATE_OFFSET
 
     mob.position = spawn_position
-    --mob.path = get_path(mob, spawn_hex, HEX_GRID_CENTER)
+    mob.path = Astar(mob, spawn_hex, HEX_GRID_CENTER)
     mob.sprite = am.circle(spawn_position, 18, COLORS.WHITE, 4)
+
+    win.scene:action(coroutine.create(function()
+        local goal = spawn_hex
+        local current = mob.path[HEX_GRID_CENTER.x][HEX_GRID_CENTER.y].position
+        log(current)
+
+        while current ~= goal do
+            if current then
+                win.scene:append(am.circle(hex_to_pixel(current) + WORLDSPACE_COORDINATE_OFFSET, 4, COLORS.MAGENTA))
+                current = mob.path[current.x][current.y].position
+            end
+            am.wait(am.delay(0.01))
+        end
+    end))
+
     win.scene:append(mob.sprite)
 
     return mob

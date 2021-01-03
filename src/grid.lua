@@ -7,7 +7,7 @@ HEX_GRID_WIDTH = 65
 HEX_GRID_HEIGHT = 33
 HEX_GRID_DIMENSIONS = vec2(HEX_GRID_WIDTH, HEX_GRID_HEIGHT)
 
--- @NOTE no idea why the y coordinate doesn't need to be transformed here
+-- this is in hex coordinates
 HEX_GRID_CENTER = vec2(math.floor(HEX_GRID_DIMENSIONS.x/2), 0)
 
 -- index is hex coordinates [x][y]
@@ -50,6 +50,32 @@ function color_at(elevation)
     end
 end
 
+function generate_flow_field(start)
+    local frontier = { start }
+    local came_from = {}
+    came_from[start.x] = {}
+    came_from[start.x][start.y] = true
+
+    while not (#frontier == 0) do
+        local current = table.pop(frontier)
+        log(current)
+
+        for _,neighbour in pairs(hex_neighbours(current)) do
+            if get_tile(neighbour.x, neighbour.y) then
+                if not (came_from[neighbour.x] and came_from[neighbour.x][neighbour.y]) then
+                    log("hi")
+                    if true then return came_from end
+                    table.insert(frontier, neighbour)
+                    came_from[neighbour.x] = {}
+                    came_from[neighbour.x][neighbour.y] = current
+                end
+            end
+        end
+    end
+
+    return came_from
+end
+
 function random_map(seed, do_seed_rng)
     local elevation_map = rectangular_map(HEX_GRID_DIMENSIONS.x, HEX_GRID_DIMENSIONS.y, seed)
 
@@ -90,5 +116,9 @@ function random_map(seed, do_seed_rng)
 
     return am.translate(WORLDSPACE_COORDINATE_OFFSET)
            ^ world:tag"world"
+end
+
+function grid_neighbours(hex)
+    return table.filter(hex_neighbours(hex), function(_hex) return get_tile(_hex.x, _hex.y) end)
 end
 

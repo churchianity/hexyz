@@ -1,14 +1,14 @@
 
-function table.shift(t, count)
-    local e = t[1]
-    t[1] = nil
+function twoD_get(t, x, y)
+    return t[x] and t[x][y]
+end
 
-    for i,e in pairs(t) do
-        if e then
-            t[i - 1] = e
-        end
+function twoD_set(t, x, y, v)
+    if t[x] then
+        t[x][y] = v
+    else
+        t[x] = {}
+        t[x][y] = v
     end
-
-    return e
 end
 

@@ -37,12 +37,9 @@ function game_action(scene)
     local _off = hex_to_evenq(hex)
     local off = _off{ y = -_off.y } - vec2(math.floor(HEX_GRID_WIDTH/2)
                                          , math.floor(HEX_GRID_HEIGHT/2))
-    local off2 = evenq_to_hex(_off)
     local tile = get_tile(hex.x, hex.y)
 
     if tile and win:mouse_pressed"left" then
-        log(tile)
-        --invoke_tile_menu(hex.x, hex.y, tile)
     end
 
     if win:key_pressed"f1" then end
@@ -60,13 +57,11 @@ function game_action(scene)
     win.scene"hex_cursor".center = hex_to_pixel(hex) + WORLDSPACE_COORDINATE_OFFSET
     win.scene"score".text = string.format("SCORE: %.2f", time)
     win.scene"coords".text = string.format("%d,%d", off.x, off.y)
-    win.scene"rev".text = string.format("%d,%d", off2.x, off2.y)
 end
 
 function game_scene()
     local score = am.translate(win.left + 10, win.top - 20) ^ am.text("", "left"):tag"score"
     local coords = am.translate(win.right - 10, win.top - 20) ^ am.text("", "right"):tag"coords"
-    local coords2 = am.translate(win.right - 10, win.top - 40) ^ am.text("", "right"):tag"rev"
     local hex_cursor = am.circle(vec2(-6969), HEX_SIZE, COLORS.TRANSPARENT, 6):tag"hex_cursor"
 
     local curtain = am.rect(win.left, win.bottom, win.right, win.top, COLORS.TRUEBLACK)
@@ -81,7 +76,6 @@ function game_scene()
         hex_cursor,
         score,
         coords,
-        coords2
     }
 
     scene:action(game_action)

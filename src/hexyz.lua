@@ -97,7 +97,7 @@ function hex_direction(direction)
 
 -- Return Hexagon Adjacent to |hex| in Integer Index |direction|
 function hex_neighbour(hex, direction)
-   return hex + HEX_DIRECTIONS[(direction % 6) % 6 + 1] end
+    return hex + HEX_DIRECTIONS[(direction % 6) % 6 + 1] end
 
 -- Collect All 6 Neighbours in a Table
 function hex_neighbours(hex)
