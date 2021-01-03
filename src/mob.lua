@@ -1,79 +1,108 @@
 
+MOBS = {}
 
-MOB_HURTBOX_RADIUS = 4
-
-
--- determines when, where, and how often to spawn mobs.
-function spawner(world)
-    local SPAWN_CHANCE = 25
-    if math.random(SPAWN_CHANCE) == 1 then -- chance to spawn
-        local spawn_position
-        repeat
-            -- ensure we spawn on an random tile along the map's edges
-            local x,y = math.random(46), math.random(33)
-            if math.random() < 0.5 then
-                x = math.random(0, 1) * 46
-            else
-                y = math.random(0, 1) * 33
-            end
-            spawn_position = offset_to_hex(vec2(x, y))
-
-            -- ensure that we spawn somewhere that is passable: mid-elevation
-            local e = map[spawn_position.x][spawn_position.y]
-        until e and e < 0.5 and e > -0.5
-
-        local mob = am.translate(-278, -318) ^ am.circle(hex_to_pixel(spawn_position), MOB_HURTBOX_RADIUS)
-        world:append(mob"circle":action(coroutine.create(live)))
-    end
+-- check if a |tile| is passable by |mob|
+function can_pass_through(mob, tile)
+    return tile and tile.elevation and tile.elevation < 0.5 and tile.elevation > -0.5
 end
 
--- this function is the coroutine that represents the life-cycle of a mob.
-function live(mob)
-    local dead = false
+function get_path(mob, starting_hex, goal_hex)
+    local moves = {}
 
     local visited = {}
-    visited[mob.center.x] = {}; visited[mob.center.x][mob.center.y] = true
+    visited[starting_hex.x] = {}
+    visited[starting_hex.x][starting_hex.y] = true
 
-    -- begin life
     repeat
-        local neighbours = hex_neighbours(pixel_to_hex(mob.center))
+        local neighbours = hex_neighbours(pixel_to_hex(mob.position))
         local candidates = {}
 
         -- get list of candidates: hex positions to consider moving to.
-        for _,h in pairs(neighbours) do
-
-            local e
-            if map[h.x] then
-                e = map[h.x][h.y]
-            end
-
-            if e and e < 0.5 and e > -0.5 then
-                if visited[h.x] then
-                    if not visited[h.x][h.y] then
-                        table.insert(candidates, h)
-                    end
+        for _,neighbour in pairs(neighbours) do
+            if can_pass_through(mob, get_tile(neighbour.x, neighbour.y)) then
+                if not (visited[neighbour.h] and visited[neighbour.x][neighbour.y]) then
+                    table.insert(candidates, neighbour)
                 else
-                    table.insert(candidates, h)
+                    --table.insert(candidates, neighbour)
                 end
             end
         end
 
-        -- choose where to move. manhattan distance closest to goal is chosen.
+        -- choose where to move
         local move = candidates[1]
-        for _,h in pairs(candidates) do
-            if math.distance(h, home.center) < math.distance(move, home.center) then
-                move = h
+        for _,hex in pairs(candidates) do
+            if math.distance(hex, goal_hex) < math.distance(move, goal_hex) then
+                move = hex
             end
         end
 
-        if not move then print("can't find anywhere to move to"); return
-        end -- bug
+        if move then
+            table.insert(moves, move)
+            visited[move.x] = {}
+            visited[move.x][move.y] = true
+        end
 
-        local speed = map[move.x][move.y] ^ 2 + 0.5
-        am.wait(am.tween(mob, speed, {center=hex_to_pixel(move)}))
-        visited[move.x] = {}; visited[move.x][move.y] = true
-        if move == home.center then dead = true end
-    until dead
-    win.scene:remove(mob)
+        --if move == goal then log('made it!') return end
+    until move == goal_hex
+
+    return moves
+end
+
+function get_spawn_hex(mob)
+    local spawn_hex
+    repeat
+        -- ensure we spawn on an random tile along the map's edges
+        local roll = math.random(HEX_GRID_WIDTH * 2 + HEX_GRID_HEIGHT * 2) - 1
+        local x, y
+
+        if roll < HEX_GRID_HEIGHT then
+            x, y = 0, roll
+
+        elseif roll < (HEX_GRID_WIDTH + HEX_GRID_HEIGHT) then
+            x, y = roll - HEX_GRID_HEIGHT, HEX_GRID_HEIGHT - 1
+
+        elseif roll < (HEX_GRID_HEIGHT * 2 + HEX_GRID_WIDTH) then
+            x, y = HEX_GRID_WIDTH - 1, roll - HEX_GRID_WIDTH - HEX_GRID_HEIGHT
+
+        else
+            x, y = roll - (HEX_GRID_HEIGHT * 2) - HEX_GRID_WIDTH, 0
+        end
+
+        -- @NOTE negate 'y' because hexyz algorithms assume south is positive, in amulet north is positive
+        spawn_hex = evenq_to_hex(vec2(x, -y))
+        local tile = HEX_MAP[spawn_hex.x][spawn_hex.y]
+
+    until can_pass_through(mob, tile)
+
+    return spawn_hex
+end
+
+function make_mob()
+    local mob = {}
+
+    local spawn_hex = get_spawn_hex(mob)
+    log(spawn_hex)
+    local spawn_position = hex_to_pixel(spawn_hex) + WORLDSPACE_COORDINATE_OFFSET
+
+    mob.position = spawn_position
+    --mob.path = get_path(mob, spawn_hex, HEX_GRID_CENTER)
+    mob.sprite = am.circle(spawn_position, 18, COLORS.WHITE, 4)
+    win.scene:append(mob.sprite)
+
+    return mob
+end
+
+local SPAWN_CHANCE = 25
+function do_mob_spawning()
+    if win:key_pressed"space" then
+    --if math.random(SPAWN_CHANCE) == 1 then
+        table.insert(MOBS, make_mob())
+    end
+end
+
+function do_mob_updates()
+    for _,mob in pairs(MOBS) do
+
+    end
 end
 

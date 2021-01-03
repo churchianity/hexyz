@@ -1,125 +1,96 @@
 
+
 math.randomseed(os.time()); math.random(); math.random(); math.random()
---[[=I==========================================================================]]
+--============================================================================
 -- Imports
 require "hexyz"
 require "grid"
+require "mob"
+require "util"
 
-
---[[============================================================================]]
+--============================================================================
 -- Globals
 
-win = am.window{
-    width = 1920,
-    height = 1080,
-    resizable = false
-}
---[[============================================================================]]
--- Local 'Globals'
-local home
+win = am.window{ width = 1920, height = 1080 }
 
+function mask()
+    return am.rect(win.left, win.bottom, win.right, win.top, COLORS.TRANSPARENT):tag"mask"
+end
 
-function poll_mouse()
-    if win:mouse_position().x > -268 then -- mouse is inside game map
+function get_menu_for_tile(x, y, tile)
+    local pos = hex_to_pixel(vec2(x, y)) + WORLDSPACE_COORDINATE_OFFSET
+    return am.translate(pos) ^ am.group{
+        am.rect(-50, -50, 50, 50, COLORS.TRANSPARENT),
+        make_button_widget(x .. y, pos, vec2(100, 37), "close")
+    }
+end
 
-        local hex = pixel_to_hex(win:mouse_position() - vec2(-278, -318))
-        local off = hex_to_offset(hex)
+function invoke_tile_menu(x, y, tile)
+    win.scene:append(get_menu_for_tile(x, y, tile))
+end
 
-        -- check if cursor location outside of map bounds
-        if off.x <= 1 or -off.y <= 1 or off.x >= 46 or -off.y >= 32 then
-            win.scene"coords".text = ""
+function game_action(scene)
+    local time = am.current_time()
 
-        else
-            if win:mouse_down"left" then
-                if map[hex.x][hex.y] <= -0.5 or map[hex.x][hex.y] >= 0.5 then
+    local mouse = win:mouse_position()
+    local hex = pixel_to_hex(mouse - WORLDSPACE_COORDINATE_OFFSET)
+    local _off = hex_to_evenq(hex)
+    local off = _off{ y = -_off.y } - vec2(math.floor(HEX_GRID_WIDTH/2)
+                                         , math.floor(HEX_GRID_HEIGHT/2))
+    local off2 = evenq_to_hex(_off)
+    local tile = get_tile(hex.x, hex.y)
 
-                else
-                    map[hex.x][hex.y] = 2
-                    win.scene"world":append(am.circle(hex_to_pixel(hex), CELL_SIZE, COLORS.BLACK, 6))
-                end
-            end
-            win.scene"coords".text = string.format("%2d,%2d", off.x, -off.y)
-            win.scene"hex_cursor".center = hex_to_pixel(hex) + vec2(-278, -318)
-        end
-    else -- mouse is over background bar, (or outside window!)
-        if win:key_pressed"escape" then
-            init()
+    if tile and win:mouse_pressed"left" then
+        log(tile)
+        --invoke_tile_menu(hex.x, hex.y, tile)
+    end
+
+    if win:key_pressed"f1" then end
+
+    for wid,widget in pairs(get_widgets()) do
+        if widget.poll() then
+            log('we clicked button with id %s!', wid)
         end
     end
+
+    do_mob_updates()
+    do_mob_spawning()
+
+    -- draw stuff
+    win.scene"hex_cursor".center = hex_to_pixel(hex) + WORLDSPACE_COORDINATE_OFFSET
+    win.scene"score".text = string.format("SCORE: %.2f", time)
+    win.scene"coords".text = string.format("%d,%d", off.x, off.y)
+    win.scene"rev".text = string.format("%d,%d", off2.x, off2.y)
 end
 
-function update_score()
-    win.scene"score".text = string.format("SCORE: %.2f", am.current_time())
-end
+function game_scene()
+    local score = am.translate(win.left + 10, win.top - 20) ^ am.text("", "left"):tag"score"
+    local coords = am.translate(win.right - 10, win.top - 20) ^ am.text("", "right"):tag"coords"
+    local coords2 = am.translate(win.right - 10, win.top - 40) ^ am.text("", "right"):tag"rev"
+    local hex_cursor = am.circle(vec2(-6969), HEX_SIZE, COLORS.TRANSPARENT, 6):tag"hex_cursor"
 
-function main_action(main_scene)
-    update_score()
-    poll_mouse()
-end
+    local curtain = am.rect(win.left, win.bottom, win.right, win.top, COLORS.TRUEBLACK)
+    curtain:action(coroutine.create(function()
+        am.wait(am.tween(curtain, 3, { color = vec4(0) }, am.ease.out(am.ease.hyperbola)))
+        win.scene:remove(curtain)
+    end))
 
-function game_init()
-    local score = am.translate(win.left, win.top - 50) ^ am.text("", "left"):tag"score"
-    local coords = am.translate(win.right, win.top - 50) ^ am.text("", "right"):tag"coords"
-    local hex_cursor = am.circle(vec2(win.left, win.top), CELL_SIZE, vec4(0.4), 6):tag"hex_cursor"
-    local curtain = am.rect(win.left, win.top, win.right, win.bottom, COLORS.BLUE_STONE):tag"curtain"
-
-    local main_scene = am.group{
+    local scene = am.group{
         random_map(),
+        curtain,
+        hex_cursor,
         score,
         coords,
-        curtain,
-        hex_cursor
+        coords2
     }
 
-    main_scene:action(am.series
-    {
-        am.tween(curtain, 0.8, { x2 = win.left }, am.ease.bounce),
-        main_action
-    })
+    scene:action(game_action)
 
-    win.scene = main_scene
-end
-
-function draw_menu()
-    local map = hexagonal_map(15, 9)
-    local backdrop = am.group()
-
-    for i,_ in pairs(map) do
-        for j,e in pairs(map[i]) do
-            backdrop:append(am.circle(hex_to_pixel(vec2(i, j)), 11, color_at(e), 6))
-        end
-    end
-
-    local title_text = am.group
-    {
-        am.translate(0, 200) ^ am.scale(5) ^ am.text("hexyz", COLORS.WHITE, "right"),
-        am.translate(0, 130) ^ am.scale(4) ^ am.text("a tower defense", COLORS.WHITE, 1),
-        am.circle(vec2(0), 100, vec4(0.6), 6):tag"button", am.scale(4) ^ am.text("START", COLORS.BLACK)
-    }
-
-    win.scene = am.group
-    {
-        backdrop,
-        title_text
-    }
-    :action(function(self)
-        local mouse = win:mouse_position()
-        if math.length(mouse) < 100 then
-            self"button":action(am.series
-            {
-                am.tween(0.1, { color = COLORS.WHITE }),
-                am.tween(0.1, { color = vec4(0.6) })
-            })
-
-            if win:mouse_pressed"left" then
-                game_init()
-            end
-        end
-    end)
+    return scene
 end
 
 function init()
-    draw_menu()
+    win.scene = am.scale(1) ^ game_scene()
 end
 
 init()

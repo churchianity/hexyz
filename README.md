@@ -1,6 +1,8 @@
 
 ## INTRODUCTION
 
+AN: Basically everything in here it out of date until I remove this line.
+
 This is a small and simple library for using hexagonal grids in amulet + lua. I wrote it for a tower defense game I'm making.
 
 It's not really well documented. If you want an actual good resource, go to [amit's guide to hexagonal grids](https://redblobgames.com/grids/hexagons). So much of what is here I derived from amit's work.

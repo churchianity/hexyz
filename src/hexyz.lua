@@ -1,4 +1,5 @@
 
+math.round = function(n) return math.floor(n + 0.5) end
 
 --============================================================================
 -- HEX CONSTANTS AND UTILITY FUNCTIONS
@@ -7,15 +8,14 @@
 ORIENTATION = {
     -- Forward & Inverse Matrices used for the Flat Orientation
     FLAT = {
-        M = mat2(3.0/2.0,  0.0,  3.0^0.5/2.0,  3.0^0.5    ),
-        W = mat2(2.0/3.0,  0.0,  -1.0/3.0   ,  3.0^0.5/3.0),
+        M = mat2(3.0/2.0, 0.0, 3.0^0.5/2.0, 3.0^0.5    ),
+        W = mat2(2.0/3.0, 0.0, -1.0/3.0   , 3.0^0.5/3.0),
         angle = 0.0
     },
-
     -- Forward & Inverse Matrices used for the Pointy Orientation
     POINTY = {
-        M = mat2(3.0^0.5,   3.0^0.5/2.0,  0.0,  3.0/2.0),
-        W = mat2(3.0^0.5/3.0,  -1.0/3.0,  0.0,  2.0/3.0),
+        M = mat2(3.0^0.5,     3.0^0.5/2.0, 0.0, 3.0/2.0),
+        W = mat2(3.0^0.5/3.0,    -1.0/3.0, 0.0, 2.0/3.0),
         angle = 0.5
     }
 }
@@ -23,8 +23,9 @@ ORIENTATION = {
 -- whenver |orientation| appears as an argument, if it isn't provided, this is used instead.
 local DEFAULT_ORIENTATION = ORIENTATION.FLAT
 
+-- whenever |size| for a hexagon appears as an argument, if it isn't provided, use this
 -- 'size' here is distance from the centerpoint to any vertex in pixel
-local DEFAULT_HEX_SIZE = 20
+local DEFAULT_HEX_SIZE = vec2(20)
 
 -- actual width (longest contained horizontal line) of the hexagon
 function hex_width(size, orientation)
@@ -42,8 +43,12 @@ end
 function hex_height(size, orientation)
     local orientation = orientation or DEFAULT_ORIENTATION
 
-    -- hex_width in one orientation == the height in the opposite orientation
-    return hex_width(size, orientation == ORIENTATION.FLAT and ORIENTATION.POINTY or ORIENTATION.FLAT)
+    if orientation == ORIENTATION.FLAT then
+        return math.sqrt(3) * size
+
+    elseif orientation == ORIENTATION.POINTY then
+        return size * 2
+    end
 end
 
 -- returns actual width and height of a hexagon given it's |size| which is the distance from the centerpoint to any vertex in pixels
@@ -59,7 +64,7 @@ function hex_horizontal_spacing(size, orientation)
     if orientation == ORIENTATION.FLAT then
         return hex_width(size, orientation) * 3/4
 
-    elseif orietnation == ORIENTATION.POINTY then
+    elseif orientation == ORIENTATION.POINTY then
         return hex_height(size, orientation)
     end
 end
@@ -68,8 +73,12 @@ end
 function hex_vertical_spacing(size, orientation)
     local orientation = orientation or DEFAULT_ORIENTATION
 
-    -- hex_horizontal_spacing in one orientation == the vertical spacing in the opposite orientation
-    return hex_horizontal_spacing(size, orientation == ORIENTATION.FLAT and ORIENTATION.POINTY or ORIENTATION.FLAT)
+    if orientation == ORIENTATION.FLAT then
+        return hex_height(size, orientation)
+
+    elseif orientation == ORIENTATION.POINTY then
+        return hex_width(size, orientation) * 3/4
+    end
 end
 
 -- returns the distance between adjacent hexagon centers in a grid
@@ -101,15 +110,13 @@ end
 
 -- Returns a vec2 Which is the Nearest |x, y| to Float Trio |x, y, z|
 local function hex_round(x, y, z)
-    local function round(n) return math.floor(n + 0.5) end
-
-    local rx = round(x)
-    local ry = round(y)
-    local rz = round(z) or round(-x - y)
+    local rx = math.round(x)
+    local ry = math.round(y)
+    local rz = math.round(z) or math.round(-x - y)
 
     local xdelta = math.abs(rx - x)
     local ydelta = math.abs(ry - y)
-    local zdelta = math.abs(rz - z or round(-x - y))
+    local zdelta = math.abs(rz - z or math.round(-x - y))
 
     if xdelta > ydelta and xdelta > zdelta then
         rx = -ry - rz
@@ -126,8 +133,8 @@ end
 function hex_to_pixel(hex, size, orientation)
     local M = orientation and orientation.M or DEFAULT_ORIENTATION.M
 
-    local x = (M[1][1] * hex[1] + M[1][2] * hex[2]) * (size and size[1] or DEFAULT_HEX_SIZE)
-    local y = (M[2][1] * hex[1] + M[2][2] * hex[2]) * (size and size[2] or DEFAULT_HEX_SIZE)
+    local x = (M[1][1] * hex[1] + M[1][2] * hex[2]) * (size and size[1] or DEFAULT_HEX_SIZE[1])
+    local y = (M[2][1] * hex[1] + M[2][2] * hex[2]) * (size and size[2] or DEFAULT_HEX_SIZE[2])
 
     return vec2(x, y)
 end
@@ -163,11 +170,13 @@ function hex_corners(hex, size, orientation)
     return corners
 end
 
-function hex_to_offset(hex)
-    return vec2(hex[1], -hex[1] - hex[2] + (hex[1] + (hex[1] % 2)) / 2) end
+function hex_to_evenq(hex)
+    return vec2(hex.x, (-hex.x - hex.y) + (hex.x + (hex.x % 2)) / 2)
+end
 
-function offset_to_hex(off)
-    return vec2(off[1], off[2] - math.floor((off[1] - 1 * (off[1] % 2))) / 2) end
+function evenq_to_hex(off)
+    return vec2(off.x, -off.x - (off.y - (off.x + (off.x % 2)) / 2))
+end
 
 --============================================================================
 -- MAPS & STORAGE
@@ -285,9 +294,9 @@ function rectangular_map(width, height, seed)
     local seed = seed or math.random(width * height)
 
     local map = {}
-    for i = 0, width do
+    for i = 0, width - 1 do
         map[i] = {}
-        for j = 0, height do
+        for j = 0, height - 1 do
 
             -- Begin to Calculate Noise
             local idelta = i / width
