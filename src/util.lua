@@ -1,14 +1,6 @@
 
-function twoD_get(t, x, y)
-    return t[x] and t[x][y]
+function lerp(v1, v2, t)
+    return v1 * t + v2 * (1 - t)
 end
 
-function twoD_set(t, x, y, v)
-    if t[x] then
-        t[x][y] = v
-    else
-        t[x] = {}
-        t[x][y] = v
-    end
-end
 

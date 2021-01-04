@@ -1,57 +1,14 @@
 
 MOBS = {}
 
--- check if a |tile| is passable by |mob|
-function can_pass_through(mob, tile)
-    return tile.elevation < 0.5 and tile.elevation > -0.5
+-- check if a the tile at |hex| is passable by |mob|
+function can_pass_through(mob, hex)
+    local tile = HEX_MAP.get(hex.x, hex.y)
+    return tile and tile.elevation < 0.5 and tile.elevation > -0.5
 end
 
 function get_movement_cost(mob, start_hex, goal_hex)
     return 1
-end
-
-
-
-function Astar(mob, start_hex, goal_hex)
-    local function heuristic(start_hex, goal_hex)
-        return math.distance(start_hex, goal_hex)
-    end
-
-    local came_from = {}
-    came_from[start_hex.x] = {}
-    came_from[start_hex.x][start_hex.y] = false
-
-    local frontier = {}
-    frontier[1] = { position = start_hex, priority = 0 }
-
-    local cost_so_far = {}
-    cost_so_far[start_hex.x] = {}
-    cost_so_far[start_hex.x][start_hex.y] = 0
-
-    while not (#frontier == 0) do
-        local current = table.remove(frontier, 1)
-
-
-        if current.position == goal_hex then log('found it!') break end
-
-        for _,_next in pairs(hex_neighbours(current.position)) do
-            local tile = get_tile(_next.x, _next.y)
-
-            if tile then
-                local new_cost = cost_so_far[current.position.x][current.position.y]
-                               + get_movement_cost(mob, current.position, _next)
-
-                if not twoD_get(cost_so_far, _next.x, _next.y) or new_cost < twoD_get(cost_so_far, _next.x, _next.y) then
-                    twoD_set(cost_so_far, _next.x, _next.y, new_cost)
-                    local priority = new_cost + heuristic(goal_hex, _next)
-                    table.insert(frontier, { position = _next, priority = priority })
-                    twoD_set(came_from, _next.x, _next.y, current)
-                end
-            end
-        end
-
-    end
-    return came_from
 end
 
 function get_spawn_hex(mob)
@@ -78,11 +35,12 @@ function get_spawn_hex(mob)
         spawn_hex = evenq_to_hex(vec2(x, -y))
         local tile = HEX_MAP[spawn_hex.x][spawn_hex.y]
 
-    until can_pass_through(mob, tile)
+    until can_pass_through(mob, spawn_hex)
 
     return spawn_hex
 end
 
+-- @NOTE spawn hex
 function make_mob()
     local mob = {}
 
@@ -90,23 +48,28 @@ function make_mob()
     local spawn_position = hex_to_pixel(spawn_hex) + WORLDSPACE_COORDINATE_OFFSET
 
     mob.position = spawn_position
-    mob.path = Astar(mob, spawn_hex, HEX_GRID_CENTER)
-    mob.sprite = am.circle(spawn_position, 18, COLORS.WHITE, 4)
+    mob.hex = spawn_hex
+    mob.path = Astar(HEX_MAP, HEX_GRID_CENTER, spawn_hex,
 
-    win.scene:action(coroutine.create(function()
-        local goal = spawn_hex
-        local current = mob.path[HEX_GRID_CENTER.x][HEX_GRID_CENTER.y].position
-        log(current)
+        -- neighbour function
+        function(hex)
+            return table.filter(hex_neighbours(hex), function(_hex)
+                return can_pass_through(mob, _hex)
+            end)
+        end,
 
-        while current ~= goal do
-            if current then
-                win.scene:append(am.circle(hex_to_pixel(current) + WORLDSPACE_COORDINATE_OFFSET, 4, COLORS.MAGENTA))
-                current = mob.path[current.x][current.y].position
-            end
-            am.wait(am.delay(0.01))
+        -- heuristic function
+        function(source, target)
+            return math.distance(source, target)
+        end,
+
+        -- cost function
+        function(map_entry)
+            return math.abs(map_entry.elevation)
         end
-    end))
+    )
 
+    mob.sprite = am.circle(spawn_position, 18, COLORS.WHITE, 4)
     win.scene:append(mob.sprite)
 
     return mob
@@ -121,8 +84,19 @@ function do_mob_spawning()
 end
 
 function do_mob_updates()
+    --if win:key_pressed"a" then
     for _,mob in pairs(MOBS) do
+        mob.hex = pixel_to_hex(mob.position - WORLDSPACE_COORDINATE_OFFSET)
 
+        local frame_target = map_get(mob.path, mob.hex.x, mob.hex.y)
+
+        if frame_target then
+            mob.position = lerp(mob.position, hex_to_pixel(frame_target.hex) + WORLDSPACE_COORDINATE_OFFSET, 0.9)
+            mob.sprite.center = mob.position
+        else
+
+        end
     end
+    --end
 end
 

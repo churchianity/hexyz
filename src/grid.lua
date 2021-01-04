@@ -3,8 +3,8 @@ require "colors"
 require "gui"
 
 HEX_SIZE = 20
-HEX_GRID_WIDTH = 65
-HEX_GRID_HEIGHT = 33
+HEX_GRID_WIDTH = 65  -- 65
+HEX_GRID_HEIGHT = 33 -- 33
 HEX_GRID_DIMENSIONS = vec2(HEX_GRID_WIDTH, HEX_GRID_HEIGHT)
 
 -- this is in hex coordinates
@@ -50,55 +50,27 @@ function color_at(elevation)
     end
 end
 
-function generate_flow_field(start)
-    local frontier = { start }
-    local came_from = {}
-    came_from[start.x] = {}
-    came_from[start.x][start.y] = true
-
-    while not (#frontier == 0) do
-        local current = table.pop(frontier)
-        log(current)
-
-        for _,neighbour in pairs(hex_neighbours(current)) do
-            if get_tile(neighbour.x, neighbour.y) then
-                if not (came_from[neighbour.x] and came_from[neighbour.x][neighbour.y]) then
-                    log("hi")
-                    if true then return came_from end
-                    table.insert(frontier, neighbour)
-                    came_from[neighbour.x] = {}
-                    came_from[neighbour.x][neighbour.y] = current
-                end
-            end
-        end
-    end
-
-    return came_from
-end
-
 function random_map(seed, do_seed_rng)
-    local elevation_map = rectangular_map(HEX_GRID_DIMENSIONS.x, HEX_GRID_DIMENSIONS.y, seed)
+    local map = rectangular_map(HEX_GRID_DIMENSIONS.x, HEX_GRID_DIMENSIONS.y, 105)
+    --log(map.seed)
 
     if do_seed_rng then math.randomseed(elevation_map.seed) end
 
-    HEX_MAP = {}
     local world = am.group():tag"world"
-    for i,_ in pairs(elevation_map) do
-        HEX_MAP[i] = {}
-        for j,elevation in pairs(elevation_map[i]) do
-
+    for i,_ in pairs(map) do
+        for j,noise in pairs(map[i]) do
             local off = hex_to_evenq(vec2(i, j))
             local mask = vec4(0, 0, 0, math.max(((off.x - HEX_GRID_DIMENSIONS.x/2) / HEX_GRID_DIMENSIONS.x) ^ 2
                                              , ((-off.y - HEX_GRID_DIMENSIONS.y/2) / HEX_GRID_DIMENSIONS.y) ^ 2))
-            local color = color_at(elevation) - mask
+            local color = color_at(noise) - mask
 
             local node = am.circle(hex_to_pixel(vec2(i, j)), HEX_SIZE, color, 6)
 
-            HEX_MAP[i][j] = {
-                elevation = elevation,
+            map.set(i, j, {
+                elevation = noise,
                 sprite = node,
                 tile = {}
-            }
+            })
 
             world:append(node)
         end
@@ -109,16 +81,12 @@ function random_map(seed, do_seed_rng)
     -- @NOTE no idea why the y-coord doesn't need to be transformed
     local home = spiral_map(HEX_GRID_CENTER, 3)
     for _,hex in pairs(home) do
-        HEX_MAP[hex.x][hex.y].elevation = 0
-        HEX_MAP[hex.x][hex.y].sprite.color = color_at(0)
+        map[hex.x][hex.y].elevation = 0
+        map[hex.x][hex.y].sprite.color = color_at(0)
         world:append(am.circle(hex_to_pixel(vec2(hex.x, hex.y)), HEX_SIZE/2, COLORS.MAGENTA, 4))
     end
 
-    return am.translate(WORLDSPACE_COORDINATE_OFFSET)
-           ^ world:tag"world"
-end
-
-function grid_neighbours(hex)
-    return table.filter(hex_neighbours(hex), function(_hex) return get_tile(_hex.x, _hex.y) end)
+    return map, am.translate(WORLDSPACE_COORDINATE_OFFSET)
+                ^ world:tag"world"
 end
 

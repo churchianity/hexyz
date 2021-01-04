@@ -206,6 +206,34 @@ function spiral_map(center, radius)
     return setmetatable(map, {__index={center=center, radius=radius}})
 end
 
+function map_get(t, x, y)
+    return t[x] and t[x][y]
+end
+
+function map_set(t, x, y, v)
+    if t[x] then
+        t[x][y] = v
+    else
+        t[x] = {}
+        t[x][y] = v
+    end
+
+    return t
+end
+
+function map_partial_set(t, x, y, k, v)
+    local entry = map_get(t, x, y)
+
+    if not entry then
+        map_set(t, x, y, { k = v })
+
+    else
+        entry.k = v
+    end
+
+    return t
+end
+
 -- Returns Unordered Parallelogram-Shaped Map of |width| and |height| with Simplex Noise
 function parallelogram_map(width, height, seed)
     local seed = seed or math.random(width * height)
@@ -229,7 +257,14 @@ function parallelogram_map(width, height, seed)
             map[i][j] = noise
         end
     end
-    return setmetatable(map, {__index={width=width, height=height, seed=seed}})
+    return setmetatable(map, { __index = {
+        width = width,
+        height = height,
+        seed = seed,
+        get = function(x, y) return map_get(map, x, y) end,
+        set = function(x, y, v) return map_set(map, x, y, v) end,
+        partial = function(x, y, k, v) return map_partial_set(map, x, y, k, v) end
+    }})
 end
 
 -- Returns Unordered Triangular (Equilateral) Map of |size| with Simplex Noise
@@ -255,7 +290,13 @@ function triangular_map(size, seed)
             map[i][j] = noise
         end
     end
-    return setmetatable(map, {__index={size=size, seed=seed}})
+    return setmetatable(map, { __index = {
+        size = size,
+        seed = seed,
+        get = function(x, y) return map_get(map, x, y) end,
+        set = function(x, y, v) return map_set(map, x, y, v) end,
+        partial = function(x, y, k, v) return map_partial_set(map, x, y, k, v) end
+    }})
 end
 
 -- Returns Unordered Hexagonal Map of |radius| with Simplex Noise
@@ -286,7 +327,13 @@ function hexagonal_map(radius, seed)
             map[i][j] = noise
         end
     end
-    return setmetatable(map, {__index={radius=radius, seed=seed}})
+    return setmetatable(map, { __index = {
+        radius = radius,
+        seed = seed,
+        get = function(x, y) return map_get(map, x, y) end,
+        set = function(x, y, v) return map_set(map, x, y, v) end,
+        partial = function(x, y, k, v) return map_partial_set(map, x, y, k, v) end
+    }})
 end
 
 -- Returns Unordered Rectangular Map of |width| and |height| with Simplex Noise
@@ -314,6 +361,70 @@ function rectangular_map(width, height, seed)
             map[i][j] = noise
         end
     end
-    return setmetatable(map, {__index={width=width, height=height, seed=seed}})
+    return setmetatable(map, { __index = {
+        width = width,
+        height = height,
+        seed = seed,
+        get = function(x, y) return map_get(map, x, y) end,
+        set = function(x, y, v) return map_set(map, x, y, v) end,
+        partial = function(x, y, k, v) return map_partial_set(map, x, y, k, v) end
+    }})
+end
+
+--============================================================================
+-- PATHFINDING
+
+-- generic A* pathfinding
+-- @NOTE is it better to move the functions to be members of the map?
+--
+-- returns a map that has map[hex.x][hex.y] = 'the vec2 which is the hex you came from when trying to get to |goal|'
+function Astar(map, start, goal, neighbour_f, heuristic_f, cost_f)
+    local neighbour_f = neighbour_f or hex_neighbours
+    local heuristic_f = heuristic_f or math.distance
+    local cost_f = cost_f or function() return 1 end
+
+    local came_from = {}
+    came_from[start.x] = {}
+    came_from[start.x][start.y] = false
+
+    local frontier = {}
+    frontier[1] = { hex = start, priority = 0 }
+
+    local cost_so_far = {}
+    cost_so_far[start.x] = {}
+    cost_so_far[start.x][start.y] = 0
+
+    local made_it = false
+    while not (#frontier == 0) do
+        local current = table.remove(frontier, 1)
+
+        if current.hex == goal then
+            made_it = true
+            break
+        end
+
+        for _,next_ in pairs(neighbour_f(current.hex)) do
+            local entry = map.get(next_.x, next_.y)
+
+            if entry then
+                local new_cost = map_get(cost_so_far, current.hex.x, current.hex.y)
+                                 + cost_f(entry)
+
+                local next_cost = map_get(cost_so_far, next_.x, next_.y)
+                if not next_cost or new_cost < next_cost then
+                    map_set(cost_so_far, next_.x, next_.y, new_cost)
+                    local priority = new_cost + heuristic_f(goal, next_)
+                    table.insert(frontier, { hex = next_, priority = priority })
+                    map_set(came_from, next_.x, next_.y, current)
+                end
+            end
+        end
+    end
+
+    if not made_it then
+        log(" we didn't make it!")
+    end
+
+    return came_from
 end
 

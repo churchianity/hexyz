@@ -56,7 +56,7 @@ function game_action(scene)
     -- draw stuff
     win.scene"hex_cursor".center = hex_to_pixel(hex) + WORLDSPACE_COORDINATE_OFFSET
     win.scene"score".text = string.format("SCORE: %.2f", time)
-    win.scene"coords".text = string.format("%d,%d", off.x, off.y)
+    win.scene"coords".text = string.format("%d,%d", hex.x, hex.y)
 end
 
 function game_scene()
@@ -70,8 +70,12 @@ function game_scene()
         win.scene:remove(curtain)
     end))
 
+    local world
+
+    HEX_MAP, world = random_map()
+
     local scene = am.group{
-        random_map(),
+        world,
         curtain,
         hex_cursor,
         score,
