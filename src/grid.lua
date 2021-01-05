@@ -1,6 +1,5 @@
 
-require "colors"
-require "gui"
+require "hexyz"
 
 HEX_SIZE = 20
 HEX_GRID_WIDTH = 65  -- 65
@@ -79,6 +78,7 @@ function random_map(seed, do_seed_rng)
     -- the center of the map in some radius is always considered 'passable' terrain and is home base
     -- terraform this area to ensure it's passable
     -- @NOTE no idea why the y-coord doesn't need to be transformed
+    -- @TODO @FIXME also terraform the edges of the map to be passable - it is theoretically possible to get maps where mobs can be stuck from the very beginning
     local home = spiral_map(HEX_GRID_CENTER, 3)
     for _,hex in pairs(home) do
         map[hex.x][hex.y].elevation = 0

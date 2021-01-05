@@ -3,34 +3,21 @@
 math.randomseed(os.time()); math.random(); math.random(); math.random()
 --============================================================================
 -- Imports
-require "hexyz"
+require "color"
 require "grid"
 require "mob"
-require "util"
+require "math"
+require "table"
+
 
 --============================================================================
 -- Globals
+TIME = 0
 
 win = am.window{ width = 1920, height = 1080 }
 
-function mask()
-    return am.rect(win.left, win.bottom, win.right, win.top, COLORS.TRANSPARENT):tag"mask"
-end
-
-function get_menu_for_tile(x, y, tile)
-    local pos = hex_to_pixel(vec2(x, y)) + WORLDSPACE_COORDINATE_OFFSET
-    return am.translate(pos) ^ am.group{
-        am.rect(-50, -50, 50, 50, COLORS.TRANSPARENT),
-        make_button_widget(x .. y, pos, vec2(100, 37), "close")
-    }
-end
-
-function invoke_tile_menu(x, y, tile)
-    win.scene:append(get_menu_for_tile(x, y, tile))
-end
-
 function game_action(scene)
-    local time = am.current_time()
+    TIME = am.current_time()
 
     local mouse = win:mouse_position()
     local hex = pixel_to_hex(mouse - WORLDSPACE_COORDINATE_OFFSET)
@@ -44,18 +31,12 @@ function game_action(scene)
 
     if win:key_pressed"f1" then end
 
-    for wid,widget in pairs(get_widgets()) do
-        if widget.poll() then
-            log('we clicked button with id %s!', wid)
-        end
-    end
-
     do_mob_updates()
     do_mob_spawning()
 
     -- draw stuff
     win.scene"hex_cursor".center = hex_to_pixel(hex) + WORLDSPACE_COORDINATE_OFFSET
-    win.scene"score".text = string.format("SCORE: %.2f", time)
+    win.scene"score".text = string.format("SCORE: %.2f", TIME)
     win.scene"coords".text = string.format("%d,%d", hex.x, hex.y)
 end
 
@@ -79,7 +60,7 @@ function game_scene()
         curtain,
         hex_cursor,
         score,
-        coords,
+        coords
     }
 
     scene:action(game_action)
@@ -88,6 +69,8 @@ function game_scene()
 end
 
 function init()
+    require "texture"
+    load_textures()
     win.scene = am.scale(1) ^ game_scene()
 end
 

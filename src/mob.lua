@@ -1,5 +1,47 @@
 
+
 MOBS = {}
+--[[
+    mob structure:
+    {
+        position    - vec2      -- true pixel coordinates
+        TOB         - float     -- time stamp in seconds of when the mob when spawned
+        node        - node      -- the root graph node for this mob
+        hex         - vec2      -- hexagon the mob is on top of
+        update      - function  -- the function that gets called every frame
+    }
+]]
+
+require "sound"
+require "util"
+
+MOB_UPDATES = {
+    BEEPER = function(mob, index)
+        mob.hex = pixel_to_hex(mob.position - WORLDSPACE_COORDINATE_OFFSET)
+
+        local frame_target = map_get(mob.path, mob.hex.x, mob.hex.y)
+
+        if frame_target then
+            mob.position = math.lerpv2(mob.position, hex_to_pixel(frame_target.hex) + WORLDSPACE_COORDINATE_OFFSET, 0.91)
+            mob.node.position2d = mob.position
+
+        -- can't find path, or dead
+        else
+            win.scene:action(am.play(am.sfxr_synth(SOUNDS.EXPLOSION1), false, math.random() + 0.5))
+
+            local i,v = table.find(MOBS, function(_mob) return _mob == mob end)
+            table.remove(MOBS, index)
+            win.scene:remove(mob.node)
+        end
+
+        -- passive animation
+        if math.random() < 0.01 then
+            mob.node"rotate":action(am.tween(0.3, { angle = mob.node"rotate".angle + math.pi*3 }))
+        else
+            mob.node"rotate".angle = math.wrapf(mob.node"rotate".angle + am.delta_time, math.pi*2)
+        end
+    end
+}
 
 -- check if a the tile at |hex| is passable by |mob|
 function can_pass_through(mob, hex)
@@ -7,10 +49,7 @@ function can_pass_through(mob, hex)
     return tile and tile.elevation < 0.5 and tile.elevation > -0.5
 end
 
-function get_movement_cost(mob, start_hex, goal_hex)
-    return 1
-end
-
+-- @FIXME there's a bug here where the position of the spawn hex is sometimes 1 closer to the center than we want
 function get_spawn_hex(mob)
     local spawn_hex
     repeat
@@ -40,16 +79,15 @@ function get_spawn_hex(mob)
     return spawn_hex
 end
 
--- @NOTE spawn hex
+--
 function make_mob()
     local mob = {}
 
-    local spawn_hex = get_spawn_hex(mob)
-    local spawn_position = hex_to_pixel(spawn_hex) + WORLDSPACE_COORDINATE_OFFSET
-
-    mob.position = spawn_position
-    mob.hex = spawn_hex
-    mob.path = Astar(HEX_MAP, HEX_GRID_CENTER, spawn_hex,
+    mob.TOB         = TIME
+    mob.update      = MOB_UPDATES.BEEPER
+    mob.hex         = get_spawn_hex(mob)
+    mob.position    = hex_to_pixel(mob.hex) + WORLDSPACE_COORDINATE_OFFSET
+    mob.path        = Astar(HEX_MAP, HEX_GRID_CENTER, mob.hex,
 
         -- neighbour function
         function(hex)
@@ -64,39 +102,31 @@ function make_mob()
         end,
 
         -- cost function
-        function(map_entry)
-            return math.abs(map_entry.elevation)
+        function(hex)
+            return math.abs(HEX_MAP.get(hex.x, hex.y).elevation)
         end
     )
 
-    mob.sprite = am.circle(spawn_position, 18, COLORS.WHITE, 4)
-    win.scene:append(mob.sprite)
+    mob.node = am.translate(mob.position)
+               ^ am.scale(2)
+               ^ am.rotate(mob.TOB)
+               ^ pack_texture_into_sprite(TEX_MOB1_1, 20, 20)
+
+    win.scene:append(mob.node)
 
     return mob
 end
 
-local SPAWN_CHANCE = 25
+local SPAWN_CHANCE = 50
 function do_mob_spawning()
-    if win:key_pressed"space" then
-    --if math.random(SPAWN_CHANCE) == 1 then
+    if math.random(SPAWN_CHANCE) == 1 then
         table.insert(MOBS, make_mob())
     end
 end
 
 function do_mob_updates()
-    --if win:key_pressed"a" then
-    for _,mob in pairs(MOBS) do
-        mob.hex = pixel_to_hex(mob.position - WORLDSPACE_COORDINATE_OFFSET)
-
-        local frame_target = map_get(mob.path, mob.hex.x, mob.hex.y)
-
-        if frame_target then
-            mob.position = lerp(mob.position, hex_to_pixel(frame_target.hex) + WORLDSPACE_COORDINATE_OFFSET, 0.9)
-            mob.sprite.center = mob.position
-        else
-
-        end
+    for i,mob in pairs(MOBS) do
+        mob.update(mob, i)
     end
-    --end
 end
 

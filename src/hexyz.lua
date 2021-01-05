@@ -170,12 +170,44 @@ function hex_corners(hex, size, orientation)
     return corners
 end
 
+-- @TODO test
+function hex_to_oddr(hex)
+    local z = -hex.x - hex.y
+    return vec2(hex.x + (z - (z % 2)) / 2)
+end
+
+-- @TODO test
+function oddr_to_hex(oddr)
+    return vec2(hex.x - (hex.y - (hex.y % 2)) / 2, -hex.x - hex.y)
+end
+
+-- @TODO test
+function hex_to_evenr(hex)
+    local z = -hex.x - hex.y
+    return vec2(hex.x + (z + (z % 2)) / 2, z)
+end
+
+-- @TODO test
+function evenr_to_hex(evenr)
+    return vec2(hex.x - (hex.y + (hex.y % 2)) / 2, -hex.x - hex.y)
+end
+
+-- @TODO test
+function hex_to_oddq(hex)
+    return vec2(hex.x, -hex.x - hex.y + (hex.x - (hex.x % 2)) / 2)
+end
+
+-- @TODO test
+function oddq_to_hex(oddq)
+    return vec2(hex.x, -hex.x - (hex.y - (hex.x - (hex.y % 2)) / 2))
+end
+
 function hex_to_evenq(hex)
     return vec2(hex.x, (-hex.x - hex.y) + (hex.x + (hex.x % 2)) / 2)
 end
 
-function evenq_to_hex(off)
-    return vec2(off.x, -off.x - (off.y - (off.x + (off.x % 2)) / 2))
+function evenq_to_hex(evenq)
+    return vec2(evenq.x, -evenq.x - (evenq.y - (evenq.x + (evenq.x % 2)) / 2))
 end
 
 --============================================================================
@@ -404,19 +436,15 @@ function Astar(map, start, goal, neighbour_f, heuristic_f, cost_f)
         end
 
         for _,next_ in pairs(neighbour_f(current.hex)) do
-            local entry = map.get(next_.x, next_.y)
+            local new_cost = map_get(cost_so_far, current.hex.x, current.hex.y)
+                             + cost_f(next_)
+            local next_cost = map_get(cost_so_far, next_.x, next_.y)
 
-            if entry then
-                local new_cost = map_get(cost_so_far, current.hex.x, current.hex.y)
-                                 + cost_f(entry)
-
-                local next_cost = map_get(cost_so_far, next_.x, next_.y)
-                if not next_cost or new_cost < next_cost then
-                    map_set(cost_so_far, next_.x, next_.y, new_cost)
-                    local priority = new_cost + heuristic_f(goal, next_)
-                    table.insert(frontier, { hex = next_, priority = priority })
-                    map_set(came_from, next_.x, next_.y, current)
-                end
+            if not next_cost or new_cost < next_cost then
+                map_set(cost_so_far, next_.x, next_.y, new_cost)
+                local priority = new_cost + heuristic_f(goal, next_)
+                table.insert(frontier, { hex = next_, priority = priority })
+                map_set(came_from, next_.x, next_.y, current)
             end
         end
     end
