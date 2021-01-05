@@ -1,4 +1,5 @@
 
+require "gui"
 require "hexyz"
 
 HEX_SIZE = 20
@@ -6,11 +7,13 @@ HEX_GRID_WIDTH = 65  -- 65
 HEX_GRID_HEIGHT = 33 -- 33
 HEX_GRID_DIMENSIONS = vec2(HEX_GRID_WIDTH, HEX_GRID_HEIGHT)
 
--- this is in hex coordinates
+
+
+-- leaving y == 0 makes this the center in hex coordinates
 HEX_GRID_CENTER = vec2(math.floor(HEX_GRID_DIMENSIONS.x/2), 0)
 
 -- index is hex coordinates [x][y]
--- { { elevation, sprite, tile } }
+-- { { elevation, node, etc. } }
 HEX_MAP = {}
 
 function grid_pixel_dimensions()
@@ -25,9 +28,15 @@ end
 GRID_PIXEL_DIMENSIONS = grid_pixel_dimensions()
 WORLDSPACE_COORDINATE_OFFSET = -GRID_PIXEL_DIMENSIONS/2
 
--- convience function for when getting a tile at x,y could fail
-function get_tile(x, y)
-    return HEX_MAP[x] and HEX_MAP[x][y]
+HEX_GRID_INTERACTABLE_REGION_PADDING = 2
+
+function is_interactable(tile, evenq)
+    return point_in_rect(evenq, {
+        x1 = HEX_GRID_INTERACTABLE_REGION_PADDING,
+        x2 = HEX_GRID_WIDTH - HEX_GRID_INTERACTABLE_REGION_PADDING,
+        y1 = HEX_GRID_INTERACTABLE_REGION_PADDING,
+        y2 = HEX_GRID_HEIGHT - HEX_GRID_INTERACTABLE_REGION_PADDING
+    })
 end
 
 -- map elevation to appropriate tile color.
@@ -43,17 +52,16 @@ function color_at(elevation)
 
     elseif elevation < 1 then     -- highest elevation : impassable
         return COLORS.BOTTLE_GREEN{ a = (elevation + 1.0) / 2 + 0.2 }
+
     else
         log('bad elevation')
         return vec4(0)
     end
 end
 
-function random_map(seed, do_seed_rng)
-    local map = rectangular_map(HEX_GRID_DIMENSIONS.x, HEX_GRID_DIMENSIONS.y, 105)
-    --log(map.seed)
-
-    if do_seed_rng then math.randomseed(elevation_map.seed) end
+function random_map(seed)
+    local map = rectangular_map(HEX_GRID_DIMENSIONS.x, HEX_GRID_DIMENSIONS.y)
+    math.randomseed(map.seed)
 
     local world = am.group():tag"world"
     for i,_ in pairs(map) do
@@ -67,8 +75,7 @@ function random_map(seed, do_seed_rng)
 
             map.set(i, j, {
                 elevation = noise,
-                sprite = node,
-                tile = {}
+                node = node
             })
 
             world:append(node)
@@ -82,7 +89,7 @@ function random_map(seed, do_seed_rng)
     local home = spiral_map(HEX_GRID_CENTER, 3)
     for _,hex in pairs(home) do
         map[hex.x][hex.y].elevation = 0
-        map[hex.x][hex.y].sprite.color = color_at(0)
+        map[hex.x][hex.y].node.color = color_at(0)
         world:append(am.circle(hex_to_pixel(vec2(hex.x, hex.y)), HEX_SIZE/2, COLORS.MAGENTA, 4))
     end
 

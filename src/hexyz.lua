@@ -1,5 +1,10 @@
 
-math.round = function(n) return math.floor(n + 0.5) end
+
+if not math.round then
+    math.round = function(n) return math.floor(n + 0.5) end
+else
+    log("clobbering a math.round function.")
+end
 
 --============================================================================
 -- HEX CONSTANTS AND UTILITY FUNCTIONS
@@ -93,11 +98,13 @@ HEX_DIRECTIONS = { vec2( 1 , -1), vec2( 1 ,  0), vec2(0 ,  1),
 
 -- Return Hex Vector Direction via Integer Index |direction|
 function hex_direction(direction)
-   return HEX_DIRECTIONS[(direction % 6) % 6 + 1] end
+    return HEX_DIRECTIONS[(direction % 6) % 6 + 1]
+end
 
 -- Return Hexagon Adjacent to |hex| in Integer Index |direction|
 function hex_neighbour(hex, direction)
-    return hex + HEX_DIRECTIONS[(direction % 6) % 6 + 1] end
+    return hex + HEX_DIRECTIONS[(direction % 6) % 6 + 1]
+end
 
 -- Collect All 6 Neighbours in a Table
 function hex_neighbours(hex)
@@ -109,6 +116,7 @@ function hex_neighbours(hex)
 end
 
 -- Returns a vec2 Which is the Nearest |x, y| to Float Trio |x, y, z|
+-- assumes you have a working math.round function (should be guarded at top of this file)
 local function hex_round(x, y, z)
     local rx = math.round(x)
     local ry = math.round(y)
@@ -238,11 +246,11 @@ function spiral_map(center, radius)
     return setmetatable(map, {__index={center=center, radius=radius}})
 end
 
-function map_get(t, x, y)
+local function map_get(t, x, y)
     return t[x] and t[x][y]
 end
 
-function map_set(t, x, y, v)
+local function map_set(t, x, y, v)
     if t[x] then
         t[x][y] = v
     else
@@ -253,7 +261,8 @@ function map_set(t, x, y, v)
     return t
 end
 
-function map_partial_set(t, x, y, k, v)
+-- @NOTE probably shouldn't use this...
+local function map_partial_set(t, x, y, k, v)
     local entry = map_get(t, x, y)
 
     if not entry then
@@ -406,6 +415,25 @@ end
 --============================================================================
 -- PATHFINDING
 
+-- @TODO @FIXME
+function breadth_first(map, target, neighbour_f)
+    local neighbour_f = neighbour_f or hex_neighbours
+
+    local frontier = { target }
+
+    local reached = {}
+    reached[target.x] = {}
+    reached[target.x][target.y] = true
+
+    while not #frontier == 0 do
+        local current = table.remove(frontier, 1)
+
+        for _,next_ in pairs(neighbour_f(current)) do
+
+        end
+    end
+end
+
 -- generic A* pathfinding
 -- @NOTE is it better to move the functions to be members of the map?
 --
@@ -453,6 +481,6 @@ function Astar(map, start, goal, neighbour_f, heuristic_f, cost_f)
         log(" we didn't make it!")
     end
 
-    return came_from
+    return came_from, made_it
 end
 

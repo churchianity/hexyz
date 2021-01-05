@@ -4,34 +4,33 @@ MOBS = {}
 --[[
     mob structure:
     {
-        position    - vec2      -- true pixel coordinates
         TOB         - float     -- time stamp in seconds of when the mob when spawned
+        hex         - vec2      -- hexagon the mob is on
+        position    - vec2      -- true pixel coordinates
         node        - node      -- the root graph node for this mob
-        hex         - vec2      -- hexagon the mob is on top of
-        update      - function  -- the function that gets called every frame
+        update      - function  -- function that gets called every frame with itself as an argument
     }
 ]]
 
+require "extra"
 require "sound"
-require "util"
 
 MOB_UPDATES = {
     BEEPER = function(mob, index)
-        mob.hex = pixel_to_hex(mob.position - WORLDSPACE_COORDINATE_OFFSET)
+        mob.hex = pixel_to_hex(mob.position)
 
-        local frame_target = map_get(mob.path, mob.hex.x, mob.hex.y)
+        local frame_target = mob.path[mob.hex.x] and mob.path[mob.hex.x][mob.hex.y]
 
         if frame_target then
-            mob.position = math.lerpv2(mob.position, hex_to_pixel(frame_target.hex) + WORLDSPACE_COORDINATE_OFFSET, 0.91)
+            mob.position = math.lerpv2(mob.position, hex_to_pixel(frame_target.hex), 0.91)
             mob.node.position2d = mob.position
 
-        -- can't find path, or dead
-        else
+        else -- can't find path, or dead
             win.scene:action(am.play(am.sfxr_synth(SOUNDS.EXPLOSION1), false, math.random() + 0.5))
 
             local i,v = table.find(MOBS, function(_mob) return _mob == mob end)
             table.remove(MOBS, index)
-            win.scene:remove(mob.node)
+            win.scene"world":remove(mob.node)
         end
 
         -- passive animation
@@ -86,7 +85,7 @@ function make_mob()
     mob.TOB         = TIME
     mob.update      = MOB_UPDATES.BEEPER
     mob.hex         = get_spawn_hex(mob)
-    mob.position    = hex_to_pixel(mob.hex) + WORLDSPACE_COORDINATE_OFFSET
+    mob.position    = hex_to_pixel(mob.hex)
     mob.path        = Astar(HEX_MAP, HEX_GRID_CENTER, mob.hex,
 
         -- neighbour function
@@ -112,7 +111,7 @@ function make_mob()
                ^ am.rotate(mob.TOB)
                ^ pack_texture_into_sprite(TEX_MOB1_1, 20, 20)
 
-    win.scene:append(mob.node)
+    win.scene"world":append(mob.node)
 
     return mob
 end

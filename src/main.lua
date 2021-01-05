@@ -6,38 +6,67 @@ math.randomseed(os.time()); math.random(); math.random(); math.random()
 require "color"
 require "grid"
 require "mob"
-require "math"
-require "table"
+require "tower"
 
 
 --============================================================================
 -- Globals
-TIME = 0
-
 win = am.window{ width = 1920, height = 1080 }
+
+TIME = 0
+SCORE = 0
+
+local COORDINATE_DISPLAY_TYPES = {
+    CENTERED_EVENQ  = 0,
+    EVENQ           = 1,
+    HEX             = 2
+}
+
+local COORDINATE_DISPLAY_TYPE = COORDINATE_DISPLAY_TYPES.CENTERED_EVENQ
 
 function game_action(scene)
     TIME = am.current_time()
+    SCORE = TIME
 
     local mouse = win:mouse_position()
     local hex = pixel_to_hex(mouse - WORLDSPACE_COORDINATE_OFFSET)
-    local _off = hex_to_evenq(hex)
-    local off = _off{ y = -_off.y } - vec2(math.floor(HEX_GRID_WIDTH/2)
-                                         , math.floor(HEX_GRID_HEIGHT/2))
-    local tile = get_tile(hex.x, hex.y)
+    local evenq = hex_to_evenq(hex)
+    local centered_evenq = evenq{ y = -evenq.y } - vec2(math.floor(HEX_GRID_WIDTH/2)
+                                                      , math.floor(HEX_GRID_HEIGHT/2))
 
-    if tile and win:mouse_pressed"left" then
+    local tile = HEX_MAP.get(hex.x, hex.y)
+
+    if win:mouse_pressed"left" then
     end
 
-    if win:key_pressed"f1" then end
+    if win:key_pressed"f3" then
+        COORDINATE_DISPLAY_TYPE = (COORDINATE_DISPLAY_TYPE + 1) % #table.keys(COORDINATE_DISPLAY_TYPES)
+    end
 
     do_mob_updates()
     do_mob_spawning()
 
-    -- draw stuff
-    win.scene"hex_cursor".center = hex_to_pixel(hex) + WORLDSPACE_COORDINATE_OFFSET
-    win.scene"score".text = string.format("SCORE: %.2f", TIME)
-    win.scene"coords".text = string.format("%d,%d", hex.x, hex.y)
+    if tile and is_interactable(tile, evenq{ y = -evenq.y }) then
+        win.scene"hex_cursor".center = hex_to_pixel(hex) + WORLDSPACE_COORDINATE_OFFSET
+    else
+        win.scene"hex_cursor".center = vec2(6969)
+    end
+
+    win.scene"score".text = string.format("SCORE: %.2f", SCORE)
+
+    do
+        local str, coords
+        if COORDINATE_DISPLAY_TYPE == COORDINATE_DISPLAY_TYPES.CENTERED_EVENQ then
+            str, coords = "evenqc: ", centered_evenq
+
+        elseif COORDINATE_DISPLAY_TYPE == COORDINATE_DISPLAY_TYPES.EVENQ then
+            str, coords = "evenq: ", evenq
+
+        elseif COORDINATE_DISPLAY_TYPE == COORDINATE_DISPLAY_TYPES.HEX then
+            str, coords = "hex: ", hex
+        end
+        win.scene"coords".text = string.format("%s%d,%d", str, coords.x, coords.y)
+    end
 end
 
 function game_scene()
@@ -52,7 +81,6 @@ function game_scene()
     end))
 
     local world
-
     HEX_MAP, world = random_map()
 
     local scene = am.group{
