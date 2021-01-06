@@ -6,8 +6,6 @@ else
     log("clobbering a math.round function.")
 end
 
---============================================================================
--- HEX CONSTANTS AND UTILITY FUNCTIONS
 
 -- wherever 'orientation' appears as an argument, use one of these two, or set a default just below
 ORIENTATION = {
@@ -261,6 +259,14 @@ local function map_set(t, x, y, v)
     return t
 end
 
+local function map_traverse(t, callback)
+    for i,_ in pairs(t) do
+        for _,entry in pairs(t[i]) do
+            callback(entry)
+        end
+    end
+end
+
 -- @NOTE probably shouldn't use this...
 local function map_partial_set(t, x, y, k, v)
     local entry = map_get(t, x, y)
@@ -304,7 +310,8 @@ function parallelogram_map(width, height, seed)
         seed = seed,
         get = function(x, y) return map_get(map, x, y) end,
         set = function(x, y, v) return map_set(map, x, y, v) end,
-        partial = function(x, y, k, v) return map_partial_set(map, x, y, k, v) end
+        partial = function(x, y, k, v) return map_partial_set(map, x, y, k, v) end,
+        traverse = function(callback) return map_traverse(map, callback) end
     }})
 end
 
@@ -336,7 +343,8 @@ function triangular_map(size, seed)
         seed = seed,
         get = function(x, y) return map_get(map, x, y) end,
         set = function(x, y, v) return map_set(map, x, y, v) end,
-        partial = function(x, y, k, v) return map_partial_set(map, x, y, k, v) end
+        partial = function(x, y, k, v) return map_partial_set(map, x, y, k, v) end,
+        traverse = function(callback) return map_traverse(map, callback) end
     }})
 end
 
@@ -373,7 +381,8 @@ function hexagonal_map(radius, seed)
         seed = seed,
         get = function(x, y) return map_get(map, x, y) end,
         set = function(x, y, v) return map_set(map, x, y, v) end,
-        partial = function(x, y, k, v) return map_partial_set(map, x, y, k, v) end
+        partial = function(x, y, k, v) return map_partial_set(map, x, y, k, v) end,
+        traverse = function(callback) return map_traverse(map, callback) end
     }})
 end
 
@@ -408,51 +417,89 @@ function rectangular_map(width, height, seed)
         seed = seed,
         get = function(x, y) return map_get(map, x, y) end,
         set = function(x, y, v) return map_set(map, x, y, v) end,
-        partial = function(x, y, k, v) return map_partial_set(map, x, y, k, v) end
+        partial = function(x, y, k, v) return map_partial_set(map, x, y, k, v) end,
+        traverse = function(callback) return map_traverse(map, callback) end
     }})
 end
 
 --============================================================================
 -- PATHFINDING
 
--- @TODO @FIXME
-function breadth_first(map, target, neighbour_f)
-    local neighbour_f = neighbour_f or hex_neighbours
 
-    local frontier = { target }
+-- maps each hex of |map| to a numeric value, which is its distance from |start|
+-- returns this new map
+function breadth_first_distance(map, start, neighbour_f)
+    local neighbour_f = neighbour_f or function(map, hex) return hex_neighbours(hex) end
 
-    local reached = {}
-    reached[target.x] = {}
-    reached[target.x][target.y] = true
+    local frontier = { start }
 
-    while not #frontier == 0 do
+    local distance = {}
+    distance[start.x] = {}
+    distance[start.x][start.y] = 0
+
+    while not (#frontier == 0) do
         local current = table.remove(frontier, 1)
 
-        for _,next_ in pairs(neighbour_f(current)) do
-
+        for _,next_ in pairs(neighbour_f(map, current)) do
+            if not map_get(distance, next_.x, next_.y) then
+                table.insert(frontier, next_)
+                map_set(distance, next_.x, next_.y, 1 + map_get(distance, current.x, current.y))
+            end
         end
     end
+
+    return setmetatable(distance, { __index = {
+        get = function(x, y) return map_get(distance, x, y) end
+    }})
 end
 
--- generic A* pathfinding
--- @NOTE is it better to move the functions to be members of the map?
---
--- returns a map that has map[hex.x][hex.y] = 'the vec2 which is the hex you came from when trying to get to |goal|'
-function Astar(map, start, goal, neighbour_f, heuristic_f, cost_f)
-    local neighbour_f = neighbour_f or hex_neighbours
-    local heuristic_f = heuristic_f or math.distance
-    local cost_f = cost_f or function() return 1 end
+-- maps each hex of |map| to an adjacent cell that is on the path to |start|, or nil if no path exists
+-- returns this new map
+function breadth_first_vectorfield(map, start, neighbour_f)
+    local neighbour_f = neighbour_f or function(map, hex) return hex_neighbours(hex) end
+
+    local frontier = { start }
 
     local came_from = {}
     came_from[start.x] = {}
     came_from[start.x][start.y] = false
 
+    while not (#frontier == 0) do
+        local current = table.remove(frontier, 1)
+
+        for _,next_ in pairs(neighbour_f(map, current)) do
+            if not map_get(came_from, next_.x, next_.y) then
+                table.insert(frontier, next_)
+                map_set(came_from, next_.x, next_.y, current)
+            end
+        end
+    end
+
+    came_from.get = function(x, y) return map_get(came_from, x, y) end
+
+    return came_from
+end
+
+-- generic A* pathfinding
+--
+-- returns a map that has map[hex.x][hex.y] = { hex = vec2, priority = number },
+-- where the hex is the spot it thinks you should go to from the indexed hex, and priority is the cost of that decision,
+-- as well as 'made_it' a bool that tells you if we were successful in reaching |goal|
+function Astar(map, start, goal, neighbour_f, heuristic_f, cost_f)
+    local neighbour_f = neighbour_f or function(map, hex) return hex_neighbours(hex) end
+    local heuristic_f = heuristic_f or math.distance
+    local cost_f = cost_f or function(from, to) return 1 end
+
+    local path = {}
+    path[start.x] = {}
+    path[start.x][start.y] = false
+
     local frontier = {}
     frontier[1] = { hex = start, priority = 0 }
 
-    local cost_so_far = {}
-    cost_so_far[start.x] = {}
-    cost_so_far[start.x][start.y] = 0
+    local path_so_far = {}
+    path_so_far[start.x] = {}
+    path_so_far[start.x][start.y] = 0
 
     local made_it = false
     while not (#frontier == 0) do
@@ -463,24 +510,19 @@ function Astar(map, start, goal, neighbour_f, heuristic_f, cost_f)
             break
         end
 
-        for _,next_ in pairs(neighbour_f(current.hex)) do
-            local new_cost = map_get(cost_so_far, current.hex.x, current.hex.y)
-                             + cost_f(next_)
-            local next_cost = map_get(cost_so_far, next_.x, next_.y)
+        for _,next_ in pairs(neighbour_f(map, current.hex)) do
+            local new_cost = map_get(path_so_far, current.hex.x, current.hex.y) + cost_f(current, next_)
+            local next_cost = map_get(path_so_far, next_.x, next_.y)
 
             if not next_cost or new_cost < next_cost then
-                map_set(cost_so_far, next_.x, next_.y, new_cost)
+                map_set(path_so_far, next_.x, next_.y, new_cost)
                 local priority = new_cost + heuristic_f(goal, next_)
                 table.insert(frontier, { hex = next_, priority = priority })
-                map_set(came_from, next_.x, next_.y, current)
+                map_set(path, next_.x, next_.y, current)
             end
         end
     end
 
-    if not made_it then
-        log(" we didn't make it!")
-    end
-
-    return came_from, made_it
+    return path, made_it
 end
 

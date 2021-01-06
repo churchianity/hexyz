@@ -1,6 +1,13 @@
 
 function load_textures()
-    TEX_MOB1_1 = am.texture2d("../res/mob1_1.png")
+    TEX_MARQUIS             = am.texture2d("../res/marquis.png")
+
+    TEX_ARROW               = am.texture2d("../res/arrow.png")
+
+    TEX_WALL_CLOSED         = am.texture2d("../res/wall_closed.png")
+    TEX_TOWER1              = am.texture2d("../res/tower1.png")
+
+    TEX_MOB1_1              = am.texture2d("../res/mob1_1.png")
 end
 
 function pack_texture_into_sprite(texture, width, height)
@@ -11,6 +18,4 @@ function pack_texture_into_sprite(texture, width, height)
         y1 = 0, y2 = height, height = height
     }
 end
-
-
 

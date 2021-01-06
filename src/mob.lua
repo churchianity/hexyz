@@ -1,36 +1,44 @@
 
 
-MOBS = {}
+local MOBS = {}
 --[[
     mob structure:
     {
-        TOB         - float     -- time stamp in seconds of when the mob when spawned
+        TOB         - float     -- time stamp in seconds of when the tower was spawned
         hex         - vec2      -- hexagon the mob is on
         position    - vec2      -- true pixel coordinates
         node        - node      -- the root graph node for this mob
         update      - function  -- function that gets called every frame with itself as an argument
+        path        - 2d table  -- map of hexes to other hexes, forms a path
+        speed       - number    -- multiplier on distance travelled per frame, up to the update function to use correctly
     }
 ]]
 
 require "extra"
 require "sound"
 
-MOB_UPDATES = {
+
+local MOB_UPDATES = {
     BEEPER = function(mob, index)
         mob.hex = pixel_to_hex(mob.position)
 
         local frame_target = mob.path[mob.hex.x] and mob.path[mob.hex.x][mob.hex.y]
 
         if frame_target then
-            mob.position = math.lerpv2(mob.position, hex_to_pixel(frame_target.hex), 0.91)
+            mob.position = mob.position + math.normalize(hex_to_pixel(frame_target.hex) - mob.position) * mob.speed
             mob.node.position2d = mob.position
 
-        else -- can't find path, or dead
-            win.scene:action(am.play(am.sfxr_synth(SOUNDS.EXPLOSION1), false, math.random() + 0.5))
+        else
+            if mob.hex == HEX_GRID_CENTER then
+                WIN.scene"world":action(
+                    am.play(am.sfxr_synth(SOUNDS.EXPLOSION1), false, math.random() + 0.5)
+                )
 
-            local i,v = table.find(MOBS, function(_mob) return _mob == mob end)
-            table.remove(MOBS, index)
-            win.scene"world":remove(mob.node)
+                table.remove(MOBS, index)
+                WIN.scene"world":remove(mob.node)
+            else
+                log("stuck")
+            end
         end
 
         -- passive animation
@@ -43,13 +51,32 @@ MOB_UPDATES = {
 }
 
 -- check if a the tile at |hex| is passable by |mob|
-function can_pass_through(mob, hex)
+local function mob_can_pass_through(mob, hex)
     local tile = HEX_MAP.get(hex.x, hex.y)
     return tile and tile.elevation < 0.5 and tile.elevation > -0.5
 end
 
+local function get_mob_path(map, start, goal, mob)
+    return Astar(map, goal, start, -- goal and start are switched intentionally
+        -- neighbour function
+        function(map, hex)
+            return table.filter(grid_neighbours(map, hex), function(_hex)
+                return mob_can_pass_through(mob, _hex)
+            end)
+        end,
+
+        -- heuristic function
+        math.distance,
+
+        -- cost function
+        function(from, to)
+            return math.abs(map.get(to.x, to.y).elevation)
+        end
+    )
+end
+
 -- @FIXME there's a bug here where the position of the spawn hex is sometimes 1 closer to the center than we want
-function get_spawn_hex(mob)
+local function get_spawn_hex(mob)
     local spawn_hex
     repeat
         -- ensure we spawn on an random tile along the map's edges
@@ -73,51 +100,40 @@ function get_spawn_hex(mob)
         spawn_hex = evenq_to_hex(vec2(x, -y))
         local tile = HEX_MAP[spawn_hex.x][spawn_hex.y]
 
-    until can_pass_through(mob, spawn_hex)
+    until mob_can_pass_through(mob, spawn_hex)
 
     return spawn_hex
 end
 
---
-function make_mob()
+local function make_mob()
     local mob = {}
 
     mob.TOB         = TIME
     mob.update      = MOB_UPDATES.BEEPER
     mob.hex         = get_spawn_hex(mob)
     mob.position    = hex_to_pixel(mob.hex)
-    mob.path        = Astar(HEX_MAP, HEX_GRID_CENTER, mob.hex,
-
-        -- neighbour function
-        function(hex)
-            return table.filter(hex_neighbours(hex), function(_hex)
-                return can_pass_through(mob, _hex)
-            end)
-        end,
-
-        -- heuristic function
-        function(source, target)
-            return math.distance(source, target)
-        end,
-
-        -- cost function
-        function(hex)
-            return math.abs(HEX_MAP.get(hex.x, hex.y).elevation)
-        end
-    )
+    mob.path        = get_mob_path(HEX_MAP, mob.hex, HEX_GRID_CENTER, mob)
+    mob.speed       = 10
 
     mob.node = am.translate(mob.position)
                ^ am.scale(2)
                ^ am.rotate(mob.TOB)
                ^ pack_texture_into_sprite(TEX_MOB1_1, 20, 20)
 
-    win.scene"world":append(mob.node)
+    WIN.scene"world":append(mob.node)
 
     return mob
 end
 
+function mob_on_hex(hex)
+    return table.find(MOBS, function(mob)
+        return mob.hex == hex
+    end)
+end
+
 local SPAWN_CHANCE = 50
 function do_mob_spawning()
+    --if WIN:key_pressed"space" then
     if math.random(SPAWN_CHANCE) == 1 then
         table.insert(MOBS, make_mob())
     end

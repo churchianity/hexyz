@@ -1,7 +1,7 @@
 
 
 COLORS = {
-    TRANSPARENT         = vec4(0.4),
+    TRANSPARENT         = vec4(0.6),
 
     -- tones
     WHITE               = vec4(0.8, 0.8, 0.7, 1),
@@ -21,6 +21,7 @@ COLORS = {
     PALE_SILVER         = vec4(193/255, 178/255, 171/255, 1),
     CLARET              = vec4(139/255, 30/255, 63/255, 1),
     BISTRO              = vec4(73/255, 44/255, 29/255, 1),
-    DEEP_SPACE_SPARKLE  = vec4(61/255, 90/255, 108/255, 1)
+    DEEP_SPACE_SPARKLE  = vec4(61/255, 90/255, 108/255, 1),
+    WHEAT               = vec4(225/255, 202/255, 150/255, 1)
 }
 
