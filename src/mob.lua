@@ -3,16 +3,18 @@
 require "extra"
 require "sound"
 
-function mob_die(mob, entity_index)
-    WORLD:action(vplay_sound(SOUNDS.EXPLOSION1))
-    delete_entity(entity_index)
-end
 
 -- @NOTE returns i,v in the table
 function mob_on_hex(hex)
     return table.find(ENTITIES, function(entity)
         return entity.type == ENTITY_TYPE.MOB and entity.hex == hex
     end)
+end
+
+
+function mob_die(mob, entity_index)
+    WORLD:action(vplay_sound(SOUNDS.EXPLOSION1))
+    delete_entity(entity_index)
 end
 
 function do_hit_mob(mob, damage, index)
@@ -27,7 +29,10 @@ end
 function check_for_broken_mob_pathing(hex)
     for _,entity in pairs(ENTITIES) do
         if entity.type == ENTITY_TYPE.MOB and entity.path[hex.x] and entity.path[hex.x][hex.y] then
-            entity.path = get_mob_path(entity, HEX_MAP, entity.hex, HEX_GRID_CENTER)
+            --local pathfinder = coroutine.create(function()
+                entity.path = get_mob_path(entity, HEX_MAP, entity.hex, HEX_GRID_CENTER)
+            --end)
+            --coroutine.resume(pathfinder)
         end
     end
 end
@@ -123,7 +128,7 @@ local function make_and_register_mob()
             end
 
             -- passive animation
-            if RAND < 0.01 then
+            if math.random() < 0.01 then
                 _mob.node"rotate":action(am.tween(0.3, { angle = _mob.node"rotate".angle + math.pi*3 }))
             else
                 _mob.node"rotate".angle = math.wrapf(_mob.node"rotate".angle + am.delta_time, math.pi*2)
@@ -131,14 +136,14 @@ local function make_and_register_mob()
         end
     )
 
-    mob.path            = get_mob_path(mob, HEX_MAP, mob.hex, HEX_GRID_CENTER)
-    mob.health          = 10
-    mob.speed           = 5
-    mob.bounty          = 5
-    mob.hurtbox_radius  = 15
+    mob.path           = get_mob_path(mob, HEX_MAP, mob.hex, HEX_GRID_CENTER)
+    mob.health         = 10
+    mob.speed          = 1
+    mob.bounty         = 5
+    mob.hurtbox_radius = 15
 end
 
-local SPAWN_CHANCE = 50
+local SPAWN_CHANCE = 100
 function do_mob_spawning()
     --if WIN:key_pressed"space" then
     if math.random(SPAWN_CHANCE) == 1 then

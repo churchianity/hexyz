@@ -25,16 +25,24 @@ OFF_SCREEN = vec2(WIN.width * 2) -- arbitrary pixel position that is garunteed t
 WORLD = false -- root scene node of everything considered to be in the game world
 TIME  = 0     -- runtime of the current game in seconds
 SCORE = 0     -- score of the player
+MONEY = 0     -- available resources
 MOUSE = false -- position of the mouse at the start of every frame, if an action is tracking it
 RAND  = 0     -- result of first call to math.random() this frame
 
-local COORDINATE_DISPLAY_TYPES = {
+-- global audio settings
+MUSIC_VOLUME = 0.1
+SFX_VOLUME   = 0.1
+
+local TRDTS = {
+    NOTHING        = -1,
     CENTERED_EVENQ = 0,
     EVENQ          = 1,
-    HEX            = 2
+    HEX            = 2,
+    PLATFORM       = 3,
+    PERF           = 4
 }
 
-local COORDINATE_DISPLAY_TYPE = COORDINATE_DISPLAY_TYPES.CENTERED_EVENQ
+local TRDT = TRDTS.CENTERED_EVENQ
 local function game_action(scene)
     if SCORE < 0 then game_end() end
 
@@ -47,7 +55,7 @@ local function game_action(scene)
     local rounded_mouse  = hex_to_pixel(hex) + WORLDSPACE_COORDINATE_OFFSET
     local evenq          = hex_to_evenq(hex)
     local centered_evenq = evenq{ y = -evenq.y } - vec2(math.floor(HEX_GRID_WIDTH/2)
-                                                         , math.floor(HEX_GRID_HEIGHT/2))
+                                                      , math.floor(HEX_GRID_HEIGHT/2))
     local tile = HEX_MAP.get(hex.x, hex.y)
     local hot = is_interactable(tile, evenq{ y = -evenq.y })
 
@@ -67,7 +75,7 @@ local function game_action(scene)
         WIN.scene = game_scene()
 
     elseif WIN:key_pressed"f3" then
-        COORDINATE_DISPLAY_TYPE = (COORDINATE_DISPLAY_TYPE + 1) % #table.keys(COORDINATE_DISPLAY_TYPES)
+        TRDT = (TRDT + 1) % #table.keys(TRDTS)
 
     elseif WIN:key_pressed"f4" then
         log(HEX_MAP.seed)
@@ -81,19 +89,26 @@ local function game_action(scene)
     end
 
     WIN.scene"score".text = string.format("SCORE: %.2f", SCORE)
+    WIN.scene"money".text = string.format("MONEY: %d", MONEY)
 
     do
-        local str, coords
-        if COORDINATE_DISPLAY_TYPE == COORDINATE_DISPLAY_TYPES.CENTERED_EVENQ then
-            str, coords = "evenqc", centered_evenq
+        local str = ""
+        if TRDT == TRDTS.CENTERED_EVENQ then
+            str = string.format("%d,%d (cevenq)", centered_evenq.x, centered_evenq.y)
 
-        elseif COORDINATE_DISPLAY_TYPE == COORDINATE_DISPLAY_TYPES.EVENQ then
-            str, coords = "evenq", evenq
+        elseif TRDT == TRDTS.EVENQ then
+            str = string.format("%d,%d (evenq)", evenq.x, evenq.y)
 
-        elseif COORDINATE_DISPLAY_TYPE == COORDINATE_DISPLAY_TYPES.HEX then
-            str, coords = "hex", hex
+        elseif TRDT == TRDTS.HEX then
+            str = string.format("%d,%d (hex)", hex.x, hex.y)
+
+        elseif TRDT == TRDTS.PLATFORM then
+            str = string.format("%s %s lang %s", am.platform, am.version, am.language())
+
+        elseif TRDT == TRDTS.PERF then
+            str = table.tostring(am.perf_stats())
         end
-        WIN.scene"coords".text = string.format("%d,%d (%s)", coords.x, coords.y, str)
+        WIN.scene"coords".text = str
     end
 end
 
@@ -138,7 +153,8 @@ end
 -- @NOTE must be global to allow the game_action to reference it
 function game_scene()
     local score = am.translate(WIN.left + 10, WIN.top - 20) ^ am.text("", "left"):tag"score"
-    local coords = am.translate(WIN.right - 10, WIN.top - 20) ^ am.text("", "right"):tag"coords"
+    local money = am.translate(WIN.left + 10, WIN.top - 40) ^ am.text("", "left"):tag"money"
+    local coords = am.translate(WIN.right - 10, WIN.top - 20) ^ am.text("", "right", "top"):tag"coords"
     local hex_cursor = am.circle(OFF_SCREEN, HEX_SIZE, COLORS.TRANSPARENT, 6):tag"hex_cursor"
 
     local curtain = am.rect(WIN.left, WIN.bottom, WIN.right, WIN.top, COLORS.TRUE_BLACK)
@@ -155,16 +171,18 @@ function game_scene()
         hex_cursor,
         toolbelt(),
         score,
+        money,
         coords,
     }
 
     scene:action(game_action)
+    scene:action(am.play(SOUNDS.TRACK1))
 
     return scene
 end
 
 function get_debug_string()
-    return string.format("%s, %s lang %s\n%s", am.platform, am.version, am.language(), am.perf_stats())
+
 end
 
 require "texture"

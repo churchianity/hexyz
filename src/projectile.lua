@@ -16,20 +16,19 @@ function make_and_register_projectile(hex, vector, velocity)
             _projectile.node.position2d = _projectile.position
             _projectile.hex             = pixel_to_hex(_projectile.position)
 
-            if not point_in_rect(_projectile.position + WORLDSPACE_COORDINATE_OFFSET, {
+            local mob_index,mob = mob_on_hex(_projectile.hex)
+            if mob and math.distance(mob.position, _projectile.position) > math.abs(_projectile.hitbox_radius - mob.hurtbox_radius) then
+                do_hit_mob(mob, _projectile.damage, mob_index)
+                delete_entity(_projectile_index)
+                WORLD:action(vplay_sound(SOUNDS.HIT1))
+
+            elseif not point_in_rect(_projectile.position + WORLDSPACE_COORDINATE_OFFSET, {
                 x1 = WIN.left,
                 y1 = WIN.bottom,
                 x2 = WIN.right,
                 y2 = WIN.top
             }) then
                 delete_entity(_projectile_index)
-            end
-
-            local mob_index,mob = mob_on_hex(_projectile.hex)
-            if mob and math.distance(mob.position, _projectile.position) > math.abs(_projectile.hitbox_radius - mob.hurtbox_radius) then
-                do_hit_mob(mob, _projectile.damage, mob_index)
-                delete_entity(_projectile_index)
-                WORLD:action(vplay_sound(SOUNDS.HIT1))
             end
         end
     )

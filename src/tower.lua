@@ -42,7 +42,7 @@ function make_and_register_tower(hex)
                     )
 
                     _tower.last_shot_time = TIME
-                    _tower.node:action(vplay_sound(SOUNDS.EXPLOSION3))
+                    _tower.node:action(vplay_sound(SOUNDS.LASER2))
                 end
             end
         end
