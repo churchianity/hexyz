@@ -38,11 +38,11 @@ function make_and_register_tower(hex)
                     make_and_register_projectile(
                         _tower.hex,
                         math.normalize(hex_to_pixel(entity.hex) - _tower.position),
-                        5
+                        15
                     )
 
                     _tower.last_shot_time = TIME
-                    _tower.node:action(am.play(am.sfxr_synth(SOUNDS.EXPLOSION3)))
+                    _tower.node:action(vplay_sound(SOUNDS.EXPLOSION3))
                 end
             end
         end

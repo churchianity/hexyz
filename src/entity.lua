@@ -1,9 +1,10 @@
 
+
 ENTITY_TYPE = {
-    ENTITY      = 0,
-    MOB         = 1,
-    TOWER       = 2,
-    PROJECTILE  = 3
+    ENTITY     = 0,
+    MOB        = 1,
+    TOWER      = 2,
+    PROJECTILE = 3
 }
 
 ENTITIES = {}
@@ -21,6 +22,8 @@ ENTITIES = {}
 --  {
 --      path            - 2d table  - map of hexes to other hexes, forms a path
 --      speed           - number    - multiplier on distance travelled per frame, up to the update function to use correctly
+--      bounty          - number    - score bonus you get when this mob is killed
+--      hurtbox_radius  - number    -
 --  }
 --
 --  tower(entity) structure:
@@ -33,6 +36,10 @@ ENTITIES = {}
 --
 --  bullet/projectile structure
 --  {
+--      vector          - vec2      - normalized vector of the current direction of this projectile
+--      velocity        - number    - multplier on distance travelled per frame
+--      damage          - number    - guess
+--      hitbox_radius   - number    - hitboxes are circles
 --  }
 --
 function make_and_register_entity(type_, hex, node, update)
@@ -46,13 +53,21 @@ function make_and_register_entity(type_, hex, node, update)
     entity.node     = am.translate(entity.position) ^ node
 
     table.insert(ENTITIES, entity)
-    WIN.scene"world":append(entity.node)
+    WORLD:append(entity.node)
     return entity
 end
 
+function delete_all_entities()
+    for index,entity in pairs(ENTITIES) do
+        delete_entity(index)
+    end
+
+    ENTITIES = {}
+end
+
 function delete_entity(index)
-    WIN.scene"world":remove(ENTITIES[index].node)
-    ENTITIES[index] = nil
+    WORLD:remove(ENTITIES[index].node)
+    ENTITIES[index] = nil -- leave empty indexes so other entities can learn that this entity was deleted
 end
 
 function do_entity_updates()
@@ -60,5 +75,4 @@ function do_entity_updates()
         entity.update(entity, index)
     end
 end
-
 

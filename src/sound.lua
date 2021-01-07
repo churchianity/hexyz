@@ -14,3 +14,8 @@ SOUNDS = {
     RANDOM5         = 36680709
 }
 
+-- play a sound with variable pitch
+function vplay_sound(seed)
+    return am.play(am.sfxr_synth(seed), false, (math.random() + 0.5)/2)
+end
+

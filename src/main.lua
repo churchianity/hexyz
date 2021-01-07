@@ -13,13 +13,20 @@ require "projectile"
 require "tower"
 
 -- Globals
-WIN = am.window{ width = 1920, height = 1080, title = "hexyz" }
+WIN = am.window{
+    width       = 1920,
+    height      = 1080,
+    title       = "hexyz",
+    resizable   = false
+}
 
 OFF_SCREEN = vec2(WIN.width * 2) -- arbitrary pixel position that is garunteed to be off screen
 
-TIME = 0
-SCORE = 0
-MOUSE = vec2(0)
+WORLD = false -- root scene node of everything considered to be in the game world
+TIME  = 0     -- runtime of the current game in seconds
+SCORE = 0     -- score of the player
+MOUSE = false -- position of the mouse at the start of every frame, if an action is tracking it
+RAND  = 0     -- result of first call to math.random() this frame
 
 local COORDINATE_DISPLAY_TYPES = {
     CENTERED_EVENQ = 0,
@@ -29,20 +36,23 @@ local COORDINATE_DISPLAY_TYPES = {
 
 local COORDINATE_DISPLAY_TYPE = COORDINATE_DISPLAY_TYPES.CENTERED_EVENQ
 local function game_action(scene)
-    TIME                    = am.current_time()
-    SCORE                   = TIME
-    MOUSE                   = WIN:mouse_position()
+    if SCORE < 0 then game_end() end
 
-    local hex               = pixel_to_hex(MOUSE - WORLDSPACE_COORDINATE_OFFSET)
-    local rounded_mouse     = hex_to_pixel(hex) + WORLDSPACE_COORDINATE_OFFSET
-    local evenq             = hex_to_evenq(hex)
-    local centered_evenq    = evenq{ y = -evenq.y } - vec2(math.floor(HEX_GRID_WIDTH/2)
+    TIME  = am.current_time()
+    SCORE = SCORE + am.delta_time
+    RAND  = math.random()
+    MOUSE = WIN:mouse_position()
+
+    local hex            = pixel_to_hex(MOUSE - WORLDSPACE_COORDINATE_OFFSET)
+    local rounded_mouse  = hex_to_pixel(hex) + WORLDSPACE_COORDINATE_OFFSET
+    local evenq          = hex_to_evenq(hex)
+    local centered_evenq = evenq{ y = -evenq.y } - vec2(math.floor(HEX_GRID_WIDTH/2)
                                                          , math.floor(HEX_GRID_HEIGHT/2))
     local tile = HEX_MAP.get(hex.x, hex.y)
     local hot = is_interactable(tile, evenq{ y = -evenq.y })
 
-    do_mob_spawning()
     do_entity_updates()
+    do_mob_spawning()
 
     if WIN:mouse_pressed"left" then
         if hot and is_buildable(hex, tile, nil) then
@@ -51,6 +61,9 @@ local function game_action(scene)
     end
 
     if WIN:key_pressed"escape" then
+        pause()
+
+    elseif WIN:key_pressed"f2" then
         WIN.scene = game_scene()
 
     elseif WIN:key_pressed"f3" then
@@ -82,6 +95,24 @@ local function game_action(scene)
         end
         WIN.scene"coords".text = string.format("%d,%d (%s)", coords.x, coords.y, str)
     end
+end
+
+function pause()
+    WORLD"group".paused = true
+end
+
+function game_end()
+    WIN.scene.paused = true
+
+    -- de-initialize stuff
+    delete_all_entities()
+    SCORE = 0
+
+    WIN.scene = game_scene()
+end
+
+function update_score(diff)
+    SCORE = SCORE + diff
 end
 
 local function toolbelt()
@@ -116,11 +147,10 @@ function game_scene()
         WIN.scene:remove(curtain)
     end))
 
-    local world
-    HEX_MAP, world = random_map()
+    HEX_MAP, WORLD = random_map()
 
     local scene = am.group{
-        world,
+        WORLD,
         curtain,
         hex_cursor,
         toolbelt(),
@@ -131,6 +161,10 @@ function game_scene()
     scene:action(game_action)
 
     return scene
+end
+
+function get_debug_string()
+    return string.format("%s, %s lang %s\n%s", am.platform, am.version, am.language(), am.perf_stats())
 end
 
 require "texture"

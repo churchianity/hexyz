@@ -4,9 +4,7 @@ require "extra"
 require "sound"
 
 function mob_die(mob, entity_index)
-    WIN.scene"world":action(
-        am.play(am.sfxr_synth(SOUNDS.EXPLOSION1), false, math.random() + 0.5)
-    )
+    WORLD:action(vplay_sound(SOUNDS.EXPLOSION1))
     delete_entity(entity_index)
 end
 
@@ -21,6 +19,7 @@ function do_hit_mob(mob, damage, index)
     mob.health = mob.health - damage
 
     if mob.health < 1 then
+        update_score(mob.bounty)
         mob_die(mob, index)
     end
 end
@@ -116,14 +115,15 @@ local function make_and_register_mob()
 
             else
                 if _mob.hex == HEX_GRID_CENTER then
-                    mob_die(_mob, index)
+                    update_score(-_mob.health)
+                    mob_die(_mob, _mob_index)
                 else
                     log("stuck")
                 end
             end
 
             -- passive animation
-            if math.random() < 0.01 then
+            if RAND < 0.01 then
                 _mob.node"rotate":action(am.tween(0.3, { angle = _mob.node"rotate".angle + math.pi*3 }))
             else
                 _mob.node"rotate".angle = math.wrapf(_mob.node"rotate".angle + am.delta_time, math.pi*2)
@@ -131,9 +131,11 @@ local function make_and_register_mob()
         end
     )
 
-    mob.path        = get_mob_path(mob, HEX_MAP, mob.hex, HEX_GRID_CENTER)
-    mob.health      = 10
-    mob.speed       = 1
+    mob.path            = get_mob_path(mob, HEX_MAP, mob.hex, HEX_GRID_CENTER)
+    mob.health          = 10
+    mob.speed           = 5
+    mob.bounty          = 5
+    mob.hurtbox_radius  = 15
 end
 
 local SPAWN_CHANCE = 50

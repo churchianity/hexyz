@@ -29,8 +29,10 @@ local function grid_pixel_dimensions()
 end
 
 GRID_PIXEL_DIMENSIONS = grid_pixel_dimensions()
+WORLDSPACE_COORDINATE_OFFSET = -GRID_PIXEL_DIMENSIONS/2
 
-HEX_GRID_INTERACTABLE_REGION_PADDING = 2
+HEX_GRID_INTERACTABLE_REGION_PADDING = 3
+
 function is_interactable(tile, evenq)
     return point_in_rect(evenq, {
         x1 =                   HEX_GRID_INTERACTABLE_REGION_PADDING,
@@ -75,7 +77,7 @@ function random_map(seed)
     local map = rectangular_map(HEX_GRID_DIMENSIONS.x, HEX_GRID_DIMENSIONS.y, seed)
     math.randomseed(map.seed)
 
-    local world = am.group():tag"world"
+    local world = am.group()
     for i,_ in pairs(map) do
         for j,noise in pairs(map[i]) do
             local evenq = hex_to_evenq(vec2(i, j))
@@ -111,7 +113,6 @@ function random_map(seed)
 
     world:append(am.circle(hex_to_pixel(HEX_GRID_CENTER), HEX_SIZE/2, COLORS.MAGENTA, 4))
 
-    WORLDSPACE_COORDINATE_OFFSET = -GRID_PIXEL_DIMENSIONS/2
     return map, am.translate(WORLDSPACE_COORDINATE_OFFSET)
                 ^ world:tag"world"
 end
