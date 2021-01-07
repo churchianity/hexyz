@@ -6,16 +6,20 @@ math.random()
 math.random()
 
 require "color"
+require "entity"
 require "grid"
 require "mob"
+require "projectile"
 require "tower"
 
 -- Globals
-WIN = am.window{ width = 1920, height = 1080 }
+WIN = am.window{ width = 1920, height = 1080, title = "hexyz" }
+
+OFF_SCREEN = vec2(WIN.width * 2) -- arbitrary pixel position that is garunteed to be off screen
 
 TIME = 0
 SCORE = 0
-OFF_SCREEN = vec2(WIN.width * 2) -- random pixel position that is garunteed to be off screen
+MOUSE = vec2(0)
 
 local COORDINATE_DISPLAY_TYPES = {
     CENTERED_EVENQ = 0,
@@ -25,31 +29,37 @@ local COORDINATE_DISPLAY_TYPES = {
 
 local COORDINATE_DISPLAY_TYPE = COORDINATE_DISPLAY_TYPES.CENTERED_EVENQ
 local function game_action(scene)
-    TIME = am.current_time()
-    SCORE = TIME
+    TIME                    = am.current_time()
+    SCORE                   = TIME
+    MOUSE                   = WIN:mouse_position()
 
-    local mouse = WIN:mouse_position()
-    local hex = pixel_to_hex(mouse - WORLDSPACE_COORDINATE_OFFSET)
-    local rounded_mouse = hex_to_pixel(hex) + WORLDSPACE_COORDINATE_OFFSET
-    local evenq = hex_to_evenq(hex)
-    local centered_evenq = evenq{ y = -evenq.y } - vec2(math.floor(HEX_GRID_WIDTH/2)
-                                                      , math.floor(HEX_GRID_HEIGHT/2))
+    local hex               = pixel_to_hex(MOUSE - WORLDSPACE_COORDINATE_OFFSET)
+    local rounded_mouse     = hex_to_pixel(hex) + WORLDSPACE_COORDINATE_OFFSET
+    local evenq             = hex_to_evenq(hex)
+    local centered_evenq    = evenq{ y = -evenq.y } - vec2(math.floor(HEX_GRID_WIDTH/2)
+                                                         , math.floor(HEX_GRID_HEIGHT/2))
     local tile = HEX_MAP.get(hex.x, hex.y)
     local hot = is_interactable(tile, evenq{ y = -evenq.y })
 
+    do_mob_spawning()
+    do_entity_updates()
+
     if WIN:mouse_pressed"left" then
         if hot and is_buildable(hex, tile, nil) then
-            make_tower(hex)
+            make_and_register_tower(hex)
         end
     end
 
-    if WIN:key_pressed"f3" then
-        COORDINATE_DISPLAY_TYPE = (COORDINATE_DISPLAY_TYPE + 1) % #table.keys(COORDINATE_DISPLAY_TYPES)
-    end
+    if WIN:key_pressed"escape" then
+        WIN.scene = game_scene()
 
-    do_tower_updates()
-    do_mob_updates()
-    do_mob_spawning()
+    elseif WIN:key_pressed"f3" then
+        COORDINATE_DISPLAY_TYPE = (COORDINATE_DISPLAY_TYPE + 1) % #table.keys(COORDINATE_DISPLAY_TYPES)
+
+    elseif WIN:key_pressed"f4" then
+        log(HEX_MAP.seed)
+        print(HEX_MAP.seed)
+    end
 
     if tile and hot then
         WIN.scene"hex_cursor".center = rounded_mouse
@@ -94,7 +104,8 @@ local function toolbelt()
     return toolbelt
 end
 
-local function game_scene()
+-- @NOTE must be global to allow the game_action to reference it
+function game_scene()
     local score = am.translate(WIN.left + 10, WIN.top - 20) ^ am.text("", "left"):tag"score"
     local coords = am.translate(WIN.right - 10, WIN.top - 20) ^ am.text("", "right"):tag"coords"
     local hex_cursor = am.circle(OFF_SCREEN, HEX_SIZE, COLORS.TRANSPARENT, 6):tag"hex_cursor"
@@ -122,12 +133,8 @@ local function game_scene()
     return scene
 end
 
-local function init()
-    require "texture"
-    load_textures()
-    WIN.scene = am.scale(1) ^ game_scene()
-end
-
-init()
+require "texture"
+load_textures()
+WIN.scene = am.scale(1) ^ game_scene()
 noglobals()
 

@@ -426,59 +426,32 @@ end
 -- PATHFINDING
 
 
--- maps each hex of |map| to a numeric value, which is its distance from |start|
--- returns this new map
-function breadth_first_distance(map, start, neighbour_f)
-    local neighbour_f = neighbour_f or function(map, hex) return hex_neighbours(hex) end
-
-    local frontier = { start }
-
-    local distance = {}
-    distance[start.x] = {}
-    distance[start.x][start.y] = 0
+--[[ @TODO bad breadth first
+    local frontier = { _tower.hex }
+    local history = {}
+    history[_tower.hex.x] = {}
+    history[_tower.hex.x][_tower.hex.y] = true
 
     while not (#frontier == 0) do
         local current = table.remove(frontier, 1)
 
-        for _,next_ in pairs(neighbour_f(map, current)) do
-            if not map_get(distance, next_.x, next_.y) then
-                table.insert(frontier, next_)
-                map_set(distance, next_.x, next_.y, 1 + map_get(distance, current.x, current.y))
+        for _,neighbour in pairs(grid_neighbours(HEX_MAP, _tower.hex)) do
+            if not (history[neighbour.x] and history[neighbour.x][neighbour.y]) then
+                local mob = mob_on_hex(neighbour)
+                if mob then
+                    _tower.target = mob
+                    break
+                end
+                table.insert(frontier, neighbour)
             end
         end
-    end
 
-    return setmetatable(distance, { __index = {
-        get = function(x, y) return map_get(distance, x, y) end
-    }})
-end
-
--- maps each hex of |map| to an adjacent cell that is on the path to |start|, or nil if no path exists
--- returns this new map
-function breadth_first_vectorfield(map, start, neighbour_f)
-    local neighbour_f = neighbour_f or function(map, hex) return hex_neighbours(hex) end
-
-    local frontier = { start }
-
-    local came_from = {}
-    came_from[start.x] = {}
-    came_from[start.x][start.y] = false
-
-    while not (#frontier == 0) do
-        local current = table.remove(frontier, 1)
-
-        for _,next_ in pairs(neighbour_f(map, current)) do
-            if not map_get(came_from, next_.x, next_.y) then
-                table.insert(frontier, next_)
-                map_set(came_from, next_.x, next_.y, current)
-            end
+        if _tower.target then
+            log(_tower.target)
+            break
         end
     end
-
-    came_from.get = function(x, y) return map_get(came_from, x, y) end
-
-    return came_from
-end
+]]
 
 -- generic A* pathfinding
 --
@@ -511,7 +484,7 @@ function Astar(map, start, goal, neighbour_f, heuristic_f, cost_f)
         end
 
         for _,next_ in pairs(neighbour_f(map, current.hex)) do
-            local new_cost = map_get(path_so_far, current.hex.x, current.hex.y) + cost_f(current, next_)
+            local new_cost = map_get(path_so_far, current.hex.x, current.hex.y) + cost_f(current.hex, next_)
             local next_cost = map_get(path_so_far, next_.x, next_.y)
 
             if not next_cost or new_cost < next_cost then

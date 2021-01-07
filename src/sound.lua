@@ -2,6 +2,8 @@
 SOUNDS = {
     EXPLOSION1      = 49179102, -- this slowed sounds metal as fuck
     EXPLOSION2      = 19725402,
+    EXPLOSION3      = 69338002,
+    HIT1            = 25811004,
     LASER1          = 79859301,
     PUSH1           = 30455908,
     BIRD1           = 50838307,

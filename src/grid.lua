@@ -6,9 +6,10 @@ require "hexyz"
 HEX_SIZE = 20
 
 -- with 1920x1080, this is the minimal dimensions to cover the screen (65x33)
+-- @NOTE added 2 cell padding, because we terraform the very outer edge and it looks ugly
 -- odd numbers are important because we want a 'true' center
-HEX_GRID_WIDTH = 65
-HEX_GRID_HEIGHT = 33
+HEX_GRID_WIDTH = 67
+HEX_GRID_HEIGHT = 35
 HEX_GRID_DIMENSIONS = vec2(HEX_GRID_WIDTH, HEX_GRID_HEIGHT)
 
 -- leaving y == 0 makes this the center in hex coordinates
@@ -29,7 +30,6 @@ end
 
 GRID_PIXEL_DIMENSIONS = grid_pixel_dimensions()
 
-
 HEX_GRID_INTERACTABLE_REGION_PADDING = 2
 function is_interactable(tile, evenq)
     return point_in_rect(evenq, {
@@ -44,25 +44,27 @@ function is_passable(tile, mob)
     return tile.elevation > -0.5 and tile.elevation < 0.5
 end
 
--- map elevation to appropriate tile color.
+-- map elevation to appropriate color
 function color_at(elevation)
-    if elevation < -0.5 then -- lowest elevation : impassable
-        return COLORS.BLUE_STONE{ a = (elevation + 1.4) / 2 + 0.2 }
+    if elevation < -0.5 then -- lowest elevation
+        return COLORS.WATER{ a = (elevation + 1.4) / 2 + 0.2 }
 
-    elseif elevation < 0 then -- med-low elevation : passable
-        return math.lerp(COLORS.MYRTLE, COLORS.BROWN_POD, elevation + 0.5){ a = (elevation + 1.8) / 2 + 0.2 }
+    elseif elevation < 0 then -- med-low elevation
+        return math.lerp(COLORS.DIRT, COLORS.GRASS, elevation + 0.5){ a = (elevation + 1.8) / 2 + 0.2 }
 
-    elseif elevation < 0.5 then -- med-high elevation : passable
-        return math.lerp(COLORS.MYRTLE, COLORS.BROWN_POD, elevation + 0.5){ a = (elevation + 1.6) / 2 + 0.2 }
+    elseif elevation < 0.5 then -- med-high elevation
+        return math.lerp(COLORS.DIRT, COLORS.GRASS, elevation + 0.5){ a = (elevation + 1.6) / 2 + 0.2 }
 
-    elseif elevation < 1 then     -- highest elevation : impassable
-        return COLORS.BOTTLE_GREEN{ a = (elevation + 1.0) / 2 + 0.2 }
+    elseif elevation < 1 then     -- high elevation
+        return COLORS.MOUNTAIN{ ra = elevation }
 
     else
         log('bad elevation'); return vec4(0)
     end
 end
 
+-- hex_neighbours returns all coordinate positions that could be valid for a map extending infinite in all directions
+-- grid_neighbours only gets you the neighbours that are actually in the grid
 function grid_neighbours(map, hex)
     return table.filter(hex_neighbours(hex), function(_hex)
         return map.get(_hex.x, _hex.y)
@@ -76,9 +78,24 @@ function random_map(seed)
     local world = am.group():tag"world"
     for i,_ in pairs(map) do
         for j,noise in pairs(map[i]) do
-            local off = hex_to_evenq(vec2(i, j))
-            local mask = vec4(0, 0, 0, math.max(((off.x - HEX_GRID_DIMENSIONS.x/2) / HEX_GRID_DIMENSIONS.x) ^ 2
-                                             , ((-off.y - HEX_GRID_DIMENSIONS.y/2) / HEX_GRID_DIMENSIONS.y) ^ 2))
+            local evenq = hex_to_evenq(vec2(i, j))
+
+            -- check if we're on an edge -- terraform edges to be passable
+            if  evenq.x == 0 or  evenq.x == (HEX_GRID_WIDTH - 1)
+            or -evenq.y == 0 or -evenq.y == (HEX_GRID_HEIGHT - 1) then
+                noise = 0
+
+            else
+                -- scale noise to be closer to 0 the closer we are to the center
+                -- @NOTE i don't know if this 100% of the time makes the center tile passable, but it probably does 99.9+% of the time
+                local nx, ny = evenq.x/HEX_GRID_WIDTH - 0.5, -evenq.y/HEX_GRID_HEIGHT - 0.5
+                local d = math.sqrt(nx^2 + ny^2) / math.sqrt(0.5)
+                noise = noise * d^0.125 -- arbitrary, seems to work good
+            end
+
+            -- light shading on edge cells
+            local mask = vec4(0, 0, 0, math.max(((evenq.x - HEX_GRID_WIDTH/2) / HEX_GRID_WIDTH) ^ 2
+                                             , ((-evenq.y - HEX_GRID_HEIGHT/2) / HEX_GRID_HEIGHT) ^ 2))
             local color = color_at(noise) - mask
 
             local node = am.circle(hex_to_pixel(vec2(i, j)), HEX_SIZE, color, 6)
@@ -92,15 +109,6 @@ function random_map(seed)
         end
     end
 
-    -- the center of the map in some radius is always considered 'passable' terrain and is home base
-    -- terraform this area to ensure it's passable
-    -- @NOTE no idea why the y-coord doesn't need to be transformed
-    -- @TODO @FIXME also terraform the edges of the map to be passable - it is theoretically possible to get maps where mobs can be stuck from the very beginning
-    local home = spiral_map(HEX_GRID_CENTER, 3)
-    for _,hex in pairs(home) do
-        map[hex.x][hex.y].elevation = 0
-        map[hex.x][hex.y].node.color = color_at(0)
-    end
     world:append(am.circle(hex_to_pixel(HEX_GRID_CENTER), HEX_SIZE/2, COLORS.MAGENTA, 4))
 
     WORLDSPACE_COORDINATE_OFFSET = -GRID_PIXEL_DIMENSIONS/2
