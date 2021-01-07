@@ -16,7 +16,7 @@ SOUNDS = {
     RANDOM5         = 36680709,
 
     -- audio buffers
-    TRACK1 = am.track(am.load_audio("../res/track1.ogg"), true, 1, 0.1)
+    TRACK1 = am.track(am.load_audio("./res/track1.ogg"), true, 1, 0.1)
 }
 
 -- play a sound with variable pitch

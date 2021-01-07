@@ -1,8 +1,5 @@
 
 
-require "gui"
-require "hexyz"
-
 HEX_SIZE = 20
 
 -- with 1920x1080, this is the minimal dimensions to cover the screen (65x33)

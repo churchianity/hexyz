@@ -1,9 +1,5 @@
 
 
-require "extra"
-require "sound"
-
-
 -- @NOTE returns i,v in the table
 function mob_on_hex(hex)
     return table.find(ENTITIES, function(entity)

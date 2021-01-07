@@ -6,11 +6,18 @@ math.random()
 math.random()
 
 require "color"
-require "entity"
-require "grid"
-require "mob"
-require "projectile"
-require "tower"
+require "sound"
+require "texture"
+
+require "src/hexyz"
+require "src/entity"
+require "src/extra"
+require "src/grid"
+require "src/gui"
+require "src/mob"
+require "src/projectile"
+require "src/tower"
+
 
 -- Globals
 WIN = am.window{
@@ -72,6 +79,7 @@ local function game_action(scene)
         pause()
 
     elseif WIN:key_pressed"f2" then
+        delete_all_entities()
         WIN.scene = game_scene()
 
     elseif WIN:key_pressed"f3" then
