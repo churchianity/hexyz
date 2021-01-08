@@ -136,7 +136,7 @@ local function make_and_register_mob()
     mob.health         = 10
     mob.speed          = 1
     mob.bounty         = 5
-    mob.hurtbox_radius = 15
+    mob.hurtbox_radius = 100
 end
 
 local SPAWN_CHANCE = 100

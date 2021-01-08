@@ -28,7 +28,7 @@ end
 GRID_PIXEL_DIMENSIONS = grid_pixel_dimensions()
 WORLDSPACE_COORDINATE_OFFSET = -GRID_PIXEL_DIMENSIONS/2
 
-HEX_GRID_INTERACTABLE_REGION_PADDING = 3
+HEX_GRID_INTERACTABLE_REGION_PADDING = 4
 
 function is_interactable(tile, evenq)
     return point_in_rect(evenq, {
@@ -97,7 +97,8 @@ function random_map(seed)
                                              , ((-evenq.y - HEX_GRID_HEIGHT/2) / HEX_GRID_HEIGHT) ^ 2))
             local color = color_at(noise) - mask
 
-            local node = am.circle(hex_to_pixel(vec2(i, j)), HEX_SIZE, color, 6)
+            local node = am.translate(hex_to_pixel(vec2(i, j)))
+                         ^ am.circle(vec2(0), HEX_SIZE, color, 6)
 
             map.set(i, j, {
                 elevation = noise,

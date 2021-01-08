@@ -8,10 +8,6 @@ function register_widget(id, poll)
     widgets[id] = { id = id, poll = poll }
 end
 
-function point_in_rect(point, rect)
-    return point.x > rect.x1 and point.x < rect.x2 and point.y > rect.y1 and point.y < rect.y2
-end
-
 function set_hot(id)
     if not active then hot = { id = id } end
 end

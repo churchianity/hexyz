@@ -38,7 +38,9 @@ function make_and_register_tower(hex)
                     make_and_register_projectile(
                         _tower.hex,
                         math.normalize(hex_to_pixel(entity.hex) - _tower.position),
-                        15
+                        15,
+                        5,
+                        4
                     )
 
                     _tower.last_shot_time = TIME

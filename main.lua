@@ -5,15 +5,16 @@ math.random()
 math.random()
 math.random()
 
+-- assets/non-or-trivial code
 require "color"
 require "sound"
 require "texture"
 
-require "src/hexyz"
 require "src/entity"
 require "src/extra"
+require "src/geometry"
+require "src/hexyz"
 require "src/grid"
-require "src/gui"
 require "src/mob"
 require "src/projectile"
 require "src/tower"
@@ -24,38 +25,38 @@ WIN = am.window{
     width       = 1920,
     height      = 1080,
     title       = "hexyz",
-    resizable   = false
+
 }
 
 OFF_SCREEN = vec2(WIN.width * 2) -- arbitrary pixel position that is garunteed to be off screen
 
 WORLD = false -- root scene node of everything considered to be in the game world
-TIME  = 0     -- runtime of the current game in seconds
+TIME  = 0     -- runtime of the current game in seconds (not whole program runtime)
 SCORE = 0     -- score of the player
 MONEY = 0     -- available resources
 MOUSE = false -- position of the mouse at the start of every frame, if an action is tracking it
-RAND  = 0     -- result of first call to math.random() this frame
 
 -- global audio settings
 MUSIC_VOLUME = 0.1
 SFX_VOLUME   = 0.1
 
+-- top right display types
 local TRDTS = {
     NOTHING        = -1,
     CENTERED_EVENQ = 0,
     EVENQ          = 1,
     HEX            = 2,
     PLATFORM       = 3,
-    PERF           = 4
+    PERF           = 4,
+    SEED           = 5
 }
+local TRDT = TRDTS.SEED
 
-local TRDT = TRDTS.CENTERED_EVENQ
 local function game_action(scene)
     if SCORE < 0 then game_end() end
 
-    TIME  = am.current_time()
+    TIME  = TIME + am.delta_time
     SCORE = SCORE + am.delta_time
-    RAND  = math.random()
     MOUSE = WIN:mouse_position()
 
     local hex            = pixel_to_hex(MOUSE - WORLDSPACE_COORDINATE_OFFSET)
@@ -75,19 +76,8 @@ local function game_action(scene)
         end
     end
 
-    if WIN:key_pressed"escape" then
-        pause()
-
-    elseif WIN:key_pressed"f2" then
-        delete_all_entities()
-        WIN.scene = game_scene()
-
-    elseif WIN:key_pressed"f3" then
-        TRDT = (TRDT + 1) % #table.keys(TRDTS)
-
-    elseif WIN:key_pressed"f4" then
-        log(HEX_MAP.seed)
-        print(HEX_MAP.seed)
+    if WIN:key_pressed"escape" then game_end()
+    elseif WIN:key_pressed"f1" then TRDT = (TRDT + 1) % #table.keys(TRDTS)
     end
 
     if tile and hot then
@@ -102,26 +92,25 @@ local function game_action(scene)
     do
         local str = ""
         if TRDT == TRDTS.CENTERED_EVENQ then
-            str = string.format("%d,%d (cevenq)", centered_evenq.x, centered_evenq.y)
+            str = centered_evenq.x .. "," .. centered_evenq.y .. " (cevenq)"
 
         elseif TRDT == TRDTS.EVENQ then
-            str = string.format("%d,%d (evenq)", evenq.x, evenq.y)
+            str = evenq.x .. "," .. evenq.y .. " (evenq)"
 
         elseif TRDT == TRDTS.HEX then
-            str = string.format("%d,%d (hex)", hex.x, hex.y)
+            str = hex.x .. "," .. hex.y .. " (hex)"
 
         elseif TRDT == TRDTS.PLATFORM then
             str = string.format("%s %s lang %s", am.platform, am.version, am.language())
 
         elseif TRDT == TRDTS.PERF then
             str = table.tostring(am.perf_stats())
+
+        elseif TRDT == TRDTS.SEED then
+            str = "SEED: " .. HEX_MAP.seed
         end
         WIN.scene"coords".text = str
     end
-end
-
-function pause()
-    WORLD"group".paused = true
 end
 
 function game_end()
@@ -184,17 +173,12 @@ function game_scene()
     }
 
     scene:action(game_action)
-    scene:action(am.play(SOUNDS.TRACK1))
+    --scene:action(am.play(SOUNDS.TRACK1))
 
     return scene
 end
 
-function get_debug_string()
-
-end
-
-require "texture"
 load_textures()
-WIN.scene = am.scale(1) ^ game_scene()
+WIN.scene = game_scene()
 noglobals()
 

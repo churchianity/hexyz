@@ -11,7 +11,6 @@ ENTITIES = {}
 --  entity structure:
 --  {
 --      TOB             - number    - time of birth, const
---
 --      hex             - vec2      - current occupied hex, if any
 --      position        - vec2      - current pixel position of it's translate (forced parent) node
 --      update          - function  - runs every frame with itself and its index as an argument

@@ -1,6 +1,6 @@
 
 
-function make_and_register_projectile(hex, vector, velocity)
+function make_and_register_projectile(hex, vector, velocity, damage, hitbox_radius)
     local projectile = make_and_register_entity(
         -- type
         ENTITY_TYPE.PROJECTILE,
@@ -8,7 +8,7 @@ function make_and_register_projectile(hex, vector, velocity)
         hex,
 
         -- node
-        am.circle(vec2(0), 2, COLORS.CLARET),
+        am.circle(vec2(0), hitbox_radius - 1, COLORS.CLARET),
 
         -- update function
         function(_projectile, _projectile_index)
@@ -17,7 +17,11 @@ function make_and_register_projectile(hex, vector, velocity)
             _projectile.hex             = pixel_to_hex(_projectile.position)
 
             local mob_index,mob = mob_on_hex(_projectile.hex)
-            if mob and math.distance(mob.position, _projectile.position) > math.abs(_projectile.hitbox_radius - mob.hurtbox_radius) then
+            if mob and circles_intersect(mob.position
+                                       , _projectile.position
+                                       , mob.hurtbox_radius
+                                       , _projectile.hitbox_radius) then
+
                 do_hit_mob(mob, _projectile.damage, mob_index)
                 delete_entity(_projectile_index)
                 WORLD:action(vplay_sound(SOUNDS.HIT1))
@@ -35,7 +39,7 @@ function make_and_register_projectile(hex, vector, velocity)
 
     projectile.vector        = vector
     projectile.velocity      = velocity
-    projectile.damage        = 5
-    projectile.hitbox_radius = 10
+    projectile.damage        = damage
+    projectile.hitbox_radius = hitbox_radius
 end
 
