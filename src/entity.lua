@@ -1,77 +1,81 @@
 
 
-ENTITY_TYPE = {
-    ENTITY     = 0,
-    MOB        = 1,
-    TOWER      = 2,
-    PROJECTILE = 3
-}
+MOBS = {}
+TOWERS = {}
+PROJECTILES = {}
 
-ENTITIES = {}
---  entity structure:
---  {
---      TOB             - number    - time of birth, const
---      hex             - vec2      - current occupied hex, if any
---      position        - vec2      - current pixel position of it's translate (forced parent) node
---      update          - function  - runs every frame with itself and its index as an argument
---      node            - node      - scene graph node
---  }
---
---  mob(entity) structure:
---  {
---      path            - 2d table  - map of hexes to other hexes, forms a path
---      speed           - number    - multiplier on distance travelled per frame, up to the update function to use correctly
---      bounty          - number    - score bonus you get when this mob is killed
---      hurtbox_radius  - number    -
---  }
---
---  tower(entity) structure:
---  {
---      -- @NOTE these should probably be wrapped in a 'weapon' struct or something, so towers can have multiple weapons
---      range           - number    - distance it can shoot
---      last_shot_time  - number    - timestamp (seconds) of last time it shot
---      target_index    - number    - index of entity it is currently shooting
---  }
---
---  bullet/projectile structure
---  {
---      vector          - vec2      - normalized vector of the current direction of this projectile
---      velocity        - number    - multplier on distance travelled per frame
---      damage          - number    - guess
---      hitbox_radius   - number    - hitboxes are circles
---  }
---
-function make_and_register_entity(type_, hex, node, update)
+--[[
+entity structure:
+{
+    TOB             - number    - time of birth, const
+    hex             - vec2      - current occupied hex, if any
+    position        - vec2      - current pixel position of it's translate (forced parent) node
+    update          - function  - runs every frame with itself and its index as an argument
+    node            - node      - scene graph node
+}
+--]]
+function make_basic_entity(hex, node, update, position)
     local entity = {}
 
-    entity.type     = type_
     entity.TOB      = TIME
-    entity.hex      = hex
-    entity.position = hex_to_pixel(hex)
-    entity.update   = update or function() log("unimplemented update function!") end
+
+    -- usually you'll provide a hex and not a position, and the entity will spawn in the center
+    -- of the hex. if you want an entity to exist not at the center of a hex, you can provide a
+    -- pixel position instead
+    if position then
+        entity.position = position
+        entity.hex      = pixel_to_hex(entity.position)
+    else
+        entity.hex      = hex
+        entity.position = hex_to_pixel(hex)
+    end
+
+    entity.update   = update
     entity.node     = am.translate(entity.position) ^ node
 
-    table.insert(ENTITIES, entity)
-    WORLD:append(entity.node)
     return entity
 end
 
-function delete_all_entities()
-    for index,entity in pairs(ENTITIES) do
-        delete_entity(index)
-    end
-
-    ENTITIES = {}
+function register_entity(t, entity)
+    table.insert(t, entity)
+    WORLD:append(entity.node)
 end
 
-function delete_entity(index)
-    WORLD:remove(ENTITIES[index].node)
-    ENTITIES[index] = nil -- leave empty indexes so other entities can learn that this entity was deleted
+-- |t| is the source table, probably MOBS, TOWERS, or PROJECTILES
+function delete_entity(t, index)
+    if not t then log("splat!") end
+
+    WORLD:remove(t[index].node)
+    t[index] = false -- leave empty indexes so other entities can learn that this entity was deleted
+end
+
+function delete_all_entities()
+    for mob_index,mob in pairs(MOBS) do
+        delete_entity(MOBS, mob_index)
+    end
+    for tower_index,tower in pairs(TOWERS) do
+        delete_entity(TOWERS, tower_index)
+    end
+    for projectile_index,projectile in pairs(PROJECTILES) do
+        delete_entity(PROJECTILES, projectile_index)
+    end
 end
 
 function do_entity_updates()
-    for index,entity in pairs(ENTITIES) do
-        entity.update(entity, index)
+    for mob_index,mob in pairs(MOBS) do
+        if mob and mob.update then
+            mob.update(mob, mob_index)
+        end
+    end
+    for tower_index,tower in pairs(TOWERS) do
+        if tower and tower.update then
+            tower.update(tower, tower_index)
+        end
+    end
+    for projectile_index,projectile in pairs(PROJECTILES) do
+        if projectile and projectile.update then
+            projectile.update(projectile, projectile_index)
+        end
     end
 end
 

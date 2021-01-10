@@ -1,6 +1,9 @@
 
 
+-- distance from hex centerpoint to any vertex
 HEX_SIZE = 20
+HEX_PIXEL_SIZE = vec2(hex_width(HEX_SIZE, ORIENTATION.FLAT)
+                    , hex_height(HEX_SIZE, ORIENTATION.FLAT))
 
 -- with 1920x1080, this is the minimal dimensions to cover the screen (65x33)
 -- @NOTE added 2 cell padding, because we terraform the very outer edge and it looks ugly
@@ -10,26 +13,29 @@ HEX_GRID_HEIGHT = 35
 HEX_GRID_DIMENSIONS = vec2(HEX_GRID_WIDTH, HEX_GRID_HEIGHT)
 
 -- leaving y == 0 makes this the center in hex coordinates
-HEX_GRID_CENTER = vec2(math.floor(HEX_GRID_DIMENSIONS.x/2), 0)
+HEX_GRID_CENTER = vec2(math.floor(HEX_GRID_WIDTH/2)
+                     , 0)
+                    -- math.floor(HEX_GRID_HEIGHT/2))
 
 -- index is hex coordinates [x][y]
 -- { { elevation, node, etc. } }
 HEX_MAP = {}
 
-local function grid_pixel_dimensions()
+do
     local hhs = hex_horizontal_spacing(HEX_SIZE)
     local hvs = hex_vertical_spacing(HEX_SIZE)
 
     -- number of 'spacings' on the grid == number of cells - 1
-    return vec2((HEX_GRID_WIDTH - 1) * hhs
-              , (HEX_GRID_HEIGHT - 1) * hvs)
+    GRID_PIXEL_DIMENSIONS = vec2((HEX_GRID_WIDTH - 1) * hhs
+                               , (HEX_GRID_HEIGHT - 1) * hvs)
 end
 
-GRID_PIXEL_DIMENSIONS = grid_pixel_dimensions()
+-- amulet puts 0,0 in the middle of the screen
+-- transform coordinates by this to pretend 0,0 is elsewhere
 WORLDSPACE_COORDINATE_OFFSET = -GRID_PIXEL_DIMENSIONS/2
 
+-- the outer edges of the map are not interactable, most action occurs in the center
 HEX_GRID_INTERACTABLE_REGION_PADDING = 4
-
 function is_interactable(tile, evenq)
     return point_in_rect(evenq, {
         x1 =                   HEX_GRID_INTERACTABLE_REGION_PADDING,
@@ -56,18 +62,17 @@ function color_at(elevation)
 
     elseif elevation < 1 then     -- high elevation
         return COLORS.MOUNTAIN{ ra = elevation }
-
-    else
-        log('bad elevation'); return vec4(0)
     end
 end
 
--- hex_neighbours returns all coordinate positions that could be valid for a map extending infinite in all directions
--- grid_neighbours only gets you the neighbours that are actually in the grid
-function grid_neighbours(map, hex)
-    return table.filter(hex_neighbours(hex), function(_hex)
-        return map.get(_hex.x, _hex.y)
-    end)
+function grid_heuristic(source, target)
+    return math.distance(source, target)
+end
+
+function grid_cost(from, to)
+    local t1, t2 = HEX_MAP.get(from.x, from.y), HEX_MAP.get(to.x, to.y)
+    --local baseline = math.log(math.abs(1 - t1.elevation) + math.abs(1 - t2.elevation))
+    return math.abs(t1.elevation - t2.elevation) --+ baseline
 end
 
 function random_map(seed)
@@ -86,9 +91,9 @@ function random_map(seed)
 
             else
                 -- scale noise to be closer to 0 the closer we are to the center
-                -- @NOTE i don't know if this 100% of the time makes the center tile passable, but it probably does 99.9+% of the time
+                -- @NOTE i don't know if this 100% of the time makes the center tile passable, but it seems to 99.9+% of the time
                 local nx, ny = evenq.x/HEX_GRID_WIDTH - 0.5, -evenq.y/HEX_GRID_HEIGHT - 0.5
-                local d = math.sqrt(nx^2 + ny^2) / math.sqrt(0.5)
+                local d = (nx^2 + ny^2)^0.5 / 0.5^0.5
                 noise = noise * d^0.125 -- arbitrary, seems to work good
             end
 

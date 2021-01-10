@@ -25,7 +25,8 @@ WIN = am.window{
     width       = 1920,
     height      = 1080,
     title       = "hexyz",
-
+    highdpi     = true,
+    letterbox   = true
 }
 
 OFF_SCREEN = vec2(WIN.width * 2) -- arbitrary pixel position that is garunteed to be off screen
@@ -40,6 +41,9 @@ MOUSE = false -- position of the mouse at the start of every frame, if an action
 MUSIC_VOLUME = 0.1
 SFX_VOLUME   = 0.1
 
+-- game stuff
+SELECTED_TOWER_TYPE = TOWER_TYPE.REDEYE
+
 -- top right display types
 local TRDTS = {
     NOTHING        = -1,
@@ -51,6 +55,11 @@ local TRDTS = {
     SEED           = 5
 }
 local TRDT = TRDTS.SEED
+
+local function select_tower(tower_type)
+    SELECTED_TOWER_TYPE = tower_type
+    WIN.scene"tower_tooltip".text = tower_type_tostring(tower_type)
+end
 
 local function game_action(scene)
     if SCORE < 0 then game_end() end
@@ -72,12 +81,18 @@ local function game_action(scene)
 
     if WIN:mouse_pressed"left" then
         if hot and is_buildable(hex, tile, nil) then
-            make_and_register_tower(hex)
+            make_and_register_tower(hex, SELECTED_TOWER_TYPE)
         end
     end
 
-    if WIN:key_pressed"escape" then game_end()
-    elseif WIN:key_pressed"f1" then TRDT = (TRDT + 1) % #table.keys(TRDTS)
+    if WIN:key_pressed"escape" then
+        game_end()
+
+    elseif WIN:key_pressed"f1" then
+        TRDT = (TRDT + 1) % #table.keys(TRDTS)
+
+    elseif WIN:key_pressed"tab" then
+        select_tower((SELECTED_TOWER_TYPE + 1) % #table.keys(TOWER_TYPE))
     end
 
     if tile and hot then
@@ -129,7 +144,10 @@ end
 
 local function toolbelt()
     local toolbelt_height = hex_height(HEX_SIZE) * 2
+    local tower_tooltip = am.translate(WIN.left + 10, WIN.bottom + toolbelt_height + 10)
+                          ^ am.text(tower_type_tostring(SELECTED_TOWER_TYPE), "left"):tag"tower_tooltip"
     local toolbelt = am.group{
+        tower_tooltip,
         am.rect(WIN.left, WIN.bottom, WIN.right, WIN.bottom + toolbelt_height, COLORS.TRANSPARENT)
     }
 
@@ -153,6 +171,7 @@ function game_scene()
     local money = am.translate(WIN.left + 10, WIN.top - 40) ^ am.text("", "left"):tag"money"
     local coords = am.translate(WIN.right - 10, WIN.top - 20) ^ am.text("", "right", "top"):tag"coords"
     local hex_cursor = am.circle(OFF_SCREEN, HEX_SIZE, COLORS.TRANSPARENT, 6):tag"hex_cursor"
+
 
     local curtain = am.rect(WIN.left, WIN.bottom, WIN.right, WIN.top, COLORS.TRUE_BLACK)
     curtain:action(coroutine.create(function()

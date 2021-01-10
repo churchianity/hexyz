@@ -1,4 +1,7 @@
 
+function booltostring(bool)
+    return bool and "true" or "false"
+end
 
 function math.wrapf(float, range)
     return float - range * math.floor(float / range)
