@@ -45,10 +45,6 @@ function is_interactable(tile, evenq)
     })
 end
 
-function is_passable(tile, mob)
-    return tile.elevation > -0.5 and tile.elevation < 0.5
-end
-
 -- map elevation to appropriate color
 function color_at(elevation)
     if elevation < -0.5 then -- lowest elevation
@@ -65,14 +61,18 @@ function color_at(elevation)
     end
 end
 
-local function grid_heuristic(source, target)
+function grid_heuristic(source, target)
     return math.distance(source, target)
 end
 
-local function grid_cost(map, from, to)
+function grid_cost(map, from, to)
     local t1, t2 = map.get(from.x, from.y), map.get(to.x, to.y)
-    if t2.elevation < -0.5 or t2.elevation >= 0.5
-    or t1.elevation < -0.5 or t1.elevation >= 0.5 then return 999 end
+
+    -- moving from a non-water, non-mountain tile to a water or mountain tile is very expensive
+    if math.abs(t1.elevation) < 0.5 and math.abs(t2.elevation) > 0.5 then
+        return 999
+    end
+
     return math.abs(math.abs(t1.elevation)^0.5 - math.abs(t2.elevation)^0.5)
 end
 

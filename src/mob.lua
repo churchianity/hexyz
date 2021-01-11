@@ -30,6 +30,15 @@ function mob_on_hex(hex)
     end)
 end
 
+function mob_can_pass_through(mob, hex)
+    local tile = HEX_MAP.get(hex.x, hex.y)
+    if tile and tile.elevation < -0.5 or tile.elevation >= 0.5 then
+        return false
+    else
+        return true
+    end
+end
+
 function mob_die(mob, mob_index)
     WORLD:action(vplay_sound(SOUNDS.EXPLOSION1))
     delete_entity(MOBS, mob_index)
@@ -61,37 +70,30 @@ end
 -- try reducing map size by identifying key nodes (inflection points)
 -- there are performance hits everytime we spawn a mob and it's Astar's fault
 function get_mob_path(mob, map, start, goal)
-    --return Astar(map, goal, start, grid_heuristic, grid_cost)
+    return Astar(map, goal, start, grid_heuristic, grid_cost)
 end
 
 -- @FIXME there's a bug here where the position of the spawn hex is sometimes 1 closer to the center than we want
 local function get_spawn_hex()
-    local spawn_hex
-    repeat
-        -- ensure we spawn on an random tile along the map's edges
-        local roll = math.random(HEX_GRID_WIDTH * 2 + HEX_GRID_HEIGHT * 2) - 1
-        local x, y
+    -- ensure we spawn on an random tile along the map's edges
+    local roll = math.random(HEX_GRID_WIDTH * 2 + HEX_GRID_HEIGHT * 2) - 1
+    local x, y
 
-        if roll < HEX_GRID_HEIGHT then
-            x, y = 0, roll
+    if roll < HEX_GRID_HEIGHT then
+        x, y = 0, roll
 
-        elseif roll < (HEX_GRID_WIDTH + HEX_GRID_HEIGHT) then
-            x, y = roll - HEX_GRID_HEIGHT, HEX_GRID_HEIGHT - 1
+    elseif roll < (HEX_GRID_WIDTH + HEX_GRID_HEIGHT) then
+        x, y = roll - HEX_GRID_HEIGHT, HEX_GRID_HEIGHT - 1
 
-        elseif roll < (HEX_GRID_HEIGHT * 2 + HEX_GRID_WIDTH) then
-            x, y = HEX_GRID_WIDTH - 1, roll - HEX_GRID_WIDTH - HEX_GRID_HEIGHT
+    elseif roll < (HEX_GRID_HEIGHT * 2 + HEX_GRID_WIDTH) then
+        x, y = HEX_GRID_WIDTH - 1, roll - HEX_GRID_WIDTH - HEX_GRID_HEIGHT
 
-        else
-            x, y = roll - (HEX_GRID_HEIGHT * 2) - HEX_GRID_WIDTH, 0
-        end
+    else
+        x, y = roll - (HEX_GRID_HEIGHT * 2) - HEX_GRID_WIDTH, 0
+    end
 
-        -- @NOTE negate 'y' because hexyz algorithms assume south is positive, in amulet north is positive
-        spawn_hex = evenq_to_hex(vec2(x, -y))
-        local tile = HEX_MAP[spawn_hex.x][spawn_hex.y]
-
-    until is_passable(tile)
-
-    return spawn_hex
+    -- @NOTE negate 'y' because hexyz algorithms assume south is positive, in amulet north is positive
+    return evenq_to_hex(vec2(x, -y))
 end
 
 local function mob_update(mob, mob_index)
@@ -104,17 +106,21 @@ local function mob_update(mob, mob_index)
         return true
     end
 
-    --local frame_target = mob.path[mob.hex.x] and mob.path[mob.hex.x][mob.hex.y]
     local frame_target = nil
-    local neighbours = HEX_MAP.neighbours(mob.hex)
-    if #neighbours ~= 0 then
-        local first_entry = HEX_MAP.get(neighbours[1].x, neighbours[1].y)
+    if mob.path then
+        -- we have an explicitly stored hex that this mob wants to move towards.
+        frame_target = mob.path[mob.hex.x] and mob.path[mob.hex.x][mob.hex.y]
 
-        local best_hex = neighbours[1]
-        local best_cost = first_entry and first_entry.priority or HEX_MAP.get(last_frame_hex.x, last_frame_hex.y).priority
+    else
+        -- make a dumb guess where we should go.
+        local neighbours = HEX_MAP.neighbours(mob.hex)
+        if #neighbours ~= 0 then
+            local first_entry = HEX_MAP.get(neighbours[1].x, neighbours[1].y)
 
-        for _,h in pairs(neighbours) do
-            --if h ~= last_frame_hex then
+            local best_hex = neighbours[1]
+            local best_cost = first_entry and first_entry.priority or HEX_MAP.get(last_frame_hex.x, last_frame_hex.y).priority
+
+            for _,h in pairs(neighbours) do
                 local map_entry = HEX_MAP.get(h.x, h.y)
                 local cost = map_entry.priority
 
@@ -122,9 +128,15 @@ local function mob_update(mob, mob_index)
                     best_cost = cost
                     best_hex = h
                 end
-            --end
+            end
+            frame_target = best_hex
         end
-        frame_target = best_hex
+    end
+
+    if frame_target == last_frame_hex or not mob_can_pass_through(mob, frame_target) then
+        -- we are trying to go somewhere dumb. make a better path.
+        mob.path = get_mob_path(mob, HEX_MAP, mob.hex, HEX_GRID_CENTER)
+        return -- don't move this frame. too much time thinking
     end
 
     if frame_target then
@@ -150,7 +162,7 @@ local function make_and_register_mob()
         mob_update
     )
 
-    mob.path           = get_mob_path(mob, HEX_MAP, mob.hex, HEX_GRID_CENTER)
+    mob.path           = false --get_mob_path(mob, HEX_MAP, mob.hex, HEX_GRID_CENTER)
     mob.health         = 10
     mob.speed          = 1
     mob.bounty         = 5

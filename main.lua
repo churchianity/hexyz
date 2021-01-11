@@ -27,7 +27,7 @@ WIN = am.window{
     title       = "hexyz",
     highdpi     = true,
     letterbox   = true,
-    clear_color = color_at(0)
+    --clear_color = color_at(0)
 }
 
 OFF_SCREEN = vec2(WIN.width * 2) -- arbitrary pixel position that is garunteed to be off screen
@@ -71,7 +71,6 @@ local function game_action(scene)
     TIME = TIME + am.delta_time
     SCORE = SCORE + am.delta_time
     MOUSE = WIN:mouse_position()
-    local mwd = WIN:mouse_wheel_delta()
 
     local hex            = pixel_to_hex(MOUSE - WORLDSPACE_COORDINATE_OFFSET)
     local rounded_mouse  = hex_to_pixel(hex) + WORLDSPACE_COORDINATE_OFFSET
@@ -93,9 +92,9 @@ local function game_action(scene)
     if WIN:mouse_pressed"middle" then
         WIN.scene"scale".scale2d = vec2(1)
     else
-        local small_mwd = vec2(mwd.y / 1000)
-        WIN.scene"scale".scale = WIN.scene"scale".scale + small_mwd
-        WIN.scene"scale".scale = WIN.scene"scale".scale + small_mwd
+        local mwd = vec2(WIN:mouse_wheel_delta().y / 1000)
+        WIN.scene"scale".scale2d = WIN.scene"scale".scale2d + mwd
+        WIN.scene"scale".scale2d = WIN.scene"scale".scale2d + mwd
     end
 
     if WIN:key_pressed"escape" then
@@ -154,7 +153,7 @@ function game_end()
     delete_all_entities()
     SCORE = 0
 
-    WIN.scene = game_scene()
+    WIN.scene = am.scale(1) ^ game_scene()
 end
 
 function update_score(diff)
