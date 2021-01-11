@@ -26,12 +26,15 @@ WIN = am.window{
     height      = 1080,
     title       = "hexyz",
     highdpi     = true,
-    letterbox   = true
+    letterbox   = true,
+    clear_color = color_at(0)
 }
 
 OFF_SCREEN = vec2(WIN.width * 2) -- arbitrary pixel position that is garunteed to be off screen
 
 WORLD = false -- root scene node of everything considered to be in the game world
+              -- aka non gui stuff
+
 TIME  = 0     -- runtime of the current game in seconds (not whole program runtime)
 SCORE = 0     -- score of the player
 MONEY = 0     -- available resources
@@ -52,7 +55,8 @@ local TRDTS = {
     HEX            = 2,
     PLATFORM       = 3,
     PERF           = 4,
-    SEED           = 5
+    SEED           = 5,
+    TILE           = 6
 }
 local TRDT = TRDTS.SEED
 
@@ -64,9 +68,10 @@ end
 local function game_action(scene)
     if SCORE < 0 then game_end() end
 
-    TIME  = TIME + am.delta_time
+    TIME = TIME + am.delta_time
     SCORE = SCORE + am.delta_time
     MOUSE = WIN:mouse_position()
+    local mwd = WIN:mouse_wheel_delta()
 
     local hex            = pixel_to_hex(MOUSE - WORLDSPACE_COORDINATE_OFFSET)
     local rounded_mouse  = hex_to_pixel(hex) + WORLDSPACE_COORDINATE_OFFSET
@@ -85,11 +90,22 @@ local function game_action(scene)
         end
     end
 
+    if WIN:mouse_pressed"middle" then
+        WIN.scene"scale".scale2d = vec2(1)
+    else
+        local small_mwd = vec2(mwd.y / 1000)
+        WIN.scene"scale".scale = WIN.scene"scale".scale + small_mwd
+        WIN.scene"scale".scale = WIN.scene"scale".scale + small_mwd
+    end
+
     if WIN:key_pressed"escape" then
         game_end()
 
     elseif WIN:key_pressed"f1" then
         TRDT = (TRDT + 1) % #table.keys(TRDTS)
+
+    elseif WIN:key_pressed"f2" then
+        WORLD"priority_overlay".hidden = not WORLD"priority_overlay".hidden
 
     elseif WIN:key_pressed"tab" then
         select_tower((SELECTED_TOWER_TYPE + 1) % #table.keys(TOWER_TYPE))
@@ -123,6 +139,9 @@ local function game_action(scene)
 
         elseif TRDT == TRDTS.SEED then
             str = "SEED: " .. HEX_MAP.seed
+
+        elseif TRDT == TRDTS.TILE then
+            str = table.tostring(HEX_MAP.get(hex.x, hex.y))
         end
         WIN.scene"coords".text = str
     end
@@ -172,7 +191,6 @@ function game_scene()
     local coords = am.translate(WIN.right - 10, WIN.top - 20) ^ am.text("", "right", "top"):tag"coords"
     local hex_cursor = am.circle(OFF_SCREEN, HEX_SIZE, COLORS.TRANSPARENT, 6):tag"hex_cursor"
 
-
     local curtain = am.rect(WIN.left, WIN.bottom, WIN.right, WIN.top, COLORS.TRUE_BLACK)
     curtain:action(coroutine.create(function()
         am.wait(am.tween(curtain, 3, { color = vec4(0) }, am.ease.out(am.ease.hyperbola)))
@@ -198,6 +216,6 @@ function game_scene()
 end
 
 load_textures()
-WIN.scene = game_scene()
+WIN.scene = am.scale(vec2(1)) ^ game_scene()
 noglobals()
 

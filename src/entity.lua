@@ -17,7 +17,7 @@ entity structure:
 function make_basic_entity(hex, node, update, position)
     local entity = {}
 
-    entity.TOB      = TIME
+    entity.TOB = TIME
 
     -- usually you'll provide a hex and not a position, and the entity will spawn in the center
     -- of the hex. if you want an entity to exist not at the center of a hex, you can provide a
@@ -51,17 +51,18 @@ end
 
 function delete_all_entities()
     for mob_index,mob in pairs(MOBS) do
-        delete_entity(MOBS, mob_index)
+        if mob then delete_entity(MOBS, mob_index) end
     end
     for tower_index,tower in pairs(TOWERS) do
-        delete_entity(TOWERS, tower_index)
+        if tower then delete_entity(TOWERS, tower_index) end
     end
     for projectile_index,projectile in pairs(PROJECTILES) do
-        delete_entity(PROJECTILES, projectile_index)
+        if projectile then delete_entity(PROJECTILES, projectile_index) end
     end
 end
 
 function do_entity_updates()
+    --if WIN:key_down"space" then
     for mob_index,mob in pairs(MOBS) do
         if mob and mob.update then
             mob.update(mob, mob_index)
@@ -77,5 +78,6 @@ function do_entity_updates()
             projectile.update(projectile, projectile_index)
         end
     end
+    --end
 end
 

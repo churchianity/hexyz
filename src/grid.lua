@@ -65,14 +65,19 @@ function color_at(elevation)
     end
 end
 
-function grid_heuristic(source, target)
+local function grid_heuristic(source, target)
     return math.distance(source, target)
 end
 
-function grid_cost(from, to)
-    local t1, t2 = HEX_MAP.get(from.x, from.y), HEX_MAP.get(to.x, to.y)
-    --local baseline = math.log(math.abs(1 - t1.elevation) + math.abs(1 - t2.elevation))
-    return math.abs(t1.elevation - t2.elevation) --+ baseline
+local function grid_cost(map, from, to)
+    local t1, t2 = map.get(from.x, from.y), map.get(to.x, to.y)
+    if t2.elevation < -0.5 or t2.elevation >= 0.5
+    or t1.elevation < -0.5 or t1.elevation >= 0.5 then return 999 end
+    return math.abs(math.abs(t1.elevation)^0.5 - math.abs(t2.elevation)^0.5)
+end
+
+local function generate_flow_field(map, start)
+    return dijkstra(map, start, nil, grid_cost)
 end
 
 function random_map(seed)
@@ -97,7 +102,7 @@ function random_map(seed)
                 noise = noise * d^0.125 -- arbitrary, seems to work good
             end
 
-            -- light shading on edge cells
+            -- light shading on edge cells @TODO replace this with a skylight, that can move
             local mask = vec4(0, 0, 0, math.max(((evenq.x - HEX_GRID_WIDTH/2) / HEX_GRID_WIDTH) ^ 2
                                              , ((-evenq.y - HEX_GRID_HEIGHT/2) / HEX_GRID_HEIGHT) ^ 2))
             local color = color_at(noise) - mask
@@ -114,9 +119,34 @@ function random_map(seed)
         end
     end
 
+    local flow_field = generate_flow_field(map, HEX_GRID_CENTER)
+    for i,_ in pairs(flow_field) do
+        for j,priority in pairs(flow_field[i]) do
+            if priority then
+                map[i][j].priority = priority.priority
+            end
+        end
+    end
+
+    world:append(draw_priority_overlay(map))
+
     world:append(am.circle(hex_to_pixel(HEX_GRID_CENTER), HEX_SIZE/2, COLORS.MAGENTA, 4))
 
     return map, am.translate(WORLDSPACE_COORDINATE_OFFSET)
                 ^ world:tag"world"
 end
+
+function draw_priority_overlay(map)
+    local priority_overlay = am.group():tag"priority_overlay"
+    for i,_ in pairs(map) do
+        for j,tile in pairs(map[i]) do
+            if tile then
+                priority_overlay:append(am.translate(hex_to_pixel(vec2(i, j)))
+                                        ^ am.text(string.format("%.1f", tile.priority or 0)))
+            end
+        end
+    end
+    return priority_overlay
+end
+
 

@@ -6,13 +6,10 @@ TOWER_TYPE = {
     MOAT        = 2,
 }
 
-function tower_type_tostring(type_)
-    if type_ == TOWER_TYPE.REDEYE then
-        return "Redeye Tower"
-    elseif type_ == TOWER_TYPE.WALL then
-        return "Wall"
-    elseif type_ == TOWER_TYPE.MOAT then
-        return "Moat"
+function tower_type_tostring(tower_type)
+        if tower_type == TOWER_TYPE.REDEYE then return "Redeye Tower"
+    elseif tower_type == TOWER_TYPE.WALL then   return "Wall"
+    elseif tower_type == TOWER_TYPE.MOAT then   return "Moat"
     end
 end
 

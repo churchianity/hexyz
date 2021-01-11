@@ -1,4 +1,5 @@
 
+SEEED 1835 has bad start
 
 todoooos & notes
 

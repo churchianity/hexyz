@@ -448,7 +448,7 @@ end
 
 function breadth_first(map, start)
     local frontier = {}
-    frontier[1] = { start }
+    frontier[1] = start
 
     local distance = {}
     distance[start.x] = {}
@@ -461,7 +461,8 @@ function breadth_first(map, start)
             local d = map_get(distance, neighbour.x, neighbour.y)
             if not d then
                 table.insert(frontier, neighbour)
-                map_set(distance, neighbour.x, neighbour.y, d + 1)
+                local current_distance = map_get(distance, current.x, current.y)
+                map_set(distance, neighbour.x, neighbour.y, current_distance + 1)
             end
         end
     end
@@ -471,7 +472,7 @@ end
 
 function dijkstra(map, start, goal, cost_f)
     local frontier = {}
-    frontier = { hex = start, priority = 0 }
+    frontier[1] = { hex = start, priority = 0 }
 
     local came_from = {}
     came_from[start.x] = {}
@@ -484,17 +485,17 @@ function dijkstra(map, start, goal, cost_f)
     while not (#frontier == 0) do
         local current = table.remove(frontier, 1)
 
-        if current.hex == goal then
+        if goal and current.hex == goal then
             break
         end
 
         for _,neighbour in pairs(map.neighbours(current.hex)) do
-            local new_cost = map_get(cost_so_far, current.hex.x, current.hex.y) + cost_f(current.hex, neighbour)
+            local new_cost = map_get(cost_so_far, current.hex.x, current.hex.y) + cost_f(map, current.hex, neighbour)
             local neighbour_cost = map_get(cost_so_far, neighbour.x, neighbour.y)
 
-            if not neighbour_cost or new_cost < neighbour_cost then
+            if not neighbour_cost or (new_cost < neighbour_cost) then
                 map_set(cost_so_far, neighbour.x, neighbour.y, new_cost)
-                local priority = new_cost
+                local priority = new_cost + math.distance(start, neighbour)
                 table.insert(frontier, { hex = neighbour, priority = priority })
                 map_set(came_from, neighbour.x, neighbour.y, current)
             end
@@ -539,7 +540,7 @@ function Astar(map, start, goal, heuristic, cost_f)
         end
 
         for _,next_ in pairs(map.neighbours(current.hex)) do
-            local new_cost = map_get(path_so_far, current.hex.x, current.hex.y) + cost_f(current.hex, next_)
+            local new_cost = map_get(path_so_far, current.hex.x, current.hex.y) + cost_f(map, current.hex, next_)
             local next_cost = map_get(path_so_far, next_.x, next_.y)
 
             if not next_cost or new_cost < next_cost then
