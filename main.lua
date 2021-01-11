@@ -27,10 +27,11 @@ WIN = am.window{
     title       = "hexyz",
     highdpi     = true,
     letterbox   = true,
-    --clear_color = color_at(0)
+    clear_color = COLORS.TRUE_BLACK
 }
 
 OFF_SCREEN = vec2(WIN.width * 2) -- arbitrary pixel position that is garunteed to be off screen
+PERF_STATS = false               -- result of am.perf_stats() -- should be called every frame
 
 WORLD = false -- root scene node of everything considered to be in the game world
               -- aka non gui stuff
@@ -60,10 +61,8 @@ local TRDTS = {
 }
 local TRDT = TRDTS.SEED
 
-local function select_tower(tower_type)
-    SELECTED_TOWER_TYPE = tower_type
-    WIN.scene"tower_tooltip".text = tower_type_tostring(tower_type)
-end
+-- a function - get sets later inside toolbelt
+--local select_tower_type
 
 local function game_action(scene)
     if SCORE < 0 then game_end() end
@@ -71,6 +70,7 @@ local function game_action(scene)
     TIME = TIME + am.delta_time
     SCORE = SCORE + am.delta_time
     MOUSE = WIN:mouse_position()
+    PERF_STATS = am.perf_stats()
 
     local hex            = pixel_to_hex(MOUSE - WORLDSPACE_COORDINATE_OFFSET)
     local rounded_mouse  = hex_to_pixel(hex) + WORLDSPACE_COORDINATE_OFFSET
@@ -103,11 +103,8 @@ local function game_action(scene)
     elseif WIN:key_pressed"f1" then
         TRDT = (TRDT + 1) % #table.keys(TRDTS)
 
-    elseif WIN:key_pressed"f2" then
-        WORLD"priority_overlay".hidden = not WORLD"priority_overlay".hidden
-
     elseif WIN:key_pressed"tab" then
-        select_tower((SELECTED_TOWER_TYPE + 1) % #table.keys(TOWER_TYPE))
+        select_tower_type((SELECTED_TOWER_TYPE) % #table.keys(TOWER_TYPE) + 1)
     end
 
     if tile and hot then
@@ -134,7 +131,7 @@ local function game_action(scene)
             str = string.format("%s %s lang %s", am.platform, am.version, am.language())
 
         elseif TRDT == TRDTS.PERF then
-            str = table.tostring(am.perf_stats())
+            str = table.tostring(PERF_STATS)
 
         elseif TRDT == TRDTS.SEED then
             str = "SEED: " .. HEX_MAP.seed
@@ -162,23 +159,61 @@ end
 
 local function toolbelt()
     local toolbelt_height = hex_height(HEX_SIZE) * 2
-    local tower_tooltip = am.translate(WIN.left + 10, WIN.bottom + toolbelt_height + 10)
+    local tower_tooltip = am.translate(WIN.left + 10, WIN.bottom + toolbelt_height + 20)
                           ^ am.text(tower_type_tostring(SELECTED_TOWER_TYPE), "left"):tag"tower_tooltip"
+
     local toolbelt = am.group{
         tower_tooltip,
         am.rect(WIN.left, WIN.bottom, WIN.right, WIN.bottom + toolbelt_height, COLORS.TRANSPARENT)
+    }:tag"toolbelt"
+
+    local padding = 15
+    local size = toolbelt_height - padding
+    local offset = vec2(WIN.left + padding/3, WIN.bottom + padding/3)
+
+    local keys = {
+        '1', '2', '3', '4', '5', '6', '7', '9', '0', '-', '='
     }
 
-    --[[
-    local padding = 22
-    local size = toolbelt_height - padding
-    for i = 0, 0 do
-        toolbelt:append(
-            am.translate(vec2(size + padding, 0) * i + vec2(WIN.left + padding/3, WIN.bottom + padding/3))
-            ^ am.rect(0, 0, size, size, COLORS.BLACK)
-        )
+    local tower_select_square = (
+        am.translate(vec2(size + padding, size/2) + offset)
+        ^ am.rect(-size/2-3, -size/2-3, size/2+3, size/2+3, COLORS.SUNRAY)
+    ):tag"tower_select_square"
+
+    toolbelt:append(tower_select_square)
+    local tower_type_values = table.values(TOWER_TYPE)
+
+    for i = 1, #keys do
+        if tower_type_values[i] then
+            toolbelt:append(
+                am.translate(vec2(size + padding, 0) * i + offset)
+                ^ am.group{
+                    am.translate(0, size/2)
+                    ^ pack_texture_into_sprite(TEX_BUTTON1, size, size),
+
+                    am.translate(0, size/2)
+                    ^ pack_texture_into_sprite(get_tower_texture(tower_type_values[i]), size, size),
+
+                    am.translate(vec2(size/2))
+                    ^ am.group{
+                        pack_texture_into_sprite(TEX_BUTTON1, size/2, size/2),
+                        am.scale(2)
+                        ^ am.text(keys[i], COLORS.BLACK)
+                    }
+                }
+            )
+        end
     end
-    ]]
+
+    select_tower_type = function(tower_type)
+        SELECTED_TOWER_TYPE = tower_type
+        WIN.scene"tower_tooltip".text = tower_type_tostring(tower_type)
+
+        local new_position = vec2((size + padding) * tower_type, size/2) + offset
+        WIN.scene"tower_select_square":action(am.tween(0.1, { position2d = new_position }))
+
+        WIN.scene:action(am.play(am.sfxr_synth(SOUNDS.SELECT1), false, 1, SFX_VOLUME))
+    end
 
     return toolbelt
 end

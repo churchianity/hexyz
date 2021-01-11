@@ -8,6 +8,8 @@ SOUNDS = {
     LASER1          = 79859301,
     LASER2          = 86914201,
     PUSH1           = 30455908,
+    SELECT1         = 76036806,
+    PUSH2           = 57563308,
     BIRD1           = 50838307,
     RANDOM1         = 85363309,
     RANDOM2         = 15482409,
@@ -22,5 +24,9 @@ SOUNDS = {
 -- play a sound with variable pitch
 function vplay_sound(seed)
     return am.play(am.sfxr_synth(seed), false, (math.random() + 0.5)/2)
+end
+
+function play_sound(seed)
+    return am.play(am.sfxr_synth(seed), false)
 end
 

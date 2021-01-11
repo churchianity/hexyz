@@ -30,13 +30,10 @@ function mob_on_hex(hex)
     end)
 end
 
+-- check if a the tile at |hex| is passable by |mob|
 function mob_can_pass_through(mob, hex)
     local tile = HEX_MAP.get(hex.x, hex.y)
-    if tile and tile.elevation < -0.5 or tile.elevation >= 0.5 then
-        return false
-    else
-        return true
-    end
+    return tile and tile.elevation < 0.5 and tile.elevation > -0.5
 end
 
 function mob_die(mob, mob_index)
@@ -60,11 +57,6 @@ function check_for_broken_mob_pathing(hex)
     end
 end
 
--- check if a the tile at |hex| is passable by |mob|
-local function mob_can_pass_through(mob, hex)
-    local tile = HEX_MAP.get(hex.x, hex.y)
-    return tile and tile.elevation < 0.5 and tile.elevation > -0.5
-end
 
 -- @TODO performance.
 -- try reducing map size by identifying key nodes (inflection points)
@@ -106,44 +98,14 @@ local function mob_update(mob, mob_index)
         return true
     end
 
-    local frame_target = nil
-    if mob.path then
-        -- we have an explicitly stored hex that this mob wants to move towards.
-        frame_target = mob.path[mob.hex.x] and mob.path[mob.hex.x][mob.hex.y]
+    local frame_target = mob.path[mob.hex.x] and mob.path[mob.hex.x][mob.hex.y]
 
-    else
-        -- make a dumb guess where we should go.
-        local neighbours = HEX_MAP.neighbours(mob.hex)
-        if #neighbours ~= 0 then
-            local first_entry = HEX_MAP.get(neighbours[1].x, neighbours[1].y)
-
-            local best_hex = neighbours[1]
-            local best_cost = first_entry and first_entry.priority or HEX_MAP.get(last_frame_hex.x, last_frame_hex.y).priority
-
-            for _,h in pairs(neighbours) do
-                local map_entry = HEX_MAP.get(h.x, h.y)
-                local cost = map_entry.priority
-
-                if cost and cost < best_cost then
-                    best_cost = cost
-                    best_hex = h
-                end
-            end
-            frame_target = best_hex
-        end
-    end
-
-    if frame_target == last_frame_hex or not mob_can_pass_through(mob, frame_target) then
-        -- we are trying to go somewhere dumb. make a better path.
-        mob.path = get_mob_path(mob, HEX_MAP, mob.hex, HEX_GRID_CENTER)
-        return -- don't move this frame. too much time thinking
-    end
-
-    if frame_target then
-        mob.position = mob.position + math.normalize(hex_to_pixel(frame_target) - mob.position) * mob.speed
+    if frame_target --[[and mob_can_pass_through(mob, frame_target.hex)]] then
+        local factor = 1 + mob.speed * (1/frame_target.priority) / PERF_STATS.avg_fps
+        mob.position = mob.position + math.normalize(hex_to_pixel(frame_target.hex) - mob.position) * factor
         mob.node.position2d = mob.position
     else
-        log("no frame target")
+        mob.path = get_mob_path(mob, HEX_MAP, mob.hex, HEX_GRID_CENTER)
     end
 
     --[[ passive animation
@@ -162,9 +124,9 @@ local function make_and_register_mob()
         mob_update
     )
 
-    mob.path           = false --get_mob_path(mob, HEX_MAP, mob.hex, HEX_GRID_CENTER)
+    mob.path           = get_mob_path(mob, HEX_MAP, mob.hex, HEX_GRID_CENTER)
     mob.health         = 10
-    mob.speed          = 1
+    mob.speed          = 100
     mob.bounty         = 5
     mob.hurtbox_radius = MOB_SIZE
 

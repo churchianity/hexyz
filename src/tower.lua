@@ -1,10 +1,17 @@
 
 
 TOWER_TYPE = {
-    REDEYE      = 0,
-    WALL        = 1,
-    MOAT        = 2,
+    REDEYE      = 1,
+    WALL        = 2,
+    MOAT        = 3,
 }
+
+function get_tower_texture(tower_type)
+        if tower_type == TOWER_TYPE.REDEYE then return TEX_TOWER2
+    elseif tower_type == TOWER_TYPE.WALL then   return TEX_WALL_CLOSED
+    elseif tower_type == TOWER_TYPE.MOAT then   return TEX_MOAT1
+    end
+end
 
 function tower_type_tostring(tower_type)
         if tower_type == TOWER_TYPE.REDEYE then return "Redeye Tower"
@@ -12,6 +19,28 @@ function tower_type_tostring(tower_type)
     elseif tower_type == TOWER_TYPE.MOAT then   return "Moat"
     end
 end
+
+local function get_tower_update_function(tower_type)
+    if tower_type == TOWER_TYPE.REDEYE then
+        return update_tower_redeye
+    end
+end
+
+local function make_tower_sprite(tower_type)
+    local texture = get_tower_texture(tower_type)
+    if tower_type == TOWER_TYPE.REDEYE then
+        return pack_texture_into_sprite(texture, HEX_PIXEL_SIZE.x, HEX_PIXEL_SIZE.y)
+
+    elseif tower_type == TOWER_TYPE.WALL then
+        --return pack_texture_into_sprite(TEX_WALL_CLOSED, HEX_PIXEL_SIZE.x, HEX_PIXEL_SIZE.y)
+        return am.circle(vec2(0), HEX_SIZE, COLORS.VERY_DARK_GRAY, 6)
+
+    elseif tower_type == TOWER_TYPE.MOAT then
+        --return pack_texture_into_sprite(TEX_MOAT1, HEX_PIXEL_SIZE.x, HEX_PIXEL_SIZE.y)
+        return am.circle(vec2(0), HEX_SIZE, COLORS.YALE_BLUE, 6)
+    end
+end
+
 
 
 --[[
@@ -24,8 +53,8 @@ tower(entity) structure:
 }
 --]]
 function is_buildable(hex, tile, tower)
-    local blocked = mob_on_hex(hex)
-    return not blocked and is_passable(tile)
+    local blocked = #mobs_on_hex(hex) ~= 0
+    return not blocked and tile.elevation <= 0.5 and tile.elevation > -0.5
 end
 
 function update_tower_redeye(tower, tower_index)
@@ -57,30 +86,6 @@ function update_tower_redeye(tower, tower_index)
             tower.last_shot_time = TIME
             tower.node:action(vplay_sound(SOUNDS.LASER2))
         end
-    end
-end
-
-local function make_tower_sprite(tower_type)
-    if tower_type == TOWER_TYPE.REDEYE then
-        return pack_texture_into_sprite(TEX_TOWER2, HEX_PIXEL_SIZE.x, HEX_PIXEL_SIZE.y)
-
-    elseif tower_type == TOWER_TYPE.WALL then
-        --return pack_texture_into_sprite(TEX_WALL_CLOSED, HEX_PIXEL_SIZE.x, HEX_PIXEL_SIZE.y)
-        return am.circle(vec2(0), HEX_SIZE, COLORS.VERY_DARK_GRAY, 6)
-
-    elseif tower_type == TOWER_TYPE.MOAT then
-        --return pack_texture_into_sprite(TEX_MOAT1, HEX_PIXEL_SIZE.x, HEX_PIXEL_SIZE.y)
-        return am.circle(vec2(0), HEX_SIZE, COLORS.YALE_BLUE, 6)
-    end
-end
-
-local function modify_terrain_by_tower_type(tower_type, hex)
-
-end
-
-local function get_tower_update_function(tower_type)
-    if tower_type == TOWER_TYPE.REDEYE then
-        return update_tower_redeye
     end
 end
 

@@ -551,6 +551,9 @@ function Astar(map, start, goal, heuristic, cost_f)
             end
         end
     end
+    if not made_it then
+        log('aaaa')
+    end
 
     return path, made_it
 end

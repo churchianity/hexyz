@@ -3,6 +3,8 @@
 function load_textures()
     TEX_MARQUIS             = am.texture2d("res/marquis.png")
 
+    TEX_BUTTON1             = am.texture2d("res/button1.png")
+
     TEX_ARROW               = am.texture2d("res/arrow.png")
 
     TEX_WALL_CLOSED         = am.texture2d("res/wall_closed.png")
