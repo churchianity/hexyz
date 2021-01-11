@@ -67,9 +67,9 @@ local TRDT = TRDTS.SEED
 local function game_action(scene)
     if SCORE < 0 then game_end() end
 
-    TIME = TIME + am.delta_time
-    SCORE = SCORE + am.delta_time
-    MOUSE = WIN:mouse_position()
+    TIME       = TIME + am.delta_time
+    SCORE      = SCORE + am.delta_time
+    MOUSE      = WIN:mouse_position()
     PERF_STATS = am.perf_stats()
 
     local hex            = pixel_to_hex(MOUSE - WORLDSPACE_COORDINATE_OFFSET)
@@ -85,7 +85,7 @@ local function game_action(scene)
 
     if WIN:mouse_pressed"left" then
         if hot and is_buildable(hex, tile, nil) then
-            make_and_register_tower(hex, SELECTED_TOWER_TYPE)
+            build_tower(hex, SELECTED_TOWER_TYPE)
         end
     end
 
@@ -141,6 +141,13 @@ local function game_action(scene)
         end
         WIN.scene"coords".text = str
     end
+
+    do_day_night_cycle()
+end
+
+function do_day_night_cycle()
+    local tstep = (math.sin(TIME) / PERF_STATS.avg_fps + 1)/8
+    WORLD"negative_mask".color = vec4(tstep)
 end
 
 function game_end()

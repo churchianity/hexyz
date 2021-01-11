@@ -4,6 +4,7 @@ SOUNDS = {
     EXPLOSION1      = 49179102, -- this slowed sounds metal as fuck
     EXPLOSION2      = 19725402,
     EXPLOSION3      = 69338002,
+    EXPLOSION4      = 92224102,
     HIT1            = 25811004,
     LASER1          = 79859301,
     LASER2          = 86914201,

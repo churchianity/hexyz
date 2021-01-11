@@ -1,9 +1,18 @@
 
+--[[
+tower(entity) structure:
+{
+    -- @NOTE these should probably be wrapped in a 'weapon' struct or something, so towers can have multiple weapons
+    range           - number    - distance it can shoot
+    last_shot_time  - number    - timestamp (seconds) of last time it shot
+    target_index    - number    - index of entity it is currently shooting
+}
+--]]
 
 TOWER_TYPE = {
-    REDEYE      = 1,
-    WALL        = 2,
-    MOAT        = 3,
+    REDEYE = 1,
+    WALL   = 2,
+    MOAT   = 3,
 }
 
 function get_tower_texture(tower_type)
@@ -41,17 +50,6 @@ local function make_tower_sprite(tower_type)
     end
 end
 
-
-
---[[
-tower(entity) structure:
-{
-    -- @NOTE these should probably be wrapped in a 'weapon' struct or something, so towers can have multiple weapons
-    range           - number    - distance it can shoot
-    last_shot_time  - number    - timestamp (seconds) of last time it shot
-    target_index    - number    - index of entity it is currently shooting
-}
---]]
 function is_buildable(hex, tile, tower)
     local blocked = #mobs_on_hex(hex) ~= 0
     return not blocked and tile.elevation <= 0.5 and tile.elevation > -0.5
@@ -102,8 +100,12 @@ function make_and_register_tower(hex, tower_type)
 
     -- make this cell impassable
     HEX_MAP[hex.x][hex.y].elevation = 2
-    check_for_broken_mob_pathing(hex)
 
     register_entity(TOWERS, tower)
+end
+
+function build_tower(hex, tower_type)
+    make_and_register_tower(hex, tower_type)
+    WIN.scene:action(am.play(am.sfxr_synth(SOUNDS.EXPLOSION4)))
 end
 

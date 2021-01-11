@@ -33,7 +33,7 @@ end
 -- check if a the tile at |hex| is passable by |mob|
 function mob_can_pass_through(mob, hex)
     local tile = HEX_MAP.get(hex.x, hex.y)
-    return tile and tile.elevation < 0.5 and tile.elevation > -0.5
+    return tile and tile.elevation <= 0.5 and tile.elevation > -0.5
 end
 
 function mob_die(mob, mob_index)
@@ -48,15 +48,6 @@ function do_hit_mob(mob, damage, mob_index)
         mob_die(mob, mob_index)
     end
 end
-
-function check_for_broken_mob_pathing(hex)
-    for _,mob in pairs(MOBS) do
-        --if mob and mob.path[hex.x] and mob.path[hex.x][hex.y] then
-            --mob.path = get_mob_path(mob, HEX_MAP, mob.hex, HEX_GRID_CENTER)
-        --end
-    end
-end
-
 
 -- @TODO performance.
 -- try reducing map size by identifying key nodes (inflection points)
@@ -99,11 +90,21 @@ local function mob_update(mob, mob_index)
     end
 
     local frame_target = mob.path[mob.hex.x] and mob.path[mob.hex.x][mob.hex.y]
+    -- frame_target will be false when we are one hex away from the center,
+    -- or nil if something went wrong
+    if frame_target == false then
+        frame_target = { hex = HEX_GRID_CENTER, priority = 0 }
 
-    if frame_target --[[and mob_can_pass_through(mob, frame_target.hex)]] then
-        local factor = 1 + mob.speed * (1/frame_target.priority) / PERF_STATS.avg_fps
-        mob.position = mob.position + math.normalize(hex_to_pixel(frame_target.hex) - mob.position) * factor
+    elseif frame_target == nil then
+        log("bad")
+
+    elseif mob_can_pass_through(mob, frame_target.hex) then
+        -- this is supposed to achieve frame rate independence, but i have no idea if it actually does
+        local rate = 1 + mob.speed * (1/frame_target.priority) / PERF_STATS.avg_fps
+
+        mob.position = mob.position + math.normalize(hex_to_pixel(frame_target.hex) - mob.position) * rate
         mob.node.position2d = mob.position
+
     else
         mob.path = get_mob_path(mob, HEX_MAP, mob.hex, HEX_GRID_CENTER)
     end

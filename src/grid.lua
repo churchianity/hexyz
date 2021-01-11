@@ -70,6 +70,7 @@ end
 
 function grid_cost(map, from, to)
     local t1, t2 = map.get(from.x, from.y), map.get(to.x, to.y)
+    --local base_cost = math.abs(t1.elevation) * 10
     return math.abs(10 * math.abs(t1.elevation)^0.5 - 10 * math.abs(t2.elevation)^0.5)
 end
 
@@ -111,6 +112,13 @@ function random_map(seed)
                 elevation = noise,
                 node = node
             })
+
+            getmetatable(map).__index.neighbours = function(hex)
+                return table.filter(hex_neighbours(hex), function(_hex)
+                    local tile = map.get(_hex.x, _hex.y)
+                    return tile and tile.elevation > -0.5 and tile.elevation <= 0.5
+                end)
+            end
 
             world:append(node)
         end
