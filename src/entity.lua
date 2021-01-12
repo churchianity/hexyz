@@ -21,7 +21,8 @@ function make_basic_entity(hex, node, update, position)
 
     -- usually you'll provide a hex and not a position, and the entity will spawn in the center
     -- of the hex. if you want an entity to exist not at the center of a hex, you can provide a
-    -- pixel position instead
+    -- pixel position instead, then the provided hex is ignored and instead we calculate what hex
+    -- corresponds to the provided pixel position
     if position then
         entity.position = position
         entity.hex      = pixel_to_hex(entity.position)
@@ -30,8 +31,8 @@ function make_basic_entity(hex, node, update, position)
         entity.position = hex_to_pixel(hex)
     end
 
-    entity.update   = update
-    entity.node     = am.translate(entity.position) ^ node
+    entity.update = update
+    entity.node = am.translate(entity.position) ^ node
 
     return entity
 end

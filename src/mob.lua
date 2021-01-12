@@ -92,13 +92,11 @@ local function mob_update(mob, mob_index)
     local frame_target = mob.path[mob.hex.x] and mob.path[mob.hex.x][mob.hex.y]
     -- frame_target will be false when we are one hex away from the center,
     -- or nil if something went wrong
-    if frame_target == false then
+    if not frame_target then
         frame_target = { hex = HEX_GRID_CENTER, priority = 0 }
+    end
 
-    elseif frame_target == nil then
-        log("bad")
-
-    elseif mob_can_pass_through(mob, frame_target.hex) then
+    if mob_can_pass_through(mob, frame_target.hex) then
         -- this is supposed to achieve frame rate independence, but i have no idea if it actually does
         local rate = 1 + mob.speed * (1/frame_target.priority) / PERF_STATS.avg_fps
 

@@ -41,8 +41,8 @@ local function make_tower_sprite(tower_type)
         return pack_texture_into_sprite(texture, HEX_PIXEL_SIZE.x, HEX_PIXEL_SIZE.y)
 
     elseif tower_type == TOWER_TYPE.WALL then
-        --return pack_texture_into_sprite(TEX_WALL_CLOSED, HEX_PIXEL_SIZE.x, HEX_PIXEL_SIZE.y)
-        return am.circle(vec2(0), HEX_SIZE, COLORS.VERY_DARK_GRAY, 6)
+        return pack_texture_into_sprite(TEX_WALL_CLOSED, HEX_PIXEL_SIZE.x + 1, HEX_PIXEL_SIZE.y + 1)
+        --return am.circle(vec2(0), HEX_SIZE, COLORS.VERY_DARK_GRAY, 6)
 
     elseif tower_type == TOWER_TYPE.MOAT then
         --return pack_texture_into_sprite(TEX_MOAT1, HEX_PIXEL_SIZE.x, HEX_PIXEL_SIZE.y)
@@ -50,9 +50,26 @@ local function make_tower_sprite(tower_type)
     end
 end
 
-function is_buildable(hex, tile, tower)
+function tower_on_hex(hex)
+    return table.find(TOWERS, function(tower)
+        return tower.hex == hex
+    end)
+end
+
+function tower_is_buildable_on(hex, tile, tower_type)
+    if hex == HEX_GRID_CENTER then return false end
+
     local blocked = #mobs_on_hex(hex) ~= 0
-    return not blocked and tile.elevation <= 0.5 and tile.elevation > -0.5
+
+    if tower_type == TOWER_TYPE.REDEYE then
+        return not blocked and tile.elevation > 0.5
+
+    elseif tower_type == TOWER_TYPE.WALL then
+        return not blocked and tile.elevation <= 0.5 and tile.elevation > -0.5
+
+    elseif tower_type == TOWER_TYPE.MOAT then
+        return not blocked and tile.elevation <= 0.5 and tile.elevation > -0.5
+    end
 end
 
 function update_tower_redeye(tower, tower_index)
@@ -94,7 +111,7 @@ function make_and_register_tower(hex, tower_type)
         get_tower_update_function(tower_type)
     )
 
-    tower.range             = 10
+    tower.range             = 7
     tower.last_shot_time    = tower.TOB
     tower.target_index      = false
 

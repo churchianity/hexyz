@@ -37,15 +37,23 @@ end
 -- transform coordinates by this to pretend 0,0 is elsewhere
 WORLDSPACE_COORDINATE_OFFSET = -HEX_GRID_PIXEL_DIMENSIONS/2
 
--- the outer edges of the map are not interactable, most action occurs in the center
+-- the outer edges of the map are not interactable, most action occurs in the center-ish
 HEX_GRID_INTERACTABLE_REGION_PADDING = 4
-function is_interactable(tile, evenq)
+function evenq_is_interactable(evenq)
     return point_in_rect(evenq, {
         x1 =                   HEX_GRID_INTERACTABLE_REGION_PADDING,
         x2 = HEX_GRID_WIDTH  - HEX_GRID_INTERACTABLE_REGION_PADDING,
         y1 =                   HEX_GRID_INTERACTABLE_REGION_PADDING,
         y2 = HEX_GRID_HEIGHT - HEX_GRID_INTERACTABLE_REGION_PADDING
     })
+end
+
+local function tile_is_medium_elevation(tile)
+    return tile.elevation >= -0.5 and tile.elevation < 0.5
+end
+
+function tilehex_is_buildable(tile, hex)
+    return tile_is_medium_elevation(tile) and hex ~= HEX_GRID_CENTER
 end
 
 -- map elevation to appropriate color
@@ -92,9 +100,15 @@ function random_map(seed)
             or -evenq.y == 0 or -evenq.y == (HEX_GRID_HEIGHT - 1) then
                 noise = 0
 
+            -- also terraform the center of the grid to be passable
+            -- very infrequently, but still sometimes it is not medium elevation
+            elseif i == HEX_GRID_CENTER.x and j == HEX_GRID_CENTER.y then
+                noise = 0
+
             else
                 -- scale noise to be closer to 0 the closer we are to the center
                 -- @NOTE i don't know if this 100% of the time makes the center tile passable, but it seems to 99.9+% of the time
+                -- @NOTE it doesn't. seed: 1835
                 local nx, ny = evenq.x/HEX_GRID_WIDTH - 0.5, -evenq.y/HEX_GRID_HEIGHT - 0.5
                 local d = (nx^2 + ny^2)^0.5 / 0.5^0.5
                 noise = noise * d^0.125 -- arbitrary, seems to work good
@@ -124,7 +138,8 @@ function random_map(seed)
         end
     end
 
-    world:append(am.circle(hex_to_pixel(HEX_GRID_CENTER), HEX_SIZE/2, COLORS.MAGENTA, 4))
+    world:append(am.translate(hex_to_pixel(HEX_GRID_CENTER))
+                 ^ pack_texture_into_sprite(TEX_RADAR1, HEX_PIXEL_SIZE.x, HEX_PIXEL_SIZE.y))
 
     return map, am.translate(WORLDSPACE_COORDINATE_OFFSET) ^ world
 end

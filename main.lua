@@ -27,7 +27,7 @@ WIN = am.window{
     title       = "hexyz",
     highdpi     = true,
     letterbox   = true,
-    clear_color = COLORS.TRUE_BLACK
+    clear_color = color_at(0)
 }
 
 OFF_SCREEN = vec2(WIN.width * 2) -- arbitrary pixel position that is garunteed to be off screen
@@ -61,8 +61,15 @@ local TRDTS = {
 }
 local TRDT = TRDTS.SEED
 
--- a function - get sets later inside toolbelt
---local select_tower_type
+local function select_hex(hex)
+    local tower = tower_on_hex(hex)
+    local tile = HEX_MAP.get(hex.x, hex.y)
+    log(tile)
+end
+
+local function can_do_build(hex, tile, tower_type)
+    return tower_is_buildable_on(hex, tile, SELECTED_TOWER_TYPE)
+end
 
 local function game_action(scene)
     if SCORE < 0 then game_end() end
@@ -78,13 +85,13 @@ local function game_action(scene)
     local centered_evenq = evenq{ y = -evenq.y } - vec2(math.floor(HEX_GRID_WIDTH/2)
                                                       , math.floor(HEX_GRID_HEIGHT/2))
     local tile = HEX_MAP.get(hex.x, hex.y)
-    local hot = is_interactable(tile, evenq{ y = -evenq.y })
+    local hot = evenq_is_interactable(evenq{ y = -evenq.y })
 
     do_entity_updates()
     do_mob_spawning()
 
     if WIN:mouse_pressed"left" then
-        if hot and is_buildable(hex, tile, nil) then
+        if hot and can_do_build(hex, tile, SELECTED_TOWER_TYPE) then
             build_tower(hex, SELECTED_TOWER_TYPE)
         end
     end
@@ -105,6 +112,19 @@ local function game_action(scene)
 
     elseif WIN:key_pressed"tab" then
         select_tower_type((SELECTED_TOWER_TYPE) % #table.keys(TOWER_TYPE) + 1)
+
+    elseif WIN:key_pressed"1" then select_tower_type(TOWER_TYPE.REDEYE)
+    elseif WIN:key_pressed"2" then select_tower_type(2)
+    elseif WIN:key_pressed"3" then select_tower_type(3)
+    elseif WIN:key_pressed"4" then --select_tower_type(4)
+    elseif WIN:key_pressed"5" then --select_tower_type(5)
+    elseif WIN:key_pressed"6" then --select_tower_type(6)
+    elseif WIN:key_pressed"7" then --select_tower_type(7)
+    elseif WIN:key_pressed"8" then --select_tower_type(8)
+    elseif WIN:key_pressed"9" then --select_tower_type(9)
+    elseif WIN:key_pressed"0" then --select_tower_type(10)
+    elseif WIN:key_pressed"-" then --select_tower_type(1)
+    elseif WIN:key_pressed"=" then --select_tower_type(1)
     end
 
     if tile and hot then
@@ -142,7 +162,7 @@ local function game_action(scene)
         WIN.scene"coords".text = str
     end
 
-    do_day_night_cycle()
+    --do_day_night_cycle()
 end
 
 function do_day_night_cycle()
@@ -151,11 +171,13 @@ function do_day_night_cycle()
 end
 
 function game_end()
-    WIN.scene.paused = true
 
     -- de-initialize stuff
     delete_all_entities()
+    TIME = 0
     SCORE = 0
+    MONEY = 0
+    WORLD = false
 
     WIN.scene = am.scale(1) ^ game_scene()
 end
@@ -168,7 +190,6 @@ local function toolbelt()
     local toolbelt_height = hex_height(HEX_SIZE) * 2
     local tower_tooltip = am.translate(WIN.left + 10, WIN.bottom + toolbelt_height + 20)
                           ^ am.text(tower_type_tostring(SELECTED_TOWER_TYPE), "left"):tag"tower_tooltip"
-
     local toolbelt = am.group{
         tower_tooltip,
         am.rect(WIN.left, WIN.bottom, WIN.right, WIN.bottom + toolbelt_height, COLORS.TRANSPARENT)
@@ -176,34 +197,53 @@ local function toolbelt()
 
     local padding = 15
     local size = toolbelt_height - padding
-    local offset = vec2(WIN.left + padding/3, WIN.bottom + padding/3)
+    local half_size = size/2
+    local offset = vec2(WIN.left + padding*3, WIN.bottom + padding/3)
 
-    local keys = {
-        '1', '2', '3', '4', '5', '6', '7', '9', '0', '-', '='
-    }
+    local tab_button = am.translate(vec2(0, half_size) + offset)
+                       ^ am.group{
+                           pack_texture_into_sprite(TEX_WIDER_BUTTON1, 54, 32),
+                           pack_texture_into_sprite(TEX_TAB_ICON, 25, 25)
+                       }
+    toolbelt:append(tab_button)
 
     local tower_select_square = (
-        am.translate(vec2(size + padding, size/2) + offset)
+        am.translate(vec2(size + padding, half_size) + offset)
         ^ am.rect(-size/2-3, -size/2-3, size/2+3, size/2+3, COLORS.SUNRAY)
     ):tag"tower_select_square"
-
     toolbelt:append(tower_select_square)
-    local tower_type_values = table.values(TOWER_TYPE)
 
+    local tower_type_values = table.values(TOWER_TYPE)
+    local keys = { '1', '2', '3', '4', '5', '6', '7', '9', '0', '-', '=' }
     for i = 1, #keys do
         if tower_type_values[i] then
             toolbelt:append(
                 am.translate(vec2(size + padding, 0) * i + offset)
                 ^ am.group{
-                    am.translate(0, size/2)
+                    am.translate(0, half_size)
                     ^ pack_texture_into_sprite(TEX_BUTTON1, size, size),
 
-                    am.translate(0, size/2)
+                    am.translate(0, half_size)
                     ^ pack_texture_into_sprite(get_tower_texture(tower_type_values[i]), size, size),
 
-                    am.translate(vec2(size/2))
+                    am.translate(vec2(half_size))
                     ^ am.group{
-                        pack_texture_into_sprite(TEX_BUTTON1, size/2, size/2),
+                        pack_texture_into_sprite(TEX_BUTTON1, half_size, half_size),
+                        am.scale(2)
+                        ^ am.text(keys[i], COLORS.BLACK)
+                    }
+                }
+            )
+        else
+            toolbelt:append(
+                am.translate(vec2(size + padding, 0) * i + offset)
+                ^ am.group{
+                    am.translate(0, half_size)
+                    ^ pack_texture_into_sprite(TEX_BUTTON1, size, size),
+
+                    am.translate(vec2(half_size))
+                    ^ am.group{
+                        pack_texture_into_sprite(TEX_BUTTON1, half_size, half_size),
                         am.scale(2)
                         ^ am.text(keys[i], COLORS.BLACK)
                     }

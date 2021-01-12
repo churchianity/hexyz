@@ -4,9 +4,12 @@ function load_textures()
     TEX_MARQUIS             = am.texture2d("res/marquis.png")
 
     TEX_BUTTON1             = am.texture2d("res/button1.png")
+    TEX_WIDER_BUTTON1       = am.texture2d("res/wider_button1.png")
 
+    TEX_TAB_ICON            = am.texture2d("res/tab_icon.png")
     TEX_ARROW               = am.texture2d("res/arrow.png")
 
+    TEX_RADAR1              = am.texture2d("res/radar.png")
     TEX_WALL_CLOSED         = am.texture2d("res/wall_closed.png")
     TEX_MOAT1               = am.texture2d("res/moat1.png")
     TEX_TOWER1              = am.texture2d("res/tower1.png")
