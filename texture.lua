@@ -10,6 +10,7 @@ function load_textures()
     TEX_ARROW               = am.texture2d("res/arrow.png")
 
     TEX_RADAR1              = am.texture2d("res/radar.png")
+    TEX_SATELLITE           = am.texture2d("res/satelite.png")
     TEX_WALL_CLOSED         = am.texture2d("res/wall_closed.png")
     TEX_MOAT1               = am.texture2d("res/moat1.png")
     TEX_TOWER1              = am.texture2d("res/tower1.png")

@@ -6,7 +6,7 @@ SOUNDS = {
     EXPLOSION3      = 69338002,
     EXPLOSION4      = 92224102,
     COIN1           = 10262800,
-    HIT2            = 25811004,
+    HIT1            = 39920504,
     LASER1          = 79859301,
     LASER2          = 86914201,
     PUSH1           = 30455908,
@@ -24,8 +24,8 @@ SOUNDS = {
 }
 
 -- play a sound with variable pitch
-function vplay_sound(seed)
-    return am.play(am.sfxr_synth(seed), false, (math.random() + 0.5)/2)
+function vplay_sound(seed, range)
+    return am.play(am.sfxr_synth(seed), false, (math.random() + 0.5)/(range and 1/range or 2))
 end
 
 function play_sound(seed)

@@ -11,8 +11,8 @@ tower(entity) structure:
 
 TOWER_TYPE = {
     REDEYE = 1,
-    WALL   = 2,
-    MOAT   = 3,
+    WALL   = 11,
+    MOAT   = 12,
 }
 
 function get_tower_texture(tower_type)
@@ -117,6 +117,7 @@ function make_and_register_tower(hex, tower_type)
 
     -- make this cell impassable
     HEX_MAP[hex.x][hex.y].elevation = 2
+    generate_and_apply_flow_field(HEX_MAP, HEX_GRID_CENTER)
 
     register_entity(TOWERS, tower)
 end

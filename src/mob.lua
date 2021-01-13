@@ -84,27 +84,64 @@ local function mob_update(mob, mob_index)
     mob.hex = pixel_to_hex(mob.position)
 
     if mob.hex == HEX_GRID_CENTER then
+        log('die')
         update_score(-mob.health)
         mob_die(mob, mob_index)
         return true
     end
 
-    local frame_target = mob.path[mob.hex.x] and mob.path[mob.hex.x][mob.hex.y]
-    -- frame_target will be false when we are one hex away from the center,
-    -- or nil if something went wrong
-    if not frame_target then
-        frame_target = { hex = HEX_GRID_CENTER, priority = 0 }
+    -- figure out movement
+    local frame_target, tile = nil, nil
+    if mob.path then
+        log('A*')
+
+        -- we have an explicitly stored target
+        local path_entry = mob.path[mob.hex.x] and mob.path[mob.hex.x][mob.hex.y]
+        frame_target = path_entry.hex
+
+        -- check if our target is valid, and if it's not we aren't going to move this frame.
+        -- recalculate our path.
+        if last_frame_hex ~= mob.hex and not mob_can_pass_through(mob, frame_target) then
+            log('recalc')
+            mob.path = get_mob_path(mob, HEX_MAP, mob.hex, HEX_GRID_CENTER)
+            frame_target = nil
+        end
+    else
+        -- use the map's flow field - gotta find the the best neighbour
+        local neighbours = HEX_MAP.neighbours(mob.hex)
+
+        if #neighbours > 0 then
+            local first_neighbour = neighbours[1]
+            tile = HEX_MAP.get(first_neighbour.x, first_neighbour.y)
+            local lowest_cost_hex = first_neighbour
+            local lowest_cost = tile.priority or 0
+
+            for _,n in pairs(neighbours) do
+                tile = HEX_MAP.get(n.x, n.y)
+                local current_cost = tile.priority
+
+                if current_cost and current_cost < lowest_cost then
+                    lowest_cost_hex = n
+                    lowest_cost = current_cost
+                end
+            end
+
+            frame_target = lowest_cost_hex
+        else
+            log('no neighbours')
+            log(table.tostring(neighbours) .. mob.hex .. mob.position)
+        end
     end
 
-    if mob_can_pass_through(mob, frame_target.hex) then
+    -- do movement
+    if frame_target then
         -- this is supposed to achieve frame rate independence, but i have no idea if it actually does
-        local rate = 1 + mob.speed * (1/frame_target.priority) / PERF_STATS.avg_fps
+        local rate = 1 + mob.speed / PERF_STATS.avg_fps
 
-        mob.position = mob.position + math.normalize(hex_to_pixel(frame_target.hex) - mob.position) * rate
+        mob.position = mob.position + math.normalize(hex_to_pixel(frame_target) - mob.position) * rate
         mob.node.position2d = mob.position
-
     else
-        mob.path = get_mob_path(mob, HEX_MAP, mob.hex, HEX_GRID_CENTER)
+        log('no target')
     end
 
     --[[ passive animation
@@ -123,7 +160,7 @@ local function make_and_register_mob()
         mob_update
     )
 
-    mob.path           = get_mob_path(mob, HEX_MAP, mob.hex, HEX_GRID_CENTER)
+    --mob.path           = get_mob_path(mob, HEX_MAP, mob.hex, HEX_GRID_CENTER)
     mob.health         = 10
     mob.speed          = 100
     mob.bounty         = 5

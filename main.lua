@@ -72,7 +72,7 @@ local function can_do_build(hex, tile, tower_type)
 end
 
 local function game_action(scene)
-    if SCORE < 0 then game_end() end
+    --if SCORE < 0 then game_end() end
 
     TIME       = TIME + am.delta_time
     SCORE      = SCORE + am.delta_time
@@ -111,7 +111,12 @@ local function game_action(scene)
         TRDT = (TRDT + 1) % #table.keys(TRDTS)
 
     elseif WIN:key_pressed"tab" then
-        select_tower_type((SELECTED_TOWER_TYPE) % #table.keys(TOWER_TYPE) + 1)
+        local num_of_types = #table.keys(TOWER_TYPE)
+        if WIN:key_down"lshift" then
+            select_tower_type((SELECTED_TOWER_TYPE + num_of_types - 2) % num_of_types + 1)
+        else
+            select_tower_type((SELECTED_TOWER_TYPE) % num_of_types + 1)
+        end
 
     elseif WIN:key_pressed"1" then select_tower_type(TOWER_TYPE.REDEYE)
     elseif WIN:key_pressed"2" then select_tower_type(2)
@@ -214,7 +219,7 @@ local function toolbelt()
     toolbelt:append(tower_select_square)
 
     local tower_type_values = table.values(TOWER_TYPE)
-    local keys = { '1', '2', '3', '4', '5', '6', '7', '9', '0', '-', '=' }
+    local keys = { '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=' }
     for i = 1, #keys do
         if tower_type_values[i] then
             toolbelt:append(

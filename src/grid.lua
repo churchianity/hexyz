@@ -78,8 +78,48 @@ end
 
 function grid_cost(map, from, to)
     local t1, t2 = map.get(from.x, from.y), map.get(to.x, to.y)
-    --local base_cost = math.abs(t1.elevation) * 10
-    return math.abs(10 * math.abs(t1.elevation)^0.5 - 10 * math.abs(t2.elevation)^0.5)
+    return 1 + 10 * math.abs(math.abs(t1.elevation)^0.5
+                           - math.abs(t2.elevation)^0.5)
+end
+
+function generate_and_apply_flow_field(map, start, world)
+    local flow_field = dijkstra(map, start, nil, grid_cost)
+    local overlay_group = am.group():tag"flow_field"
+    for i,_ in pairs(flow_field) do
+        for j,f in pairs(flow_field[i]) do
+            if f then
+                map[i][j].priority = f.priority
+
+                overlay_group:append(am.translate(hex_to_pixel(vec2(i, j)))
+                                     ^ am.text(string.format("%.1f", f.priority * 10)))
+            else
+                -- should fire exactly once per goal hex
+                log('no priority')
+            end
+        end
+    end
+
+    -- dijkstra doesn't set the priority of the center, do it ourselves
+    map[HEX_GRID_CENTER.x][HEX_GRID_CENTER.y].priority = -1
+    overlay_group:append(am.translate(hex_to_pixel(vec2(HEX_GRID_CENTER.x, HEX_GRID_CENTER.y)))
+                         ^ am.text(string.format("%.1f", -10)))
+
+    if world then world:append(overlay_group) end
+end
+
+function redraw_flow_field_overlay(flow_field)
+    local overlay_group = am.group():tag"flow_field"
+    for i,_ in pairs(flow_field) do
+        for j,f in pairs(flow_field[i]) do
+            if f then
+                overlay_group:append(am.translate(hex_to_pixel(vec2(i, j)))
+                                     ^ am.text(string.format("%.1f", f.priority * 10)))
+            else
+                -- should fire exactly once per goal hex
+                --log('no priority')
+            end
+        end
+    end
 end
 
 function random_map(seed)
@@ -127,19 +167,21 @@ function random_map(seed)
                 node = node
             })
 
-            getmetatable(map).__index.neighbours = function(hex)
-                return table.filter(hex_neighbours(hex), function(_hex)
-                    local tile = map.get(_hex.x, _hex.y)
-                    return tile and tile.elevation > -0.5 and tile.elevation <= 0.5
-                end)
-            end
-
             world:append(node)
         end
     end
 
-    world:append(am.translate(hex_to_pixel(HEX_GRID_CENTER))
-                 ^ pack_texture_into_sprite(TEX_RADAR1, HEX_PIXEL_SIZE.x, HEX_PIXEL_SIZE.y))
+    getmetatable(map).__index.neighbours = function(hex)
+        return table.filter(hex_neighbours(hex), function(_hex)
+            local tile = map.get(_hex.x, _hex.y)
+            return tile and tile.elevation > -0.5 and tile.elevation <= 0.5
+        end)
+    end
+
+    generate_and_apply_flow_field(map, HEX_GRID_CENTER)
+
+    --world:append(am.translate(hex_to_pixel(HEX_GRID_CENTER))
+    --             ^ pack_texture_into_sprite(TEX_SATELLITE, HEX_PIXEL_SIZE.x*2, HEX_PIXEL_SIZE.y*2))
 
     return map, am.translate(WORLDSPACE_COORDINATE_OFFSET) ^ world
 end

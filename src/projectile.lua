@@ -63,14 +63,13 @@ function projectile_update(projectile, projectile_index)
     -- hit the mob, delete ourselves, affect the world
     do_hit_mob(closest_mob, projectile.damage, closest_mob_index)
     delete_entity(PROJECTILES, projectile_index)
-    WORLD:action(vplay_sound(SOUNDS.HIT1))
+    WORLD:action(vplay_sound(SOUNDS.HIT1, 0.5))
 end
 
 function make_and_register_projectile(hex, vector, velocity, damage, hitbox_radius)
     local projectile = make_basic_entity(hex
                                        , am.line(vector, vector*hitbox_radius, 3, COLORS.CLARET)
                                        , projectile_update)
-
     projectile.vector        = vector
     projectile.velocity      = velocity
     projectile.damage        = damage
