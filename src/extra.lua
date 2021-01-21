@@ -24,3 +24,33 @@ function table.find(t, predicate)
     return nil
 end
 
+function quicksort(t, low_index, high_index, comparator)
+    local function partition(t, low_index, high_index)
+        local i = low_index - 1
+        local pivot = t[high_index]
+
+        for j = low_index, high_index - 1 do
+            if comparator(t[j], t[pivot]) <= 0 then
+                i = i + 1
+                t[i], t[j] = t[j], t[i]
+            end
+        end
+
+        t[i + 1], t[high_index] = t[high_index], t[i + 1]
+        return i + 1
+    end
+
+    if #t == 1 then
+        return t
+    end
+
+    if comparator(t[low_index], t[high_index]) < 0 then
+        local partition_index = partition(t, low_index, high_index)
+
+        quicksort(t, low_index, partition_index - 1, comparator)
+        quicksort(t, partition_index + 1, high_index, comparator)
+    end
+
+    return t
+end
+

@@ -23,12 +23,13 @@ SOUNDS = {
     TRACK1 = am.track(am.load_audio("res/track1.ogg"), true, 1, 0.1)
 }
 
--- play a sound with variable pitch
-function vplay_sound(seed, range)
-    return am.play(am.sfxr_synth(seed), false, (math.random() + 0.5)/(range and 1/range or 2))
+-- play sound effect with variable pitch
+function vplay_sfx(sound, pitch_range)
+    local pitch = (math.random() + 0.5)/(pitch_range and 1/pitch_range or 2)
+    WIN.scene:action(am.play(sound, false, pitch, SFX_VOLUME))
 end
 
-function play_sound(seed)
-    return am.play(am.sfxr_synth(seed), false)
+function play_sfx(sound)
+    WIN.scene:action(am.play(sound, false, 1, SFX_VOLUME))
 end
 

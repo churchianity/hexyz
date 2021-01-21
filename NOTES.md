@@ -10,14 +10,16 @@ MAP RESOURCES
 
 
 towers:
-1  - redeye
+- redeye
     long-range laser tower
     only buildable on mountains and upgraded walls
 
-    upgrades:
-        ???
+- lighthouse
+    light-emitting static tower
+    only buildable on tiles adjacent to water
+    mobs strongly prefer to path around lighthouses
 
--1 - wall
+- wall
     some fraction of the height of the tallest mountain
     makes mob pathing more difficult
 
@@ -25,7 +27,7 @@ towers:
         - fortifications    - lets you build some qualifying towers on top of this tower
         - spikes            - mobs take damage when climbing
 
--2 - moat
+- moat
     some fraction of the depth of the deepest lake
     makes mob pathing more difficult
 

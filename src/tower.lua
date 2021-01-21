@@ -11,14 +11,30 @@ tower(entity) structure:
 
 TOWER_TYPE = {
     REDEYE = 1,
-    WALL   = 11,
-    MOAT   = 12,
+    WALL   = 2,
+    MOAT   = 3,
 }
 
+function get_tower_build_cost(tower_type)
+        if tower_type == TOWER_TYPE.REDEYE then return 25
+    elseif tower_type == TOWER_TYPE.WALL then   return 5
+    elseif tower_type == TOWER_TYPE.MOAT then   return 15
+    end
+end
+
+function can_afford_tower(money, tower_type)
+    local cost = get_tower_build_cost(tower_type)
+
+        if tower_type == TOWER_TYPE.REDEYE then return (money - cost) > 0
+    elseif tower_type == TOWER_TYPE.WALL then   return (money - cost) > 0
+    elseif tower_type == TOWER_TYPE.MOAT then   return (money - cost) > 0
+    end
+end
+
 function get_tower_texture(tower_type)
-        if tower_type == TOWER_TYPE.REDEYE then return TEX_TOWER2
-    elseif tower_type == TOWER_TYPE.WALL then   return TEX_WALL_CLOSED
-    elseif tower_type == TOWER_TYPE.MOAT then   return TEX_MOAT1
+        if tower_type == TOWER_TYPE.REDEYE then return TEX_TOWER_REDEYE
+    elseif tower_type == TOWER_TYPE.WALL then   return TEX_TOWER_WALL
+    elseif tower_type == TOWER_TYPE.MOAT then   return TEX_TOWER_MOAT
     end
 end
 
@@ -35,19 +51,15 @@ local function get_tower_update_function(tower_type)
     end
 end
 
-local function make_tower_sprite(tower_type)
-    local texture = get_tower_texture(tower_type)
-    if tower_type == TOWER_TYPE.REDEYE then
-        return pack_texture_into_sprite(texture, HEX_PIXEL_SIZE.x, HEX_PIXEL_SIZE.y)
+function update_wall_texture(hex)
+    for _,n in pairs(hex_neighbours(hex)) do
+        local tile = HEX_MAP.get(hex.x, hex.y)
 
-    elseif tower_type == TOWER_TYPE.WALL then
-        return pack_texture_into_sprite(TEX_WALL_CLOSED, HEX_PIXEL_SIZE.x + 1, HEX_PIXEL_SIZE.y + 1)
-        --return am.circle(vec2(0), HEX_SIZE, COLORS.VERY_DARK_GRAY, 6)
-
-    elseif tower_type == TOWER_TYPE.MOAT then
-        --return pack_texture_into_sprite(TEX_MOAT1, HEX_PIXEL_SIZE.x, HEX_PIXEL_SIZE.y)
-        return am.circle(vec2(0), HEX_SIZE, COLORS.YALE_BLUE, 6)
     end
+end
+
+local function make_tower_sprite(tower_type)
+    return pack_texture_into_sprite(get_tower_texture(tower_type), HEX_PIXEL_WIDTH, HEX_PIXEL_HEIGHT)
 end
 
 function tower_on_hex(hex)
@@ -99,7 +111,7 @@ function update_tower_redeye(tower, tower_index)
             )
 
             tower.last_shot_time = TIME
-            tower.node:action(vplay_sound(SOUNDS.LASER2))
+            vplay_sfx(SOUNDS.LASER2)
         end
     end
 end
@@ -123,7 +135,8 @@ function make_and_register_tower(hex, tower_type)
 end
 
 function build_tower(hex, tower_type)
+    update_money(-get_tower_build_cost(tower_type))
     make_and_register_tower(hex, tower_type)
-    WIN.scene:action(am.play(am.sfxr_synth(SOUNDS.EXPLOSION4)))
+    vplay_sfx(SOUNDS.EXPLOSION4)
 end
 

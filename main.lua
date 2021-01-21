@@ -36,10 +36,11 @@ PERF_STATS = false               -- result of am.perf_stats() -- should be calle
 WORLD = false -- root scene node of everything considered to be in the game world
               -- aka non gui stuff
 
-TIME  = 0     -- runtime of the current game in seconds (not whole program runtime)
-SCORE = 0     -- score of the player
-MONEY = 0     -- available resources
-MOUSE = false -- position of the mouse at the start of every frame, if an action is tracking it
+TIME           = 0                  -- runtime of the current game in seconds (not whole program runtime)
+SCORE          = 0                  -- score of the player
+STARTING_MONEY = 50
+MONEY          = STARTING_MONEY     -- available resources
+MOUSE          = false              -- position of the mouse at the start of every frame, if an action is tracking it
 
 -- global audio settings
 MUSIC_VOLUME = 0.1
@@ -68,7 +69,7 @@ local function select_hex(hex)
 end
 
 local function can_do_build(hex, tile, tower_type)
-    return tower_is_buildable_on(hex, tile, SELECTED_TOWER_TYPE)
+    return can_afford_tower(MONEY, tower_type) and tower_is_buildable_on(hex, tile, tower_type)
 end
 
 local function game_action(scene)
@@ -105,7 +106,14 @@ local function game_action(scene)
     end
 
     if WIN:key_pressed"escape" then
-        game_end()
+        WIN.scene"game".paused = true
+        WIN.scene:action(function()
+            if WIN:key_pressed"escape" then
+                WIN.scene"game".paused = false
+                return true
+            end
+        end)
+        --game_end()
 
     elseif WIN:key_pressed"f1" then
         TRDT = (TRDT + 1) % #table.keys(TRDTS)
@@ -171,24 +179,28 @@ local function game_action(scene)
 end
 
 function do_day_night_cycle()
-    local tstep = (math.sin(TIME) / PERF_STATS.avg_fps + 1)/8
-    WORLD"negative_mask".color = vec4(tstep)
+    local slow = 100
+    local tstep = (math.sin(TIME / 100) + 1) / PERF_STATS.avg_fps
+    WORLD"negative_mask".color = vec4(tstep){a=1}
 end
 
 function game_end()
-
     -- de-initialize stuff
     delete_all_entities()
     TIME = 0
     SCORE = 0
-    MONEY = 0
+    MONEY = STARTING_MONEY
     WORLD = false
 
-    WIN.scene = am.scale(1) ^ game_scene()
+    WIN.scene = am.group(am.scale(1) ^ game_scene())
 end
 
 function update_score(diff)
     SCORE = SCORE + diff
+end
+
+function update_money(diff)
+    MONEY = MONEY + diff
 end
 
 local function toolbelt()
@@ -283,6 +295,7 @@ function game_scene()
         WIN.scene:remove(curtain)
     end))
 
+    -- 2227
     HEX_MAP, WORLD = random_map()
 
     local scene = am.group{
@@ -293,7 +306,7 @@ function game_scene()
         score,
         money,
         coords,
-    }
+    }:tag"game"
 
     scene:action(game_action)
     --scene:action(am.play(SOUNDS.TRACK1))
@@ -302,6 +315,6 @@ function game_scene()
 end
 
 load_textures()
-WIN.scene = am.scale(vec2(1)) ^ game_scene()
+WIN.scene = am.group(am.scale(vec2(1)) ^ game_scene())
 noglobals()
 

@@ -2,8 +2,10 @@
 
 -- distance from hex centerpoint to any vertex
 HEX_SIZE = 20
-HEX_PIXEL_SIZE = vec2(hex_width(HEX_SIZE, ORIENTATION.FLAT)
-                    , hex_height(HEX_SIZE, ORIENTATION.FLAT))
+
+HEX_PIXEL_WIDTH = hex_width(HEX_SIZE, ORIENTATION.FLAT)
+HEX_PIXEL_HEIGHT = hex_height(HEX_SIZE, ORIENTATION.FLAT)
+HEX_PIXEL_DIMENSIONS = vec2(HEX_PIXEL_WIDTH, HEX_PIXEL_HEIGHT)
 
 -- with 1920x1080, this is the minimal dimensions to cover the screen (65x33)
 -- @NOTE added 2 cell padding, because we terraform the very outer edge and it looks ugly
@@ -16,6 +18,9 @@ HEX_GRID_DIMENSIONS = vec2(HEX_GRID_WIDTH, HEX_GRID_HEIGHT)
 HEX_GRID_CENTER = vec2(math.floor(HEX_GRID_WIDTH/2)
                      , 0)
                     -- math.floor(HEX_GRID_HEIGHT/2))
+
+HEX_GRID_MINIMUM_ELEVATION = -1
+HEX_GRID_MAXIMUM_ELEVATION = 1
 
 -- index is hex coordinates [x][y]
 -- { { elevation, node, etc. } }
@@ -78,8 +83,9 @@ end
 
 function grid_cost(map, from, to)
     local t1, t2 = map.get(from.x, from.y), map.get(to.x, to.y)
-    return 1 + 10 * math.abs(math.abs(t1.elevation)^0.5
-                           - math.abs(t2.elevation)^0.5)
+    local epsilon = HEX_GRID_MAXIMUM_ELEVATION - HEX_GRID_MINIMUM_ELEVATION
+    return epsilon + 10 * math.abs(math.abs(t1.elevation)^0.5
+                                 - math.abs(t2.elevation)^0.5)
 end
 
 function generate_and_apply_flow_field(map, start, world)
@@ -94,7 +100,7 @@ function generate_and_apply_flow_field(map, start, world)
                                      ^ am.text(string.format("%.1f", f.priority * 10)))
             else
                 -- should fire exactly once per goal hex
-                log('no priority')
+                --log('no priority')
             end
         end
     end
@@ -135,14 +141,14 @@ function random_map(seed)
         for j,noise in pairs(map[i]) do
             local evenq = hex_to_evenq(vec2(i, j))
 
-            -- check if we're on an edge -- terraform edges to be passable
             if  evenq.x == 0 or  evenq.x == (HEX_GRID_WIDTH - 1)
             or -evenq.y == 0 or -evenq.y == (HEX_GRID_HEIGHT - 1) then
+                -- if we're on an edge -- terraform edges to be passable
                 noise = 0
 
-            -- also terraform the center of the grid to be passable
-            -- very infrequently, but still sometimes it is not medium elevation
             elseif i == HEX_GRID_CENTER.x and j == HEX_GRID_CENTER.y then
+                -- also terraform the center of the grid to be passable
+                -- very infrequently, but still sometimes it is not medium elevation
                 noise = 0
 
             else
@@ -178,10 +184,10 @@ function random_map(seed)
         end)
     end
 
-    generate_and_apply_flow_field(map, HEX_GRID_CENTER)
+    generate_and_apply_flow_field(map, HEX_GRID_CENTER, world)
 
-    --world:append(am.translate(hex_to_pixel(HEX_GRID_CENTER))
-    --             ^ pack_texture_into_sprite(TEX_SATELLITE, HEX_PIXEL_SIZE.x*2, HEX_PIXEL_SIZE.y*2))
+    world:append(am.translate(hex_to_pixel(HEX_GRID_CENTER))
+                 ^ pack_texture_into_sprite(TEX_SATELLITE, HEX_PIXEL_WIDTH, HEX_PIXEL_HEIGHT))
 
     return map, am.translate(WORLDSPACE_COORDINATE_OFFSET) ^ world
 end

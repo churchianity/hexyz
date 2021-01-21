@@ -10,7 +10,7 @@ bullet/projectile(entity) structure
 }
 --]]
 
-function projectile_update(projectile, projectile_index)
+function update_projectile(projectile, projectile_index)
     projectile.position        = projectile.position + projectile.vector * projectile.velocity
     projectile.node.position2d = projectile.position
     projectile.hex             = pixel_to_hex(projectile.position)
@@ -63,13 +63,13 @@ function projectile_update(projectile, projectile_index)
     -- hit the mob, delete ourselves, affect the world
     do_hit_mob(closest_mob, projectile.damage, closest_mob_index)
     delete_entity(PROJECTILES, projectile_index)
-    WORLD:action(vplay_sound(SOUNDS.HIT1, 0.5))
+    vplay_sfx(SOUNDS.HIT1, 0.5)
 end
 
 function make_and_register_projectile(hex, vector, velocity, damage, hitbox_radius)
     local projectile = make_basic_entity(hex
                                        , am.line(vector, vector*hitbox_radius, 3, COLORS.CLARET)
-                                       , projectile_update)
+                                       , update_projectile)
     projectile.vector        = vector
     projectile.velocity      = velocity
     projectile.damage        = damage
