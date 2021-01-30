@@ -57,10 +57,6 @@ local function tile_is_medium_elevation(tile)
     return tile.elevation >= -0.5 and tile.elevation < 0.5
 end
 
-function tilehex_is_buildable(tile, hex)
-    return tile_is_medium_elevation(tile) and hex ~= HEX_GRID_CENTER
-end
-
 -- map elevation to appropriate color
 function color_at(elevation)
     if elevation < -0.5 then -- lowest elevation
@@ -83,16 +79,33 @@ end
 
 function grid_cost(map, from, to)
     local t1, t2 = map.get(from.x, from.y), map.get(to.x, to.y)
-    local epsilon = HEX_GRID_MAXIMUM_ELEVATION - HEX_GRID_MINIMUM_ELEVATION
-    return epsilon + 10 * math.abs(math.abs(t1.elevation)^0.5
-                                 - math.abs(t2.elevation)^0.5)
+
+    local elevation_epsilon = HEX_GRID_MAXIMUM_ELEVATION - HEX_GRID_MINIMUM_ELEVATION
+    local elevation_cost = 1 * math.abs(math.abs(t1.elevation)^0.5
+                                      - math.abs(t2.elevation)^0.5)
+
+    local epsilon = elevation_epsilon
+    local cost = elevation_cost
+
+    return epsilon - cost
 end
 
 function generate_and_apply_flow_field(map, start, world)
-    local flow_field = dijkstra(map, start, nil, grid_cost)
+    local flow
+    if false then
+        flow = flow_field(map, start, world)
+    else
+        flow = dijkstra(map, start, nil, grid_cost)
+    end
+
+    local flow_field_hidden = world and world"flow_field" and world"flow_field".hidden
+    if world and world"flow_field" then
+        world:remove"flow_field"
+    end
+
     local overlay_group = am.group():tag"flow_field"
-    for i,_ in pairs(flow_field) do
-        for j,f in pairs(flow_field[i]) do
+    for i,_ in pairs(flow) do
+        for j,f in pairs(flow[i]) do
             if f then
                 map[i][j].priority = f.priority
 
@@ -100,7 +113,7 @@ function generate_and_apply_flow_field(map, start, world)
                                      ^ am.text(string.format("%.1f", f.priority * 10)))
             else
                 -- should fire exactly once per goal hex
-                --log('no priority')
+                -- log('no priority')
             end
         end
     end
@@ -109,22 +122,9 @@ function generate_and_apply_flow_field(map, start, world)
     map[HEX_GRID_CENTER.x][HEX_GRID_CENTER.y].priority = -1
     overlay_group:append(am.translate(hex_to_pixel(vec2(HEX_GRID_CENTER.x, HEX_GRID_CENTER.y)))
                          ^ am.text(string.format("%.1f", -10)))
-
-    if world then world:append(overlay_group) end
-end
-
-function redraw_flow_field_overlay(flow_field)
-    local overlay_group = am.group():tag"flow_field"
-    for i,_ in pairs(flow_field) do
-        for j,f in pairs(flow_field[i]) do
-            if f then
-                overlay_group:append(am.translate(hex_to_pixel(vec2(i, j)))
-                                     ^ am.text(string.format("%.1f", f.priority * 10)))
-            else
-                -- should fire exactly once per goal hex
-                --log('no priority')
-            end
-        end
+    if world then
+        overlay_group.hidden = flow_field_hidden
+        world:append(overlay_group)
     end
 end
 
@@ -154,7 +154,7 @@ function random_map(seed)
             else
                 -- scale noise to be closer to 0 the closer we are to the center
                 -- @NOTE i don't know if this 100% of the time makes the center tile passable, but it seems to 99.9+% of the time
-                -- @NOTE it doesn't. seed: 1835
+                -- @NOTE it doesn't. seed: 1835, 2227?
                 local nx, ny = evenq.x/HEX_GRID_WIDTH - 0.5, -evenq.y/HEX_GRID_HEIGHT - 0.5
                 local d = (nx^2 + ny^2)^0.5 / 0.5^0.5
                 noise = noise * d^0.125 -- arbitrary, seems to work good
@@ -187,7 +187,7 @@ function random_map(seed)
     generate_and_apply_flow_field(map, HEX_GRID_CENTER, world)
 
     world:append(am.translate(hex_to_pixel(HEX_GRID_CENTER))
-                 ^ pack_texture_into_sprite(TEX_SATELLITE, HEX_PIXEL_WIDTH, HEX_PIXEL_HEIGHT))
+                 ^ pack_texture_into_sprite(TEXTURES.SATELLITE, HEX_PIXEL_WIDTH, HEX_PIXEL_HEIGHT))
 
     return map, am.translate(WORLDSPACE_COORDINATE_OFFSET) ^ world
 end

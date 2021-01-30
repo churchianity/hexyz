@@ -247,6 +247,9 @@ end
 local function map_get(t, x, y)
     return t[x] and t[x][y]
 end
+function hex_map_get(t, x, y)
+    return map_get(t, x, y)
+end
 
 local function map_set(t, x, y, v)
     if t[x] then
@@ -257,6 +260,9 @@ local function map_set(t, x, y, v)
     end
 
     return t
+end
+function hex_map_set(t, x, y, v)
+    return map_set(t, x, y, v)
 end
 
 local function map_traverse(t, callback)

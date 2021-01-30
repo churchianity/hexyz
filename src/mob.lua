@@ -94,14 +94,22 @@ local function update_mob(mob, mob_index)
     if last_frame_hex ~= mob.hex or not mob.frame_target then
         local frame_target, tile = nil, nil
         if mob.path then
-            log('A*')
+            --log('A*')
             -- we have an explicitly stored target
             local path_entry = mob.path[mob.hex.x] and mob.path[mob.hex.x][mob.hex.y]
+
+            if not path_entry then
+                -- we should be just about to reach the target, delete the path.
+                mob.path = nil
+                mob.frame_target = nil
+                return
+            end
+
             mob.frame_target = path_entry.hex
 
             -- check if our target is valid, and if it's not we aren't going to move this frame.
             -- recalculate our path.
-            if last_frame_hex ~= mob.hex and not mob_can_pass_through(mob, frame_target) then
+            if last_frame_hex ~= mob.hex and not mob_can_pass_through(mob, mob.frame_target) then
                 log('recalc')
                 mob.path = get_mob_path(mob, HEX_MAP, mob.hex, HEX_GRID_CENTER)
                 mob.frame_target = nil
@@ -134,11 +142,13 @@ local function update_mob(mob, mob_index)
     end
 
     if mob.frame_target and mob.frame_target == last_frame_hex then
-        log('backpedaling')
-        log(mob.frame_target)
-        log(mob.hex)
-        log(last_frame_hex)
-        --WIN.scene.paused = true
+        --log('backpedaling')
+        -- backpedaling or failing to find anywhere to go, run Astar and hope it works
+        --local made_it
+        --mob.path, made_it = Astar(HEX_MAP, mob.hex, HEX_GRID_CENTER, grid_heuristic, grid_cost)
+        --if not made_it then
+        --    log('stuck!')
+        --end
     end
 
     -- do movement
@@ -164,7 +174,7 @@ end
 local function make_and_register_mob(mob_type)
     local mob = make_basic_entity(
         get_spawn_hex(),
-        am.rotate(TIME) ^ pack_texture_into_sprite(TEX_MOB_BEEPER, MOB_SIZE, MOB_SIZE),
+        am.rotate(TIME) ^ pack_texture_into_sprite(TEXTURES.MOB_BEEPER, MOB_SIZE, MOB_SIZE),
         update_mob
     )
 
@@ -172,7 +182,7 @@ local function make_and_register_mob(mob_type)
     mob.health         = 10
     mob.speed          = 10
     mob.bounty         = 5
-    mob.hurtbox_radius = MOB_SIZE
+    mob.hurtbox_radius = MOB_SIZE/2
 
     register_entity(MOBS, mob)
 end

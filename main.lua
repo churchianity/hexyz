@@ -5,6 +5,15 @@ math.random()
 math.random()
 math.random()
 
+-- Globals
+WIN = am.window{
+    width       = 1920,
+    height      = 1080,
+    title       = "hexyz",
+    highdpi     = true,
+    letterbox   = true
+}
+
 -- assets/non-or-trivial code
 require "color"
 require "sound"
@@ -15,20 +24,11 @@ require "src/extra"
 require "src/geometry"
 require "src/hexyz"
 require "src/grid"
+WIN.clear_color = color_at(0)
 require "src/mob"
 require "src/projectile"
 require "src/tower"
 
-
--- Globals
-WIN = am.window{
-    width       = 1920,
-    height      = 1080,
-    title       = "hexyz",
-    highdpi     = true,
-    letterbox   = true,
-    clear_color = color_at(0)
-}
 
 OFF_SCREEN = vec2(WIN.width * 2) -- arbitrary pixel position that is garunteed to be off screen
 PERF_STATS = false               -- result of am.perf_stats() -- should be called every frame
@@ -47,7 +47,7 @@ MUSIC_VOLUME = 0.1
 SFX_VOLUME   = 0.1
 
 -- game stuff
-SELECTED_TOWER_TYPE = TOWER_TYPE.REDEYE
+SELECTED_TOWER_TYPE = 1
 
 -- top right display types
 local TRDTS = {
@@ -65,7 +65,6 @@ local TRDT = TRDTS.SEED
 local function select_hex(hex)
     local tower = tower_on_hex(hex)
     local tile = HEX_MAP.get(hex.x, hex.y)
-    log(tile)
 end
 
 local function can_do_build(hex, tile, tower_type)
@@ -118,6 +117,9 @@ local function game_action(scene)
     elseif WIN:key_pressed"f1" then
         TRDT = (TRDT + 1) % #table.keys(TRDTS)
 
+    elseif WIN:key_pressed"f2" then
+        WORLD"flow_field".hidden = not WORLD"flow_field".hidden
+
     elseif WIN:key_pressed"tab" then
         local num_of_types = #table.keys(TOWER_TYPE)
         if WIN:key_down"lshift" then
@@ -129,15 +131,15 @@ local function game_action(scene)
     elseif WIN:key_pressed"1" then select_tower_type(TOWER_TYPE.REDEYE)
     elseif WIN:key_pressed"2" then select_tower_type(2)
     elseif WIN:key_pressed"3" then select_tower_type(3)
-    elseif WIN:key_pressed"4" then --select_tower_type(4)
-    elseif WIN:key_pressed"5" then --select_tower_type(5)
-    elseif WIN:key_pressed"6" then --select_tower_type(6)
-    elseif WIN:key_pressed"7" then --select_tower_type(7)
-    elseif WIN:key_pressed"8" then --select_tower_type(8)
-    elseif WIN:key_pressed"9" then --select_tower_type(9)
-    elseif WIN:key_pressed"0" then --select_tower_type(10)
-    elseif WIN:key_pressed"-" then --select_tower_type(1)
-    elseif WIN:key_pressed"=" then --select_tower_type(1)
+    elseif WIN:key_pressed"4" then select_tower_type(4)
+    elseif WIN:key_pressed"5" then select_tower_type(5)
+    elseif WIN:key_pressed"6" then select_tower_type(6)
+    elseif WIN:key_pressed"7" then select_tower_type(7)
+    elseif WIN:key_pressed"8" then select_tower_type(8)
+    elseif WIN:key_pressed"9" then select_tower_type(9)
+    elseif WIN:key_pressed"0" then select_tower_type(10)
+    elseif WIN:key_pressed"minus" then select_tower_type(11)
+    elseif WIN:key_pressed"equals" then select_tower_type(12)
     end
 
     if tile and hot then
@@ -175,7 +177,7 @@ local function game_action(scene)
         WIN.scene"coords".text = str
     end
 
-    --do_day_night_cycle()
+    do_day_night_cycle()
 end
 
 function do_day_night_cycle()
@@ -203,12 +205,22 @@ function update_money(diff)
     MONEY = MONEY + diff
 end
 
+function get_tower_tooltip_text(tower_type)
+    return string.format(
+        "%s\n%s\n%s\ncost: %d"
+      , get_tower_name(tower_type)
+      , get_tower_placement_rules_text(tower_type)
+      , get_tower_short_description(tower_type)
+      , get_tower_base_cost(tower_type)
+    )
+end
+
 local function toolbelt()
+    -- init the toolbelt
     local toolbelt_height = hex_height(HEX_SIZE) * 2
-    local tower_tooltip = am.translate(WIN.left + 10, WIN.bottom + toolbelt_height + 20)
-                          ^ am.text(tower_type_tostring(SELECTED_TOWER_TYPE), "left"):tag"tower_tooltip"
     local toolbelt = am.group{
-        tower_tooltip,
+        am.translate(WIN.left + 10, WIN.bottom + toolbelt_height + 20)
+        ^ am.text(get_tower_tooltip_text(SELECTED_TOWER_TYPE), "left", "bottom"):tag"tower_tooltip",
         am.rect(WIN.left, WIN.bottom, WIN.right, WIN.bottom + toolbelt_height, COLORS.TRANSPARENT)
     }:tag"toolbelt"
 
@@ -216,21 +228,24 @@ local function toolbelt()
     local size = toolbelt_height - padding
     local half_size = size/2
     local offset = vec2(WIN.left + padding*3, WIN.bottom + padding/3)
-
-    local tab_button = am.translate(vec2(0, half_size) + offset)
-                       ^ am.group{
-                           pack_texture_into_sprite(TEX_WIDER_BUTTON1, 54, 32),
-                           pack_texture_into_sprite(TEX_TAB_ICON, 25, 25)
-                       }
+    local tab_button = am.translate(vec2(0, half_size) + offset) ^ am.group{
+        pack_texture_into_sprite(TEXTURES.WIDER_BUTTON1, 54, 32),
+        pack_texture_into_sprite(TEXTURES.TAB_ICON, 25, 25)
+    }
     toolbelt:append(tab_button)
-
     local tower_select_square = (
         am.translate(vec2(size + padding, half_size) + offset)
         ^ am.rect(-size/2-3, -size/2-3, size/2+3, size/2+3, COLORS.SUNRAY)
     ):tag"tower_select_square"
     toolbelt:append(tower_select_square)
 
-    local tower_type_values = table.values(TOWER_TYPE)
+    -- fill in the other tower options
+    local tower_type_values = {
+        TOWER_TYPE.REDEYE,
+        TOWER_TYPE.LIGHTHOUSE,
+        TOWER_TYPE.WALL,
+        TOWER_TYPE.MOAT
+    }
     local keys = { '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=' }
     for i = 1, #keys do
         if tower_type_values[i] then
@@ -238,14 +253,14 @@ local function toolbelt()
                 am.translate(vec2(size + padding, 0) * i + offset)
                 ^ am.group{
                     am.translate(0, half_size)
-                    ^ pack_texture_into_sprite(TEX_BUTTON1, size, size),
+                    ^ pack_texture_into_sprite(TEXTURES.BUTTON1, size, size),
 
                     am.translate(0, half_size)
                     ^ pack_texture_into_sprite(get_tower_texture(tower_type_values[i]), size, size),
 
                     am.translate(vec2(half_size))
                     ^ am.group{
-                        pack_texture_into_sprite(TEX_BUTTON1, half_size, half_size),
+                        pack_texture_into_sprite(TEXTURES.BUTTON1, half_size, half_size),
                         am.scale(2)
                         ^ am.text(keys[i], COLORS.BLACK)
                     }
@@ -256,11 +271,11 @@ local function toolbelt()
                 am.translate(vec2(size + padding, 0) * i + offset)
                 ^ am.group{
                     am.translate(0, half_size)
-                    ^ pack_texture_into_sprite(TEX_BUTTON1, size, size),
+                    ^ pack_texture_into_sprite(TEXTURES.BUTTON1, size, size),
 
                     am.translate(vec2(half_size))
                     ^ am.group{
-                        pack_texture_into_sprite(TEX_BUTTON1, half_size, half_size),
+                        pack_texture_into_sprite(TEXTURES.BUTTON1, half_size, half_size),
                         am.scale(2)
                         ^ am.text(keys[i], COLORS.BLACK)
                     }
@@ -271,12 +286,13 @@ local function toolbelt()
 
     select_tower_type = function(tower_type)
         SELECTED_TOWER_TYPE = tower_type
-        WIN.scene"tower_tooltip".text = tower_type_tostring(tower_type)
+        if TOWER_SPECS[SELECTED_TOWER_TYPE] then
+            WIN.scene"tower_tooltip".text = get_tower_tooltip_text(tower_type)
+            local new_position = vec2((size + padding) * tower_type, size/2) + offset
+            WIN.scene"tower_select_square":action(am.tween(0.1, { position2d = new_position }))
 
-        local new_position = vec2((size + padding) * tower_type, size/2) + offset
-        WIN.scene"tower_select_square":action(am.tween(0.1, { position2d = new_position }))
-
-        WIN.scene:action(am.play(am.sfxr_synth(SOUNDS.SELECT1), false, 1, SFX_VOLUME))
+            WIN.scene:action(am.play(am.sfxr_synth(SOUNDS.SELECT1), false, 1, SFX_VOLUME))
+        end
     end
 
     return toolbelt
@@ -314,7 +330,6 @@ function game_scene()
     return scene
 end
 
-load_textures()
 WIN.scene = am.group(am.scale(vec2(1)) ^ game_scene())
 noglobals()
 

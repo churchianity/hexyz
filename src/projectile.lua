@@ -28,6 +28,8 @@ function update_projectile(projectile, projectile_index)
 
     -- check if we hit something
     -- get a list of hexes that could have something we could hit on them
+    -- right now, it's just the hex we're on and all of its neighbours.
+    -- this is done to avoid having to check every mob on screen, though maybe it's not necessary.
     local search_hexes = spiral_map(projectile.hex, 1)
     local hit_mob_count = 0
     local hit_mobs = {}

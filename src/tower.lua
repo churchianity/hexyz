@@ -1,60 +1,70 @@
 
---[[
-tower(entity) structure:
-{
-    -- @NOTE these should probably be wrapped in a 'weapon' struct or something, so towers can have multiple weapons
-    range           - number    - distance it can shoot
-    last_shot_time  - number    - timestamp (seconds) of last time it shot
-    target_index    - number    - index of entity it is currently shooting
-}
---]]
 
 TOWER_TYPE = {
-    REDEYE = 1,
-    WALL   = 2,
-    MOAT   = 3,
+    REDEYE     = 1,
+    LIGHTHOUSE = 2,
+    WALL       = 3,
+    MOAT       = 4,
 }
 
-function get_tower_build_cost(tower_type)
-        if tower_type == TOWER_TYPE.REDEYE then return 25
-    elseif tower_type == TOWER_TYPE.WALL then   return 5
-    elseif tower_type == TOWER_TYPE.MOAT then   return 15
-    end
+TOWER_SPECS = {
+    [TOWER_TYPE.REDEYE] = {
+        name = "Redeye",
+        placement_rules_text = "Place on mountains or on Walls",
+        short_description = "Long range laser tower",
+        texture = TEXTURES.TOWER_REDEYE,
+        base_cost = 25,
+    },
+    [TOWER_TYPE.LIGHTHOUSE] = {
+        name = "Lighthouse",
+        placement_rules_text = "Place next to - but not on - water or moats",
+        short_description = "Attracts and distracts mobs",
+        texture = TEXTURES.TOWER_LIGHTHOUSE,
+        base_cost = 25
+    },
+    [TOWER_TYPE.WALL] = {
+        name = "Wall",
+        placement_rules_text = "Place on grass or dirt",
+        short_description = "Restricts movement",
+        texture = TEXTURES.TOWER_WALL,
+        base_cost = 5,
+    },
+    [TOWER_TYPE.MOAT] = {
+        name = "Moat",
+        placement_rules_text = "Place on grass or dirt",
+        short_description = "Restricts movement",
+        texture = TEXTURES.TOWER_MOAT,
+        base_cost = 5,
+    }
+}
+
+function get_tower_name(tower_type)
+    return TOWER_SPECS[tower_type] and TOWER_SPECS[tower_type].name
+end
+function get_tower_placement_rules_text(tower_type)
+    return TOWER_SPECS[tower_type] and TOWER_SPECS[tower_type].placement_rules_text
+end
+function get_tower_short_description(tower_type)
+    return TOWER_SPECS[tower_type] and TOWER_SPECS[tower_type].short_description
+end
+function get_tower_texture(tower_type)
+    return TOWER_SPECS[tower_type] and TOWER_SPECS[tower_type].texture
+end
+function get_tower_base_cost(tower_type)
+    return TOWER_SPECS[tower_type] and TOWER_SPECS[tower_type].base_cost
 end
 
 function can_afford_tower(money, tower_type)
-    local cost = get_tower_build_cost(tower_type)
-
-        if tower_type == TOWER_TYPE.REDEYE then return (money - cost) > 0
-    elseif tower_type == TOWER_TYPE.WALL then   return (money - cost) > 0
-    elseif tower_type == TOWER_TYPE.MOAT then   return (money - cost) > 0
-    end
-end
-
-function get_tower_texture(tower_type)
-        if tower_type == TOWER_TYPE.REDEYE then return TEX_TOWER_REDEYE
-    elseif tower_type == TOWER_TYPE.WALL then   return TEX_TOWER_WALL
-    elseif tower_type == TOWER_TYPE.MOAT then   return TEX_TOWER_MOAT
-    end
-end
-
-function tower_type_tostring(tower_type)
-        if tower_type == TOWER_TYPE.REDEYE then return "Redeye Tower"
-    elseif tower_type == TOWER_TYPE.WALL then   return "Wall"
-    elseif tower_type == TOWER_TYPE.MOAT then   return "Moat"
-    end
+    local cost = get_tower_base_cost(tower_type)
+    return (money - cost) >= 0
 end
 
 local function get_tower_update_function(tower_type)
     if tower_type == TOWER_TYPE.REDEYE then
         return update_tower_redeye
-    end
-end
 
-function update_wall_texture(hex)
-    for _,n in pairs(hex_neighbours(hex)) do
-        local tile = HEX_MAP.get(hex.x, hex.y)
-
+    elseif tower_type == TOWER_TYPE.LIGHTHOUSE then
+        return update_tower_lighthouse
     end
 end
 
@@ -71,10 +81,22 @@ end
 function tower_is_buildable_on(hex, tile, tower_type)
     if hex == HEX_GRID_CENTER then return false end
 
-    local blocked = #mobs_on_hex(hex) ~= 0
+    local blocked = tower_on_hex(hex) or #mobs_on_hex(hex) ~= 0
 
     if tower_type == TOWER_TYPE.REDEYE then
         return not blocked and tile.elevation > 0.5
+
+    elseif tower_type == TOWER_TYPE.LIGHTHOUSE then
+        local has_water_neighbour = false
+        for _,h in pairs(hex_neighbours(hex)) do
+            local tile = HEX_MAP.get(h.x, h.y)
+
+            if tile and tile.elevation < -0.5 then
+                has_water_neighbour = true
+                break
+            end
+        end
+        return not blocked and tile.elevation <= 0.5 and tile.elevation > -0.5 and has_water_neighbour
 
     elseif tower_type == TOWER_TYPE.WALL then
         return not blocked and tile.elevation <= 0.5 and tile.elevation > -0.5
@@ -116,6 +138,23 @@ function update_tower_redeye(tower, tower_index)
     end
 end
 
+function update_tower_lighthouse(tower, tower_index)
+    -- check if there's a mob on a hex in our perimeter
+    for _,h in pairs(tower.perimeter) do
+        local mobs = mobs_on_hex(h)
+
+        for _,m in pairs(mobs) do
+            if not m.path then
+                local path, made_it = Astar(HEX_MAP, tower.hex, m.hex, grid_heuristic, grid_cost)
+
+                if made_it then
+                    m.path = path
+                end
+            end
+        end
+    end
+end
+
 function make_and_register_tower(hex, tower_type)
     local tower = make_basic_entity(
         hex,
@@ -123,19 +162,33 @@ function make_and_register_tower(hex, tower_type)
         get_tower_update_function(tower_type)
     )
 
-    tower.range             = 7
-    tower.last_shot_time    = tower.TOB
-    tower.target_index      = false
+    tower.type = tower_type
+    if tower_type == TOWER_TYPE.REDEYE then
+        tower.range          = 7
+        tower.last_shot_time = tower.TOB
+        tower.target_index   = false
 
-    -- make this cell impassable
-    HEX_MAP[hex.x][hex.y].elevation = 2
-    generate_and_apply_flow_field(HEX_MAP, HEX_GRID_CENTER)
+        HEX_MAP[hex.x][hex.y].elevation = 2
+
+    elseif tower_type == TOWER_TYPE.LIGHTHOUSE then
+        tower.range = 4
+        tower.perimeter = ring_map(tower.hex, tower.range)
+
+    elseif tower_type == TOWER_TYPE.WALL then
+        HEX_MAP[hex.x][hex.y].elevation = 1
+
+    elseif tower_type == TOWER_TYPE.MOAT then
+        HEX_MAP[hex.x][hex.y].elevation = 0
+
+    end
+
+    generate_and_apply_flow_field(HEX_MAP, HEX_GRID_CENTER, WORLD)
 
     register_entity(TOWERS, tower)
 end
 
 function build_tower(hex, tower_type)
-    update_money(-get_tower_build_cost(tower_type))
+    update_money(-get_tower_base_cost(tower_type))
     make_and_register_tower(hex, tower_type)
     vplay_sfx(SOUNDS.EXPLOSION4)
 end

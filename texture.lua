@@ -1,18 +1,21 @@
 
 
-function load_textures()
-    TEX_BUTTON1             = am.texture2d("res/button1.png")
-    TEX_WIDER_BUTTON1       = am.texture2d("res/wider_button1.png")
-    TEX_TAB_ICON            = am.texture2d("res/tab_icon.png")
-    TEX_SATELLITE           = am.texture2d("res/satelite.png")
+TEXTURES = {
+    BUTTON1             = am.texture2d("res/button1.png"),
+    WIDER_BUTTON1       = am.texture2d("res/wider_button1.png"),
+    TAB_ICON            = am.texture2d("res/tab_icon.png"),
+    SATELLITE           = am.texture2d("res/satelite.png"),
 
-    TEX_TOWER_WALL          = am.texture2d("res/tower_wall.png")
-    TEX_TOWER_MOAT          = am.texture2d("res/tower_moat.png")
-    TEX_TOWER_REDEYE        = am.texture2d("res/tower_redeye.png")
-    TEX_TOWER_LIGHTHOUSE    = am.texture2d("res/tower_lighthouse.png")
+    TOWER_REDEYE        = am.texture2d("res/tower_redeye.png"),
+    TOWER_LIGHTHOUSE    = am.texture2d("res/tower_lighthouse.png"),
+    TOWER_WALL          = am.texture2d("res/tower_wall.png"),
+    TOWER_MOAT          = am.texture2d("res/tower_moat.png"),
 
-    TEX_MOB_BEEPER          = am.texture2d("res/mob_beeper.png")
-end
+    MOUNTAIN1           = am.texture2d("res/mountain1.png"),
+    MOUNTAIN2           = am.texture2d("res/mountain2.png"),
+
+    MOB_BEEPER          = am.texture2d("res/mob_beeper.png"),
+}
 
 function pack_texture_into_sprite(texture, width, height)
     return am.sprite{
