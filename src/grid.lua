@@ -7,8 +7,8 @@ HEX_PIXEL_WIDTH = hex_width(HEX_SIZE, ORIENTATION.FLAT)
 HEX_PIXEL_HEIGHT = hex_height(HEX_SIZE, ORIENTATION.FLAT)
 HEX_PIXEL_DIMENSIONS = vec2(HEX_PIXEL_WIDTH, HEX_PIXEL_HEIGHT)
 
--- with 1920x1080, this is the minimal dimensions to cover the screen (65x33)
--- @NOTE added 2 cell padding, because we terraform the very outer edge and it looks ugly
+-- with 1920x1080, the minimal dimensions to cover the screen is 65x33
+-- added 2 cell padding, because we terraform the very outer edge and it looks ugly, so hide it
 -- odd numbers are important because we want a 'true' center
 HEX_GRID_WIDTH = 67
 HEX_GRID_HEIGHT = 35
@@ -91,14 +91,9 @@ function grid_cost(map, from, to)
 end
 
 function generate_and_apply_flow_field(map, start, world)
-    local flow
-    if false then
-        flow = flow_field(map, start, world)
-    else
-        flow = dijkstra(map, start, nil, grid_cost)
-    end
+    local flow = dijkstra(map, start, nil, grid_cost)
 
-    local flow_field_hidden = world and world"flow_field" and world"flow_field".hidden
+    local flow_field_hidden = world and world"flow_field" and world"flow_field".hidden or true
     if world and world"flow_field" then
         world:remove"flow_field"
     end
@@ -112,8 +107,7 @@ function generate_and_apply_flow_field(map, start, world)
                 overlay_group:append(am.translate(hex_to_pixel(vec2(i, j)))
                                      ^ am.text(string.format("%.1f", f.priority * 10)))
             else
-                -- should fire exactly once per goal hex
-                -- log('no priority')
+                -- should fire exactly once
             end
         end
     end
@@ -134,6 +128,7 @@ function random_map(seed)
 
     -- the world's appearance relies largely on a backdrop which can be scaled in
     -- tone to give the appearance of light or darkness
+    -- @NOTE replace this with a shader program
     local neg_mask = am.rect(0, 0, HEX_GRID_PIXEL_WIDTH, HEX_GRID_PIXEL_HEIGHT, COLORS.TRUE_BLACK):tag"negative_mask"
 
     local world = am.group(neg_mask):tag"world"
@@ -180,7 +175,7 @@ function random_map(seed)
     getmetatable(map).__index.neighbours = function(hex)
         return table.filter(hex_neighbours(hex), function(_hex)
             local tile = map.get(_hex.x, _hex.y)
-            return tile and tile.elevation > -0.5 and tile.elevation <= 0.5
+            return tile and tile_is_medium_elevation(tile)
         end)
     end
 

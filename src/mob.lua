@@ -1,14 +1,6 @@
 
 
---[[
-mob(entity) structure:
-{
-    path            - 2d table  - map of hexes to other hexes, forms a path
-    speed           - number    - multiplier on distance travelled per frame, up to the update function to use correctly
-    bounty          - number    - score bonus you get when this mob is killed
-    hurtbox_radius  - number    -
-}
---]]
+MOBS = {}
 
 MAX_MOB_SIZE = hex_height(HEX_SIZE, ORIENTATION.FLAT) / 2
 MOB_SIZE = MAX_MOB_SIZE
@@ -33,7 +25,7 @@ end
 -- check if a the tile at |hex| is passable by |mob|
 function mob_can_pass_through(mob, hex)
     local tile = HEX_MAP.get(hex.x, hex.y)
-    return tile and tile.elevation <= 0.5 and tile.elevation > -0.5
+    return tile and tile_is_medium_elevation(tile)
 end
 
 function mob_die(mob, mob_index)
@@ -143,12 +135,6 @@ local function update_mob(mob, mob_index)
 
     if mob.frame_target and mob.frame_target == last_frame_hex then
         --log('backpedaling')
-        -- backpedaling or failing to find anywhere to go, run Astar and hope it works
-        --local made_it
-        --mob.path, made_it = Astar(HEX_MAP, mob.hex, HEX_GRID_CENTER, grid_heuristic, grid_cost)
-        --if not made_it then
-        --    log('stuck!')
-        --end
     end
 
     -- do movement
@@ -187,12 +173,26 @@ local function make_and_register_mob(mob_type)
     register_entity(MOBS, mob)
 end
 
-local SPAWN_CHANCE = 25
+local SPAWN_CHANCE = 45
 function do_mob_spawning()
     --if WIN:key_pressed"space" then
     if math.random(SPAWN_CHANCE) == 1 then
     --if #MOBS < 1 then
         make_and_register_mob()
+    end
+end
+
+function delete_all_mobs()
+    for mob_index,mob in pairs(MOBS) do
+        if mob then delete_entity(MOBS, mob_index) end
+    end
+end
+
+function do_mob_updates()
+    for mob_index,mob in pairs(MOBS) do
+        if mob and mob.update then
+            mob.update(mob, mob_index)
+        end
     end
 end
 

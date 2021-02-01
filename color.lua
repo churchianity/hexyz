@@ -6,7 +6,7 @@ COLORS = {
     -- tones
     WHITE               = vec4(0.8, 0.8, 0.7, 1),
     BLACK               = vec4(0, 0, 0.02, 1),
-    VERY_DARK_GRAY      = vec4(45/255, 45/255, 35/255, 1),
+    VERY_DARK_GRAY      = vec4(35/255, 35/255, 25/255, 1),
     TRUE_BLACK          = vec4(0, 0, 0, 1),
 
     -- non-standard hues

@@ -1,5 +1,7 @@
 
 
+TOWERS = {}
+
 TOWER_TYPE = {
     REDEYE     = 1,
     LIGHTHOUSE = 2,
@@ -72,6 +74,34 @@ local function make_tower_sprite(tower_type)
     return pack_texture_into_sprite(get_tower_texture(tower_type), HEX_PIXEL_WIDTH, HEX_PIXEL_HEIGHT)
 end
 
+local function make_tower_node(tower_type)
+    if tower_type == TOWER_TYPE.REDEYE then
+        return make_tower_sprite(tower_type)
+
+    elseif tower_type == TOWER_TYPE.LIGHTHOUSE then
+        return am.group(
+            make_tower_sprite(tower_type)
+        )
+    elseif tower_type == TOWER_TYPE.WALL then
+        return am.circle(vec2(0), HEX_SIZE, COLORS.VERY_DARK_GRAY, 6)
+
+    elseif tower_type == TOWER_TYPE.MOAT then
+        return am.circle(vec2(0), HEX_SIZE, (COLORS.WATER){a=1}, 6)
+
+    end
+end
+
+function towers_on_hex(hex)
+    local t = {}
+    for tower_index,tower in pairs(TOWERS) do
+        if tower and tower.hex == hex then
+            table.insert(t, tower_index, tower)
+        end
+    end
+    return t
+end
+
+
 function tower_on_hex(hex)
     return table.find(TOWERS, function(tower)
         return tower.hex == hex
@@ -81,9 +111,24 @@ end
 function tower_is_buildable_on(hex, tile, tower_type)
     if hex == HEX_GRID_CENTER then return false end
 
-    local blocked = tower_on_hex(hex) or #mobs_on_hex(hex) ~= 0
+    local blocking_towers       = towers_on_hex(hex)
+    local blocking_mobs         = mobs_on_hex(hex)
+
+    local towers_blocking       = #blocking_towers ~= 0
+    local mobs_blocking         = #blocking_mobs ~= 0
+
+    local blocked = mobs_blocking or towers_blocking
 
     if tower_type == TOWER_TYPE.REDEYE then
+        if not mobs_blocking and towers_blocking then
+            blocked = false
+            for _,tower in pairs(TOWERS) do
+                if tower.type ~= TOWER_TYPE.WALL then
+                    blocked = true
+                    break
+                end
+            end
+        end
         return not blocked and tile.elevation > 0.5
 
     elseif tower_type == TOWER_TYPE.LIGHTHOUSE then
@@ -96,13 +141,13 @@ function tower_is_buildable_on(hex, tile, tower_type)
                 break
             end
         end
-        return not blocked and tile.elevation <= 0.5 and tile.elevation > -0.5 and has_water_neighbour
+        return not blocked and tile_is_medium_elevation(tile) and has_water_neighbour
 
     elseif tower_type == TOWER_TYPE.WALL then
-        return not blocked and tile.elevation <= 0.5 and tile.elevation > -0.5
+        return not blocked and tile_is_medium_elevation(tile)
 
     elseif tower_type == TOWER_TYPE.MOAT then
-        return not blocked and tile.elevation <= 0.5 and tile.elevation > -0.5
+        return not blocked and tile_is_medium_elevation(tile)
     end
 end
 
@@ -158,10 +203,11 @@ end
 function make_and_register_tower(hex, tower_type)
     local tower = make_basic_entity(
         hex,
-        make_tower_sprite(tower_type),
+        make_tower_node(tower_type),
         get_tower_update_function(tower_type)
     )
 
+    local need_to_regen_flow_field = true
     tower.type = tower_type
     if tower_type == TOWER_TYPE.REDEYE then
         tower.range          = 7
@@ -171,18 +217,46 @@ function make_and_register_tower(hex, tower_type)
         HEX_MAP[hex.x][hex.y].elevation = 2
 
     elseif tower_type == TOWER_TYPE.LIGHTHOUSE then
-        tower.range = 4
+        tower.range = 5
         tower.perimeter = ring_map(tower.hex, tower.range)
+        --[[
+        tower.node:append(
+            am.particles2d{
+                source_pos = vec2(0, 12),
+                source_pos_var = vec2(2),
+                start_size = 1,
+                start_size_var = 1,
+                end_size = 1,
+                end_size_var = 1,
+                angle = 0,
+                angle_var = math.pi,
+                speed = 1,
+                speed_var = 2,
+                life = 10,
+                life_var = 1,
+                start_color = COLORS.WHITE,
+                start_color_var = vec4(0.1, 0.1, 0.1, 1),
+                end_color = COLORS.SUNRAY,
+                end_color_var = vec4(0.1),
+                emission_rate = 4,
+                start_particles = 4,
+                max_particles = 200
+            }
+        )
+        ]]
+        -- @HACK
+        need_to_regen_flow_field = false
 
     elseif tower_type == TOWER_TYPE.WALL then
         HEX_MAP[hex.x][hex.y].elevation = 1
 
     elseif tower_type == TOWER_TYPE.MOAT then
-        HEX_MAP[hex.x][hex.y].elevation = 0
-
+        HEX_MAP[hex.x][hex.y].elevation = -1
     end
 
-    generate_and_apply_flow_field(HEX_MAP, HEX_GRID_CENTER, WORLD)
+    if need_to_regen_flow_field then
+        generate_and_apply_flow_field(HEX_MAP, HEX_GRID_CENTER, WORLD)
+    end
 
     register_entity(TOWERS, tower)
 end
@@ -191,5 +265,19 @@ function build_tower(hex, tower_type)
     update_money(-get_tower_base_cost(tower_type))
     make_and_register_tower(hex, tower_type)
     vplay_sfx(SOUNDS.EXPLOSION4)
+end
+
+function delete_all_towers()
+    for tower_index,tower in pairs(TOWERS) do
+        if tower then delete_entity(TOWERS, tower_index) end
+    end
+end
+
+function do_tower_updates()
+    for tower_index,tower in pairs(TOWERS) do
+        if tower and tower.update then
+            tower.update(tower, tower_index)
+        end
+    end
 end
 

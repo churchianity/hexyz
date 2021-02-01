@@ -1,16 +1,8 @@
 
 
---[[
-bullet/projectile(entity) structure
-{
-    vector          - vec2      - normalized vector of the current direction of this projectile
-    velocity        - number    - multplier on distance travelled per frame
-    damage          - number    - guess
-    hitbox_radius   - number    - hitboxes are circles
-}
---]]
+PROJECTILES = {}
 
-function update_projectile(projectile, projectile_index)
+local function update_projectile(projectile, projectile_index)
     projectile.position        = projectile.position + projectile.vector * projectile.velocity
     projectile.node.position2d = projectile.position
     projectile.hex             = pixel_to_hex(projectile.position)
@@ -78,5 +70,19 @@ function make_and_register_projectile(hex, vector, velocity, damage, hitbox_radi
     projectile.hitbox_radius = hitbox_radius
 
     register_entity(PROJECTILES, projectile)
+end
+
+function delete_all_projectiles()
+    for projectile_index,projectile in pairs(PROJECTILES) do
+        if projectile then delete_entity(PROJECTILES, projectile_index) end
+    end
+end
+
+function do_projectile_updates()
+    for projectile_index,projectile in pairs(PROJECTILES) do
+        if projectile and projectile.update then
+            projectile.update(projectile, projectile_index)
+        end
+    end
 end
 

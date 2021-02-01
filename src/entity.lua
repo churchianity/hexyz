@@ -1,9 +1,5 @@
 
 
-MOBS = {}
-TOWERS = {}
-PROJECTILES = {}
-
 --[[
 entity structure:
 {
@@ -12,6 +8,8 @@ entity structure:
     position        - vec2      - current pixel position of it's translate (forced parent) node
     update          - function  - runs every frame with itself and its index as an argument
     node            - node      - scene graph node
+
+    ...             - any       - a bunch of other shit depending on what entity type it is
 }
 --]]
 function make_basic_entity(hex, node, update, position)
@@ -51,34 +49,14 @@ function delete_entity(t, index)
 end
 
 function delete_all_entities()
-    for mob_index,mob in pairs(MOBS) do
-        if mob then delete_entity(MOBS, mob_index) end
-    end
-    for tower_index,tower in pairs(TOWERS) do
-        if tower then delete_entity(TOWERS, tower_index) end
-    end
-    for projectile_index,projectile in pairs(PROJECTILES) do
-        if projectile then delete_entity(PROJECTILES, projectile_index) end
-    end
+    delete_all_mobs()
+    delete_all_towers()
+    delete_all_projetiles()
 end
 
 function do_entity_updates()
-    --if WIN:key_down"space" then
-    for mob_index,mob in pairs(MOBS) do
-        if mob and mob.update then
-            mob.update(mob, mob_index)
-        end
-    end
-    for tower_index,tower in pairs(TOWERS) do
-        if tower and tower.update then
-            tower.update(tower, tower_index)
-        end
-    end
-    for projectile_index,projectile in pairs(PROJECTILES) do
-        if projectile and projectile.update then
-            projectile.update(projectile, projectile_index)
-        end
-    end
-    --end
+    do_mob_updates()
+    do_tower_updates()
+    do_projectile_updates()
 end
 

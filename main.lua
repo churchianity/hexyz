@@ -5,6 +5,7 @@ math.random()
 math.random()
 math.random()
 
+
 -- Globals
 WIN = am.window{
     width       = 1920,
@@ -14,7 +15,9 @@ WIN = am.window{
     letterbox   = true
 }
 
--- assets/non-or-trivial code
+STATE = {} -- @TODO move state in here
+
+-- assets and/or trivial code
 require "color"
 require "sound"
 require "texture"
@@ -24,7 +27,7 @@ require "src/extra"
 require "src/geometry"
 require "src/hexyz"
 require "src/grid"
-WIN.clear_color = color_at(0)
+require "src/gui"
 require "src/mob"
 require "src/projectile"
 require "src/tower"
@@ -35,6 +38,8 @@ PERF_STATS = false               -- result of am.perf_stats() -- should be calle
 
 WORLD = false -- root scene node of everything considered to be in the game world
               -- aka non gui stuff
+
+HEX_CURSOR = false
 
 TIME           = 0                  -- runtime of the current game in seconds (not whole program runtime)
 SCORE          = 0                  -- score of the player
@@ -89,6 +94,7 @@ local function game_action(scene)
 
     do_entity_updates()
     do_mob_spawning()
+    do_gui_updates()
 
     if WIN:mouse_pressed"left" then
         if hot and can_do_build(hex, tile, SELECTED_TOWER_TYPE) then
@@ -96,23 +102,29 @@ local function game_action(scene)
         end
     end
 
+    --[[
     if WIN:mouse_pressed"middle" then
-        WIN.scene"scale".scale2d = vec2(1)
+        WORLD"scale".scale2d = vec2(1)
     else
-        local mwd = vec2(WIN:mouse_wheel_delta().y / 1000)
-        WIN.scene"scale".scale2d = WIN.scene"scale".scale2d + mwd
-        WIN.scene"scale".scale2d = WIN.scene"scale".scale2d + mwd
+        local mwd = vec2(WIN:mouse_wheel_delta().y / 500)
+        WORLD"scale".scale2d = WORLD"scale".scale2d + mwd
+        WORLD"scale".scale2d = WORLD"scale".scale2d + mwd
     end
+    ]]
 
     if WIN:key_pressed"escape" then
         WIN.scene"game".paused = true
+        WIN.scene:append(am.group{
+            am.rect(WIN.left, WIN.bottom, WIN.right, WIN.top, COLORS.TRANSPARENT),
+            am.scale(3) ^ am.text("Paused.\nEscape to Resume", COLORS.BLACK)
+        }:tag"pause_menu")
         WIN.scene:action(function()
             if WIN:key_pressed"escape" then
+                WIN.scene:remove"pause_menu"
                 WIN.scene"game".paused = false
                 return true
             end
         end)
-        --game_end()
 
     elseif WIN:key_pressed"f1" then
         TRDT = (TRDT + 1) % #table.keys(TRDTS)
@@ -143,9 +155,9 @@ local function game_action(scene)
     end
 
     if tile and hot then
-        WIN.scene"hex_cursor".center = rounded_mouse
+        HEX_CURSOR.center = rounded_mouse
     else
-        WIN.scene"hex_cursor".center = OFF_SCREEN
+        HEX_CURSOR.center = OFF_SCREEN
     end
 
     WIN.scene"score".text = string.format("SCORE: %.2f", SCORE)
@@ -197,113 +209,22 @@ function game_end()
     WIN.scene = am.group(am.scale(1) ^ game_scene())
 end
 
-function update_score(diff)
-    SCORE = SCORE + diff
-end
+function update_score(diff) SCORE = SCORE + diff end
+function update_money(diff) MONEY = MONEY + diff end
 
-function update_money(diff)
-    MONEY = MONEY + diff
-end
-
-function get_tower_tooltip_text(tower_type)
-    return string.format(
-        "%s\n%s\n%s\ncost: %d"
-      , get_tower_name(tower_type)
-      , get_tower_placement_rules_text(tower_type)
-      , get_tower_short_description(tower_type)
-      , get_tower_base_cost(tower_type)
-    )
-end
-
-local function toolbelt()
-    -- init the toolbelt
-    local toolbelt_height = hex_height(HEX_SIZE) * 2
-    local toolbelt = am.group{
-        am.translate(WIN.left + 10, WIN.bottom + toolbelt_height + 20)
-        ^ am.text(get_tower_tooltip_text(SELECTED_TOWER_TYPE), "left", "bottom"):tag"tower_tooltip",
-        am.rect(WIN.left, WIN.bottom, WIN.right, WIN.bottom + toolbelt_height, COLORS.TRANSPARENT)
-    }:tag"toolbelt"
-
-    local padding = 15
-    local size = toolbelt_height - padding
-    local half_size = size/2
-    local offset = vec2(WIN.left + padding*3, WIN.bottom + padding/3)
-    local tab_button = am.translate(vec2(0, half_size) + offset) ^ am.group{
-        pack_texture_into_sprite(TEXTURES.WIDER_BUTTON1, 54, 32),
-        pack_texture_into_sprite(TEXTURES.TAB_ICON, 25, 25)
-    }
-    toolbelt:append(tab_button)
-    local tower_select_square = (
-        am.translate(vec2(size + padding, half_size) + offset)
-        ^ am.rect(-size/2-3, -size/2-3, size/2+3, size/2+3, COLORS.SUNRAY)
-    ):tag"tower_select_square"
-    toolbelt:append(tower_select_square)
-
-    -- fill in the other tower options
-    local tower_type_values = {
-        TOWER_TYPE.REDEYE,
-        TOWER_TYPE.LIGHTHOUSE,
-        TOWER_TYPE.WALL,
-        TOWER_TYPE.MOAT
-    }
-    local keys = { '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=' }
-    for i = 1, #keys do
-        if tower_type_values[i] then
-            toolbelt:append(
-                am.translate(vec2(size + padding, 0) * i + offset)
-                ^ am.group{
-                    am.translate(0, half_size)
-                    ^ pack_texture_into_sprite(TEXTURES.BUTTON1, size, size),
-
-                    am.translate(0, half_size)
-                    ^ pack_texture_into_sprite(get_tower_texture(tower_type_values[i]), size, size),
-
-                    am.translate(vec2(half_size))
-                    ^ am.group{
-                        pack_texture_into_sprite(TEXTURES.BUTTON1, half_size, half_size),
-                        am.scale(2)
-                        ^ am.text(keys[i], COLORS.BLACK)
-                    }
-                }
-            )
-        else
-            toolbelt:append(
-                am.translate(vec2(size + padding, 0) * i + offset)
-                ^ am.group{
-                    am.translate(0, half_size)
-                    ^ pack_texture_into_sprite(TEXTURES.BUTTON1, size, size),
-
-                    am.translate(vec2(half_size))
-                    ^ am.group{
-                        pack_texture_into_sprite(TEXTURES.BUTTON1, half_size, half_size),
-                        am.scale(2)
-                        ^ am.text(keys[i], COLORS.BLACK)
-                    }
-                }
-            )
-        end
+function draw_hex_cursor(map, color)
+    local group = am.group()
+    for _,h in pairs(map) do
+        group:append(am.circle(hex_to_pixel(h), HEX_SIZE, color, 6))
     end
-
-    select_tower_type = function(tower_type)
-        SELECTED_TOWER_TYPE = tower_type
-        if TOWER_SPECS[SELECTED_TOWER_TYPE] then
-            WIN.scene"tower_tooltip".text = get_tower_tooltip_text(tower_type)
-            local new_position = vec2((size + padding) * tower_type, size/2) + offset
-            WIN.scene"tower_select_square":action(am.tween(0.1, { position2d = new_position }))
-
-            WIN.scene:action(am.play(am.sfxr_synth(SOUNDS.SELECT1), false, 1, SFX_VOLUME))
-        end
-    end
-
-    return toolbelt
+    return group
 end
 
--- @NOTE must be global to allow the game_action to reference it
 function game_scene()
     local score = am.translate(WIN.left + 10, WIN.top - 20) ^ am.text("", "left"):tag"score"
     local money = am.translate(WIN.left + 10, WIN.top - 40) ^ am.text("", "left"):tag"money"
     local coords = am.translate(WIN.right - 10, WIN.top - 20) ^ am.text("", "right", "top"):tag"coords"
-    local hex_cursor = am.circle(OFF_SCREEN, HEX_SIZE, COLORS.TRANSPARENT, 6):tag"hex_cursor"
+    HEX_CURSOR = am.circle(OFF_SCREEN, HEX_SIZE, COLORS.TRANSPARENT, 6):tag"hex_cursor"
 
     local curtain = am.rect(WIN.left, WIN.bottom, WIN.right, WIN.top, COLORS.TRUE_BLACK)
     curtain:action(coroutine.create(function()
@@ -317,7 +238,7 @@ function game_scene()
     local scene = am.group{
         WORLD,
         curtain,
-        hex_cursor,
+        HEX_CURSOR,
         toolbelt(),
         score,
         money,
@@ -330,6 +251,6 @@ function game_scene()
     return scene
 end
 
-WIN.scene = am.group(am.scale(vec2(1)) ^ game_scene())
+WIN.scene = am.group(game_scene())
 noglobals()
 
