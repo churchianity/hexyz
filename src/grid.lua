@@ -53,7 +53,7 @@ function evenq_is_interactable(evenq)
     })
 end
 
-local function tile_is_medium_elevation(tile)
+function tile_is_medium_elevation(tile)
     return tile.elevation >= -0.5 and tile.elevation < 0.5
 end
 

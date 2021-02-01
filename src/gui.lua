@@ -109,7 +109,7 @@ function toolbelt()
             button(
                 size,
                 half_size,
-                get_tower_texture(tower_type_values[i]),
+                get_tower_icon_texture(tower_type_values[i]),
                 padding,
                 i,
                 offset,

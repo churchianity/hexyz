@@ -15,6 +15,7 @@ TOWER_SPECS = {
         placement_rules_text = "Place on mountains or on Walls",
         short_description = "Long range laser tower",
         texture = TEXTURES.TOWER_REDEYE,
+        icon_texture = TEXTURES.TOWER_REDEYE_ICON,
         base_cost = 25,
     },
     [TOWER_TYPE.LIGHTHOUSE] = {
@@ -22,6 +23,7 @@ TOWER_SPECS = {
         placement_rules_text = "Place next to - but not on - water or moats",
         short_description = "Attracts and distracts mobs",
         texture = TEXTURES.TOWER_LIGHTHOUSE,
+        icon_texture = TEXTURES.TOWER_LIGHTHOUSE_ICON,
         base_cost = 25
     },
     [TOWER_TYPE.WALL] = {
@@ -29,6 +31,7 @@ TOWER_SPECS = {
         placement_rules_text = "Place on grass or dirt",
         short_description = "Restricts movement",
         texture = TEXTURES.TOWER_WALL,
+        icon_texture = TEXTURES.TOWER_WALL_ICON,
         base_cost = 5,
     },
     [TOWER_TYPE.MOAT] = {
@@ -36,6 +39,7 @@ TOWER_SPECS = {
         placement_rules_text = "Place on grass or dirt",
         short_description = "Restricts movement",
         texture = TEXTURES.TOWER_MOAT,
+        icon_texture = TEXTURES.TOWER_MOAT_ICON,
         base_cost = 5,
     }
 }
@@ -51,6 +55,9 @@ function get_tower_short_description(tower_type)
 end
 function get_tower_texture(tower_type)
     return TOWER_SPECS[tower_type] and TOWER_SPECS[tower_type].texture
+end
+function get_tower_icon_texture(tower_type)
+    return TOWER_SPECS[tower_type] and TOWER_SPECS[tower_type].icon_texture
 end
 function get_tower_base_cost(tower_type)
     return TOWER_SPECS[tower_type] and TOWER_SPECS[tower_type].base_cost
@@ -194,6 +201,16 @@ function update_tower_lighthouse(tower, tower_index)
 
                 if made_it then
                     m.path = path
+
+                    local area = spiral_map(tower.hex, tower.range)
+                    for _,h in pairs(area) do
+                        local node = HEX_MAP[h.x][h.y].node"circle"
+                        local initial_color = node.color
+                        node:late_action(am.series{
+                            am.tween(node, 0.1, { color = COLORS.SUNRAY }),
+                            am.tween(node, 0.1, { color = initial_color })
+                        })
+                    end
                 end
             end
         end

@@ -102,16 +102,6 @@ local function game_action(scene)
         end
     end
 
-    --[[
-    if WIN:mouse_pressed"middle" then
-        WORLD"scale".scale2d = vec2(1)
-    else
-        local mwd = vec2(WIN:mouse_wheel_delta().y / 500)
-        WORLD"scale".scale2d = WORLD"scale".scale2d + mwd
-        WORLD"scale".scale2d = WORLD"scale".scale2d + mwd
-    end
-    ]]
-
     if WIN:key_pressed"escape" then
         WIN.scene"game".paused = true
         WIN.scene:append(am.group{
@@ -125,7 +115,6 @@ local function game_action(scene)
                 return true
             end
         end)
-
     elseif WIN:key_pressed"f1" then
         TRDT = (TRDT + 1) % #table.keys(TRDTS)
 
@@ -139,7 +128,6 @@ local function game_action(scene)
         else
             select_tower_type((SELECTED_TOWER_TYPE) % num_of_types + 1)
         end
-
     elseif WIN:key_pressed"1" then select_tower_type(TOWER_TYPE.REDEYE)
     elseif WIN:key_pressed"2" then select_tower_type(2)
     elseif WIN:key_pressed"3" then select_tower_type(3)

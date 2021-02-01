@@ -11,8 +11,10 @@ TEXTURES = {
     TOWER_WALL          = am.texture2d("res/tower_wall.png"),
     TOWER_MOAT          = am.texture2d("res/tower_moat.png"),
 
-    MOUNTAIN1           = am.texture2d("res/mountain1.png"),
-    MOUNTAIN2           = am.texture2d("res/mountain2.png"),
+    TOWER_REDEYE_ICON       = am.texture2d("res/tower_redeye_icon.png"),
+    TOWER_LIGHTHOUSE_ICON   = am.texture2d("res/tower_lighthouse_icon.png"),
+    TOWER_WALL_ICON         = am.texture2d("res/tower_wall_icon.png"),
+    TOWER_MOAT_ICON         = am.texture2d("res/tower_moat_icon.png"),
 
     MOB_BEEPER          = am.texture2d("res/mob_beeper.png"),
 }
