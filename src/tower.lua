@@ -206,9 +206,12 @@ function update_tower_lighthouse(tower, tower_index)
                     for _,h in pairs(area) do
                         local node = HEX_MAP[h.x][h.y].node"circle"
                         local initial_color = node.color
+
+                        local d = math.distance(h, tower.hex)
+                        local target_color = COLORS.SUNRAY{ a = 1/(d/tower.range) }
                         node:late_action(am.series{
-                            am.tween(node, 0.1, { color = COLORS.SUNRAY }),
-                            am.tween(node, 0.1, { color = initial_color })
+                            am.tween(node, 0.3, { color = target_color }),
+                            am.tween(node, 0.3, { color = initial_color })
                         })
                     end
                 end
