@@ -6,7 +6,7 @@ entity structure:
     TOB             - number    - time of birth, const
     hex             - vec2      - current occupied hex, if any
     position        - vec2      - current pixel position of it's translate (forced parent) node
-    update          - function  - runs every frame with itself and its index as an argument
+    update          - function  - runs every frame with itself and its index in some array as an argument
     node            - node      - scene graph node
 
     ...             - any       - a bunch of other shit depending on what entity type it is
@@ -15,7 +15,7 @@ entity structure:
 function make_basic_entity(hex, node, update, position)
     local entity = {}
 
-    entity.TOB = TIME
+    entity.TOB = state.time
 
     -- usually you'll provide a hex and not a position, and the entity will spawn in the center
     -- of the hex. if you want an entity to exist not at the center of a hex, you can provide a
@@ -37,7 +37,7 @@ end
 
 function register_entity(t, entity)
     table.insert(t, entity)
-    WORLD:append(entity.node)
+    state.world:append(entity.node)
 end
 
 -- |t| is the source table, probably MOBS, TOWERS, or PROJECTILES

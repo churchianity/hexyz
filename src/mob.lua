@@ -108,16 +108,16 @@ local function update_mob(mob, mob_index)
             end
         else
             -- use the map's flow field - gotta find the the best neighbour
-            local neighbours = HEX_MAP.neighbours(mob.hex)
+            local neighbours = state.map.neighbours(mob.hex)
 
             if #neighbours > 0 then
                 local first_neighbour = neighbours[1]
-                tile = HEX_MAP.get(first_neighbour.x, first_neighbour.y)
+                tile = state.map.get(first_neighbour.x, first_neighbour.y)
                 local lowest_cost_hex = first_neighbour
                 local lowest_cost = tile.priority or 0
 
                 for _,n in pairs(neighbours) do
-                    tile = HEX_MAP.get(n.x, n.y)
+                    tile = state.map.get(n.x, n.y)
                     local current_cost = tile.priority
 
                     if current_cost and current_cost < lowest_cost then
@@ -141,7 +141,7 @@ local function update_mob(mob, mob_index)
     if mob.frame_target then
         -- this is supposed to achieve frame rate independence, but i have no idea if it actually does
         -- the constant multiplier at the beginning is how many pixels we want a mob with speed 1 to move in one frame
-        local rate = 4 * mob.speed / PERF_STATS.avg_fps
+        local rate = 4 * mob.speed / state.perf.avg_fps
 
         mob.position = mob.position + math.normalize(hex_to_pixel(mob.frame_target) - mob.position) * rate
         mob.node.position2d = mob.position
@@ -160,7 +160,7 @@ end
 local function make_and_register_mob(mob_type)
     local mob = make_basic_entity(
         get_spawn_hex(),
-        am.rotate(TIME) ^ pack_texture_into_sprite(TEXTURES.MOB_BEEPER, MOB_SIZE, MOB_SIZE),
+        am.rotate(state.time) ^ pack_texture_into_sprite(TEXTURES.MOB_BEEPER, MOB_SIZE, MOB_SIZE),
         update_mob
     )
 

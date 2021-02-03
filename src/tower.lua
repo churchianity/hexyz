@@ -63,22 +63,20 @@ function get_tower_base_cost(tower_type)
     return TOWER_SPECS[tower_type] and TOWER_SPECS[tower_type].base_cost
 end
 
-function can_afford_tower(money, tower_type)
-    local cost = get_tower_base_cost(tower_type)
-    return (money - cost) >= 0
-end
-
-local function get_tower_update_function(tower_type)
-    if tower_type == TOWER_TYPE.REDEYE then
-        return update_tower_redeye
-
-    elseif tower_type == TOWER_TYPE.LIGHTHOUSE then
-        return update_tower_lighthouse
-    end
-end
-
 local function make_tower_sprite(tower_type)
     return pack_texture_into_sprite(get_tower_texture(tower_type), HEX_PIXEL_WIDTH, HEX_PIXEL_HEIGHT)
+end
+
+do
+    local tower_cursors = {}
+    for _,i in pairs(TOWER_TYPE) do
+        tower_cursors[i] = make_tower_sprite(i)
+        tower_cursors[i].color = COLORS.TRANSPARENT
+    end
+
+    function get_tower_cursor(tower_type)
+        return tower_cursors[tower_type]
+    end
 end
 
 local function make_tower_node(tower_type)
@@ -97,6 +95,21 @@ local function make_tower_node(tower_type)
 
     end
 end
+
+function can_afford_tower(money, tower_type)
+    local cost = get_tower_base_cost(tower_type)
+    return (money - cost) >= 0
+end
+
+local function get_tower_update_function(tower_type)
+    if tower_type == TOWER_TYPE.REDEYE then
+        return update_tower_redeye
+
+    elseif tower_type == TOWER_TYPE.LIGHTHOUSE then
+        return update_tower_lighthouse
+    end
+end
+
 
 function towers_on_hex(hex)
     local t = {}
@@ -234,7 +247,7 @@ function make_and_register_tower(hex, tower_type)
         tower.last_shot_time = tower.TOB
         tower.target_index   = false
 
-        HEX_MAP[hex.x][hex.y].elevation = 2
+        state.map[hex.x][hex.y].elevation = 2
 
     elseif tower_type == TOWER_TYPE.LIGHTHOUSE then
         tower.range = 5
@@ -268,14 +281,14 @@ function make_and_register_tower(hex, tower_type)
         need_to_regen_flow_field = false
 
     elseif tower_type == TOWER_TYPE.WALL then
-        HEX_MAP[hex.x][hex.y].elevation = 1
+        state.map[hex.x][hex.y].elevation = 1
 
     elseif tower_type == TOWER_TYPE.MOAT then
-        HEX_MAP[hex.x][hex.y].elevation = -1
+        state.map[hex.x][hex.y].elevation = -1
     end
 
     if need_to_regen_flow_field then
-        generate_and_apply_flow_field(HEX_MAP, HEX_GRID_CENTER, WORLD)
+        generate_and_apply_flow_field(state.map, HEX_GRID_CENTER, state.world)
     end
 
     register_entity(TOWERS, tower)

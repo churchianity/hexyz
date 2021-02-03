@@ -236,7 +236,7 @@ end
 
 -- Returns Ordered Spiral Hexagonal Map of |radius| Rings from |center|
 function spiral_map(center, radius)
-    local map = {center}
+    local map = { center }
 
     for i = 1, radius do
         table.append(map, ring_map(center, i))
