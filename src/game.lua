@@ -25,7 +25,19 @@ local function get_initial_game_state(seed)
 end
 
 local function can_do_build(hex, tile, tower_type)
-    return can_afford_tower(state.money, tower_type) and tower_is_buildable_on(hex, tile, tower_type)
+    if not can_afford_tower(state.money, tower_type) then
+        return false
+    end
+
+    if not tower_is_buildable_on(hex, tile, tower_type) then
+        local node = WIN.scene("cursor"):child(1)
+        node.color = COLORS.CLARET
+        node:action(am.tween(0.1, { color = COLORS.TRANSPARENT }))
+
+        return false
+    end
+
+    return true
 end
 
 -- initialized later, as part of the init of the toolbelt

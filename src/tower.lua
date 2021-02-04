@@ -154,7 +154,7 @@ function tower_is_buildable_on(hex, tile, tower_type)
     elseif tower_type == TOWER_TYPE.LIGHTHOUSE then
         local has_water_neighbour = false
         for _,h in pairs(hex_neighbours(hex)) do
-            local tile = HEX_MAP.get(h.x, h.y)
+            local tile = state.map.get(h.x, h.y)
 
             if tile and tile.elevation < -0.5 then
                 has_water_neighbour = true
