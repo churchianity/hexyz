@@ -22,10 +22,6 @@ HEX_GRID_CENTER = vec2(math.floor(HEX_GRID_WIDTH/2)
 HEX_GRID_MINIMUM_ELEVATION = -1
 HEX_GRID_MAXIMUM_ELEVATION = 1
 
--- index is hex coordinates [x][y]
--- { { elevation, node, etc. } }
-HEX_MAP = {}
-
 do
     local hhs = hex_horizontal_spacing(HEX_SIZE)
     local hvs = hex_vertical_spacing(HEX_SIZE)
@@ -81,8 +77,8 @@ function grid_cost(map, from, to)
     local t1, t2 = map.get(from.x, from.y), map.get(to.x, to.y)
 
     local elevation_epsilon = HEX_GRID_MAXIMUM_ELEVATION - HEX_GRID_MINIMUM_ELEVATION
-    local elevation_cost = 1 * math.abs(math.abs(t1.elevation)^0.5
-                                      - math.abs(t2.elevation)^0.5)
+    local elevation_cost = math.abs(math.abs(t1.elevation)^0.5
+                                  - math.abs(t2.elevation)^0.5)
 
     local epsilon = elevation_epsilon
     local cost = elevation_cost
@@ -141,7 +137,7 @@ function random_map(seed)
                 -- if we're on an edge -- terraform edges to be passable
                 noise = 0
 
-            elseif i == HEX_GRID_CENTER.x and j == HEX_GRID_CENTER.y then
+            elseif j == HEX_GRID_CENTER.y and i == HEX_GRID_CENTER.x then
                 -- also terraform the center of the grid to be passable
                 -- very infrequently, but still sometimes it is not medium elevation
                 noise = 0

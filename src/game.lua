@@ -1,10 +1,11 @@
 
 state = false
-local function get_initial_game_state()
+local function get_initial_game_state(seed)
     local STARTING_MONEY = 50
+    local map, world = random_map(seed)
     return {
-        world = false,          -- the root scene graph node for the game 'world'
-        map = false,            -- map of hex coords map[x][y] to some stuff at that location
+        map = map,              -- map of hex coords map[x][y] to some stuff at that location
+        world = world,          -- the root scene graph node for the game 'world'
 
         perf = {},              -- result of call to am.perf_stats, called every frame
         time = 0,               -- time since game started in seconds
@@ -35,12 +36,13 @@ function do_day_night_cycle()
     state.world"negative_mask".color = vec4(tstep){a=1}
 end
 
-local function pause_game()
+local function game_pause()
     WIN.scene"game".paused = true
     WIN.scene"game":append(am.group{
         am.rect(WIN.left, WIN.bottom, WIN.right, WIN.top, COLORS.TRANSPARENT),
         am.scale(3) ^ am.text("Paused.\nEscape to Resume", COLORS.BLACK)
-    }:tag"pause_menu")
+    }
+    :tag"pause_menu")
     WIN.scene:action(function()
         if WIN:key_pressed"escape" then
             WIN.scene:remove"pause_menu"
@@ -82,7 +84,7 @@ local function game_action(scene)
     end
 
     if WIN:key_pressed"escape" then
-        pause_game()
+        game_pause()
 
     elseif WIN:key_pressed"f2" then
         WORLD"flow_field".hidden = not WORLD"flow_field".hidden
@@ -99,13 +101,13 @@ local function game_action(scene)
     elseif WIN:key_pressed"3" then select_tower_type(3)
     elseif WIN:key_pressed"4" then select_tower_type(4)
     elseif WIN:key_pressed"q" then select_tower_type(5)
-    elseif WIN:key_pressed"w" then select_tower_type(6) -- wall?
+    elseif WIN:key_pressed"w" then select_tower_type(6)
     elseif WIN:key_pressed"e" then select_tower_type(7)
     elseif WIN:key_pressed"r" then select_tower_type(8)
-    elseif WIN:key_pressed"a" then --
-    elseif WIN:key_pressed"s" then --
-    elseif WIN:key_pressed"d" then --
-    elseif WIN:key_pressed"f" then --
+    elseif WIN:key_pressed"a" then select_tower_type(nil)
+    elseif WIN:key_pressed"s" then select_tower_type(nil)
+    elseif WIN:key_pressed"d" then select_tower_type(nil)
+    elseif WIN:key_pressed"f" then select_tower_type(nil)
     end
 
     do_entity_updates()
@@ -176,7 +178,6 @@ local function make_game_toolbelt()
     ):tag"tower_select_square"
     toolbelt:append(tower_select_square)
 
-    -- fill in the other tower options
     local tower_type_values = {
         TOWER_TYPE.REDEYE,
         TOWER_TYPE.LIGHTHOUSE,
@@ -200,13 +201,17 @@ local function make_game_toolbelt()
 
     select_tower_type = function(tower_type)
         state.selected_tower_type = tower_type
-        WIN.scene:replace("cursor", (am.translate(state.rounded_mouse) ^ get_tower_cursor(tower_type)):tag"cursor")
+
         if TOWER_SPECS[state.selected_tower_type] then
             WIN.scene"tower_tooltip".text = get_tower_tooltip_text(tower_type)
+
             local new_position = vec2((size + padding) * tower_type, size/2) + offset
             WIN.scene"tower_select_square":action(am.tween(0.1, { position2d = new_position }))
 
+            WIN.scene:replace("cursor", (am.translate(state.rounded_mouse) ^ get_tower_cursor(tower_type)):tag"cursor")
             WIN.scene:action(am.play(am.sfxr_synth(SOUNDS.SELECT1), false, 1, SFX_VOLUME))
+        else
+            WIN.scene:replace("cursor", make_hex_cursor(state.rounded_mouse, 0, COLORS.TRANSPARENT))
         end
     end
 
@@ -235,9 +240,6 @@ function game_scene()
         WIN.scene:remove(curtain)
     end))
 
-    -- 2227
-    state.map, state.world = random_map()
-
     local scene = am.group{
         state.world,
         curtain,
@@ -254,6 +256,7 @@ end
 
 function game_init()
     state = get_initial_game_state()
-    WIN.scene = game_scene()
+    WIN.scene:remove"game"
+    WIN.scene:append(game_scene())
 end
 

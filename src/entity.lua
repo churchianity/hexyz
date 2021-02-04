@@ -44,14 +44,14 @@ end
 function delete_entity(t, index)
     if not t then log("splat!") end
 
-    WORLD:remove(t[index].node)
+    state.world:remove(t[index].node)
     t[index] = false -- leave empty indexes so other entities can learn that this entity was deleted
 end
 
 function delete_all_entities()
     delete_all_mobs()
     delete_all_towers()
-    delete_all_projetiles()
+    delete_all_projectiles()
 end
 
 function do_entity_updates()

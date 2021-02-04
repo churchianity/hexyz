@@ -93,6 +93,7 @@ function main_scene()
     return am.group():action(main_action)
 end
 
+WIN.scene = am.group()
 game_init()
 noglobals()
 

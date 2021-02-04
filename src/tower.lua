@@ -186,7 +186,7 @@ function update_tower_redeye(tower, tower_index)
         if MOBS[tower.target_index] == false then
             tower.target_index = false
 
-        elseif (TIME - tower.last_shot_time) > 1 then
+        elseif (state.time - tower.last_shot_time) > 1 then
             local mob = MOBS[tower.target_index]
 
             make_and_register_projectile(
@@ -197,7 +197,7 @@ function update_tower_redeye(tower, tower_index)
                 10
             )
 
-            tower.last_shot_time = TIME
+            tower.last_shot_time = state.time
             vplay_sfx(SOUNDS.LASER2)
         end
     end
