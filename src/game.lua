@@ -1,5 +1,6 @@
 
-state = false
+
+state = {}
 local function get_initial_game_state(seed)
     local STARTING_MONEY = 50
     local map, world = random_map(seed)
@@ -20,7 +21,7 @@ local function get_initial_game_state(seed)
         tile            = false, -- tile at position of state.hex this frame
         hot             = false, -- element being interacted with this frame
 
-        selected_tower_type = 1,
+        selected_tower_type = false,
     }
 end
 
@@ -66,15 +67,14 @@ end
 
 function game_end()
     delete_all_entities()
-    state = get_initial_game_state()
-    WIN.scene = main_scene()
+    game_init()
 end
 
 function update_score(diff) state.score = state.score + diff end
 function update_money(diff) state.money = state.money + diff end
 
 local function game_action(scene)
-    if state.score < 0 then game_end() end
+    if state.score < 0 then game_end() return true end
 
     state.perf  = am.perf_stats()
     state.time  = state.time + am.delta_time
@@ -90,7 +90,7 @@ local function game_action(scene)
     state.hot = evenq_is_interactable(state.evenq{ y = -state.evenq.y })
 
     if WIN:mouse_pressed"left" then
-        if state.hot and can_do_build(state.hex, state.tile, state.selected_tower_type) then
+        if state.hot and state.selected_tower_type and can_do_build(state.hex, state.tile, state.selected_tower_type) then
             build_tower(state.hex, state.selected_tower_type)
         end
     end
@@ -132,15 +132,7 @@ local function game_action(scene)
     WIN.scene"cursor".position2d = state.rounded_mouse
 end
 
-function get_tower_tooltip_text(tower_type)
-    return string.format(
-        "%s\n%s\n%s\ncost: %d"
-      , get_tower_name(tower_type)
-      , get_tower_placement_rules_text(tower_type)
-      , get_tower_short_description(tower_type)
-      , get_tower_base_cost(tower_type)
-    )
-end
+
 
 local function make_game_toolbelt()
     local function toolbelt_button(size, half_size, tower_texture, padding, i, offset, key_name)
@@ -169,9 +161,26 @@ local function make_game_toolbelt()
     end
 
     local toolbelt_height = hex_height(HEX_SIZE) * 2
+    local function get_tower_tooltip_text_node(tower_type)
+        local name = get_tower_name(tower_type)
+        local placement_rules = get_tower_placement_rules_text(tower_type)
+        local short_desc = get_tower_short_description(tower_type)
+        local base_cost = get_tower_base_cost(tower_type)
+
+        if not (name or placement_rules or short_desc or base_cost) then
+            return am.group():tag"tower_tooltip_text"
+        end
+
+        local white = COLORS.PALE_SILVER
+        return (am.translate(WIN.left + 10, WIN.bottom + toolbelt_height + 20) ^ am.group{
+            am.translate(0, 60) ^ am.text(name, white, "left"):tag"tower_name",
+            am.translate(0, 40) ^ am.text(placement_rules, white, "left"):tag"tower_placement_rules",
+            am.translate(0, 20) ^ am.text(short_desc, white, "left"):tag"tower_short_description",
+            am.translate(0, 0) ^ am.text(string.format("cost: %d", base_cost), white, "left"):tag"tower_base_cost"
+        }):tag"tower_tooltip_text"
+    end
     local toolbelt = am.group{
-        am.translate(WIN.left + 10, WIN.bottom + toolbelt_height + 20)
-        ^ am.text(get_tower_tooltip_text(state.selected_tower_type), "left", "bottom"):tag"tower_tooltip",
+        get_tower_tooltip_text_node(state.selected_tower_type),
         am.rect(WIN.left, WIN.bottom, WIN.right, WIN.bottom + toolbelt_height, COLORS.TRANSPARENT)
     }:tag"toolbelt"
 
@@ -188,6 +197,7 @@ local function make_game_toolbelt()
         am.translate(vec2(size + padding, half_size) + offset)
         ^ am.rect(-size/2-3, -size/2-3, size/2+3, size/2+3, COLORS.SUNRAY)
     ):tag"tower_select_square"
+    tower_select_square.hidden = true
     toolbelt:append(tower_select_square)
 
     local tower_type_values = {
@@ -215,14 +225,22 @@ local function make_game_toolbelt()
         state.selected_tower_type = tower_type
 
         if TOWER_SPECS[state.selected_tower_type] then
-            WIN.scene"tower_tooltip".text = get_tower_tooltip_text(tower_type)
+            WIN.scene:replace("tower_tooltip_text", get_tower_tooltip_text_node(tower_type))
 
             local new_position = vec2((size + padding) * tower_type, size/2) + offset
-            WIN.scene"tower_select_square":action(am.tween(0.1, { position2d = new_position }))
+            if WIN.scene"tower_select_square".hidden then
+                WIN.scene"tower_select_square".position2d = new_position
+                WIN.scene"tower_select_square".hidden = false
+            else
+                WIN.scene"tower_select_square":action(am.tween(0.1, { position2d = new_position }))
+            end
 
             WIN.scene:replace("cursor", (am.translate(state.rounded_mouse) ^ get_tower_cursor(tower_type)):tag"cursor")
+
             WIN.scene:action(am.play(am.sfxr_synth(SOUNDS.SELECT1), false, 1, SFX_VOLUME))
         else
+            WIN.scene"tower_select_square".hidden = true
+
             WIN.scene:replace("cursor", make_hex_cursor(state.rounded_mouse, 0, COLORS.TRANSPARENT))
         end
     end
