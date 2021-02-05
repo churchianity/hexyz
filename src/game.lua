@@ -77,7 +77,7 @@ local function can_do_build(hex, tile, tower_type)
     end
 
     if not tower_is_buildable_on(hex, tile, tower_type) then
-        local node = WIN.scene("cursor"):child(1)
+        local node = WIN.scene("cursor"):child(1):child(2)
         node.color = COLORS.CLARET
         node:action(am.tween(0.1, { color = COLORS.TRANSPARENT }))
 
@@ -150,6 +150,7 @@ local function game_action(scene)
 
     if WIN:mouse_pressed"left" then
         if state.hot and state.selected_tower_type and can_do_build(state.hex, state.tile, state.selected_tower_type) then
+            update_money(-get_tower_cost(state.selected_tower_type))
             build_tower(state.hex, state.selected_tower_type)
         end
     end
@@ -230,7 +231,7 @@ local function make_game_toolbelt()
         local name = get_tower_name(tower_type)
         local placement_rules = get_tower_placement_rules_text(tower_type)
         local short_desc = get_tower_short_description(tower_type)
-        local base_cost = get_tower_base_cost(tower_type)
+        local base_cost = get_tower_cost(tower_type)
 
         if not (name or placement_rules or short_desc or base_cost) then
             return am.group():tag"tower_tooltip_text"
@@ -245,7 +246,7 @@ local function make_game_toolbelt()
         }):tag"tower_tooltip_text"
     end
     local toolbelt = am.group{
-        get_tower_tooltip_text_node(state.selected_tower_type),
+        am.group():tag"tower_tooltip_text",
         am.rect(WIN.left, WIN.bottom, WIN.right, WIN.bottom + toolbelt_height, COLORS.TRANSPARENT)
     }:tag"toolbelt"
 
@@ -265,19 +266,23 @@ local function make_game_toolbelt()
     tower_select_square.hidden = true
     toolbelt:append(tower_select_square)
 
-    local tower_type_values = {
-        TOWER_TYPE.REDEYE,
-        TOWER_TYPE.LIGHTHOUSE,
-        TOWER_TYPE.WALL,
-        TOWER_TYPE.MOAT
-    }
     local keys = { '1', '2', '3', '4', 'q', 'w', 'e', 'r', 'a', 's', 'd', 'f' }
+    -- order of this array is the order of towers on the toolbelt.
+    local tower_type_values = {
+        TOWER_TYPE.WALL,
+        TOWER_TYPE.HOWITZER,
+        TOWER_TYPE.REDEYE,
+        TOWER_TYPE.MOAT,
+        TOWER_TYPE.RADAR,
+        TOWER_TYPE.LIGHTHOUSE
+    }
     for i = 1, #keys do
+        local icon_texture = get_tower_icon_texture(tower_type_values[i])
         toolbelt:append(
             toolbelt_button(
                 size,
                 half_size,
-                get_tower_icon_texture(tower_type_values[i]),
+                icon_texture,
                 padding,
                 i,
                 offset,
@@ -289,7 +294,7 @@ local function make_game_toolbelt()
     select_tower_type = function(tower_type)
         state.selected_tower_type = tower_type
 
-        if TOWER_SPECS[state.selected_tower_type] then
+        if get_tower_spec(tower_type) then
             WIN.scene:replace("tower_tooltip_text", get_tower_tooltip_text_node(tower_type))
 
             local new_position = vec2((size + padding) * tower_type, size/2) + offset
@@ -314,19 +319,25 @@ local function make_game_toolbelt()
 end
 
 -- |color_f| can be a function that takes a hex and returns a color, or just a color
-function make_hex_cursor(position, radius, color_f)
+-- |action_f| should be an action that operates on the group node or nil
+function make_hex_cursor(position, radius, color_f, action_f)
     local color = type(color_f) == "userdata" and color_f or nil
     local map = spiral_map(vec2(0), radius)
     local group = am.group()
+
     for _,h in pairs(map) do
-        group:append(am.circle(hex_to_pixel(h), HEX_SIZE, color or color_f(h), 6))
+        local hexagon = am.circle(hex_to_pixel(h), HEX_SIZE, color or color_f(h), 6)
+        group:append(hexagon)
     end
+
+    if action_f then
+        group:action(action_f)
+    end
+
     return (am.translate(position) ^ group):tag"cursor"
 end
 
 function game_scene()
-
-
     local score = am.translate(WIN.left + 10, WIN.top - 20) ^ am.text("", "left"):tag"score"
     local money = am.translate(WIN.left + 10, WIN.top - 40) ^ am.text("", "left"):tag"money"
     local top_right_display = am.translate(WIN.right - 10, WIN.top - 20) ^ am.text("", "right", "top"):tag"top_right_display"
@@ -354,6 +365,7 @@ end
 
 function game_init()
     state = get_initial_game_state()
+    build_tower(HEX_GRID_CENTER, TOWER_TYPE.RADAR)
 
     WIN.scene:remove"game"
     WIN.scene:append(game_scene())

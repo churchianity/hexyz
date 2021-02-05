@@ -1,4 +1,14 @@
 
+
+-- @TODO make it work with functions that return multiple values
+-- right now it discards returned values beyond the first
+function fprofile(f, ...)
+    local t1 = am.current_time()
+    local result = f(...)
+    log("%f", am.current_time() - t1)
+    return result
+end
+
 function booltostring(bool)
     return bool and "true" or "false"
 end

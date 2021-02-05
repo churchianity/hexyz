@@ -3,36 +3,48 @@
 TOWERS = {}
 
 TOWER_TYPE = {
-    REDEYE     = 1,
-    LIGHTHOUSE = 2,
-    WALL       = 3,
+    WALL       = 1,
+    HOWITZER   = 2,
+    --         = 3,
+    REDEYE     = 3,
+    --         = 5,
     MOAT       = 4,
+    --         = 7,
+    RADAR      = 5,
+    --         = 9,
+    LIGHTHOUSE = 6
 }
 
-TOWER_SPECS = {
-    [TOWER_TYPE.REDEYE] = {
-        name = "Redeye",
-        placement_rules_text = "Place on mountains or on Walls",
-        short_description = "Long range laser tower",
-        texture = TEXTURES.TOWER_REDEYE,
-        icon_texture = TEXTURES.TOWER_REDEYE_ICON,
-        base_cost = 25,
-    },
-    [TOWER_TYPE.LIGHTHOUSE] = {
-        name = "Lighthouse",
-        placement_rules_text = "Place next to - but not on - water or moats",
-        short_description = "Attracts and distracts mobs",
-        texture = TEXTURES.TOWER_LIGHTHOUSE,
-        icon_texture = TEXTURES.TOWER_LIGHTHOUSE_ICON,
-        base_cost = 25
-    },
+local TOWER_SPECS = {
     [TOWER_TYPE.WALL] = {
         name = "Wall",
         placement_rules_text = "Place on grass or dirt",
         short_description = "Restricts movement",
         texture = TEXTURES.TOWER_WALL,
         icon_texture = TEXTURES.TOWER_WALL_ICON,
-        base_cost = 5,
+        cost = 10,
+        range = 0,
+        props = {}
+    },
+    [TOWER_TYPE.HOWITZER] = {
+        name = "HOWITZER",
+        placement_rules_text = "Place on non-Water",
+        short_description = "Fires artillery. Range and cost increase with elevation of terrain underneath.",
+        texture = TEXTURES.TOWER_SHELL,
+        icon_texture = TEXTURES.TOWER_SHELL_ICON,
+        cost = 20,
+        range = 10,
+        props = {}
+    },
+    [TOWER_TYPE.REDEYE] = {
+        name = "Redeye",
+        placement_rules_text = "Place on Mountains or on Walls",
+        short_description = "Long-range, single-target laser tower",
+        texture = TEXTURES.TOWER_REDEYE,
+        icon_texture = TEXTURES.TOWER_REDEYE_ICON,
+        cost = 20,
+        range = 12,
+        props = {}
     },
     [TOWER_TYPE.MOAT] = {
         name = "Moat",
@@ -40,27 +52,55 @@ TOWER_SPECS = {
         short_description = "Restricts movement",
         texture = TEXTURES.TOWER_MOAT,
         icon_texture = TEXTURES.TOWER_MOAT_ICON,
-        base_cost = 5,
-    }
+        cost = 10,
+        range = 0,
+        props = {}
+    },
+    [TOWER_TYPE.RADAR] = {
+        name = "Radar",
+        placement_rules_text = "Place on any non-water",
+        short_description = "Provides information about incoming waves.",
+        texture = TEXTURES.TOWER_RADAR,
+        icon_texture = TEXTURES.TOWER_RADAR_ICON,
+        cost = 20,
+        range = 0,
+        props = {}
+    },
+    [TOWER_TYPE.LIGHTHOUSE] = {
+        name = "Lighthouse",
+        placement_rules_text = "Place next to - but not on - Water or Moats",
+        short_description = "Attracts nearby mobs; temporarily redirects their path",
+        texture = TEXTURES.TOWER_LIGHTHOUSE,
+        icon_texture = TEXTURES.TOWER_LIGHTHOUSE_ICON,
+        cost = 20,
+        range = 8,
+        props = {}
+    },
 }
 
+function get_tower_spec(tower_type)
+    return TOWER_SPECS[tower_type]
+end
 function get_tower_name(tower_type)
-    return TOWER_SPECS[tower_type] and TOWER_SPECS[tower_type].name
+    return TOWER_SPECS[tower_type].name
 end
 function get_tower_placement_rules_text(tower_type)
-    return TOWER_SPECS[tower_type] and TOWER_SPECS[tower_type].placement_rules_text
+    return TOWER_SPECS[tower_type].placement_rules_text
 end
 function get_tower_short_description(tower_type)
-    return TOWER_SPECS[tower_type] and TOWER_SPECS[tower_type].short_description
+    return TOWER_SPECS[tower_type].short_description
 end
 function get_tower_texture(tower_type)
-    return TOWER_SPECS[tower_type] and TOWER_SPECS[tower_type].texture
+    return TOWER_SPECS[tower_type].texture
 end
 function get_tower_icon_texture(tower_type)
     return TOWER_SPECS[tower_type] and TOWER_SPECS[tower_type].icon_texture
 end
-function get_tower_base_cost(tower_type)
-    return TOWER_SPECS[tower_type] and TOWER_SPECS[tower_type].base_cost
+function get_tower_cost(tower_type)
+    return TOWER_SPECS[tower_type].cost
+end
+function get_tower_range(tower_type)
+    return TOWER_SPECS[tower_type].range
 end
 
 local function make_tower_sprite(tower_type)
@@ -70,8 +110,28 @@ end
 do
     local tower_cursors = {}
     for _,i in pairs(TOWER_TYPE) do
-        tower_cursors[i] = make_tower_sprite(i)
-        tower_cursors[i].color = COLORS.TRANSPARENT
+        local tower_sprite = make_tower_sprite(i)
+        tower_sprite.color = COLORS.TRANSPARENT
+
+        local coroutine_ = coroutine.create(function(node)
+            local flash_on = {}
+            local flash_off = {}
+            while true do
+                for _,n in node:child_pairs() do
+                    table.insert(flash_on, am.tween(n, 1, { color = vec4(0.4) }))
+                    table.insert(flash_off, am.tween(n, 1, { color = vec4(0) }))
+                end
+                am.wait(am.parallel(flash_on))
+                am.wait(am.parallel(flash_off))
+                flash_on = {}
+                flash_off = {}
+            end
+        end)
+
+        tower_cursors[i] = am.group{
+            make_hex_cursor(vec2(0), get_tower_range(i), vec4(0), coroutine_),
+            tower_sprite
+        }
     end
 
     function get_tower_cursor(tower_type)
@@ -85,18 +145,42 @@ local function make_tower_node(tower_type)
 
     elseif tower_type == TOWER_TYPE.LIGHTHOUSE then
         return am.group(
-            make_tower_sprite(tower_type)
+            make_tower_sprite(tower_type),
+            am.particles2d{
+                source_pos = vec2(0, 12),
+                source_pos_var = vec2(2),
+                start_size = 1,
+                start_size_var = 1,
+                end_size = 1,
+                end_size_var = 1,
+                angle = 0,
+                angle_var = math.pi,
+                speed = 1,
+                speed_var = 2,
+                life = 10,
+                life_var = 1,
+                start_color = COLORS.WHITE,
+                start_color_var = vec4(0.1, 0.1, 0.1, 1),
+                end_color = COLORS.SUNRAY,
+                end_color_var = vec4(0.1),
+                emission_rate = 4,
+                start_particles = 4,
+                max_particles = 200
+            }
         )
     elseif tower_type == TOWER_TYPE.WALL then
         return am.circle(vec2(0), HEX_SIZE, COLORS.VERY_DARK_GRAY, 6)
 
     elseif tower_type == TOWER_TYPE.MOAT then
         return am.circle(vec2(0), HEX_SIZE, (COLORS.WATER){a=1}, 6)
+
+    elseif tower_type == TOWER_TYPE.RADAR then
+        return make_tower_sprite(tower_type)
     end
 end
 
 function can_afford_tower(money, tower_type)
-    local cost = get_tower_base_cost(tower_type)
+    local cost = get_tower_cost(tower_type)
     return (money - cost) >= 0
 end
 
@@ -109,7 +193,6 @@ local function get_tower_update_function(tower_type)
     end
 end
 
-
 function towers_on_hex(hex)
     local t = {}
     for tower_index,tower in pairs(TOWERS) do
@@ -120,16 +203,11 @@ function towers_on_hex(hex)
     return t
 end
 
-
 function tower_on_hex(hex)
-    return table.find(TOWERS, function(tower)
-        return tower.hex == hex
-    end)
+    return table.find(TOWERS, function(tower) return tower.hex == hex end)
 end
 
 function tower_is_buildable_on(hex, tile, tower_type)
-    if hex == HEX_GRID_CENTER then return false end
-
     local blocking_towers       = towers_on_hex(hex)
     local blocking_mobs         = mobs_on_hex(hex)
 
@@ -209,18 +287,22 @@ function update_tower_lighthouse(tower, tower_index)
 
         for _,m in pairs(mobs) do
             if not m.path then
-                local path, made_it = Astar(HEX_MAP, tower.hex, m.hex, grid_heuristic, grid_cost)
+                -- @TODO only attract the mob if its frame target (direction vector)
+                -- is within some angle range...? if the mob is heading directly away from the tower, then
+                -- the lighthouse shouldn't do much
+
+                local path, made_it = Astar(state.map, tower.hex, m.hex, grid_heuristic, grid_cost)
 
                 if made_it then
                     m.path = path
 
                     local area = spiral_map(tower.hex, tower.range)
                     for _,h in pairs(area) do
-                        local node = HEX_MAP[h.x][h.y].node"circle"
+                        local node = state.map[h.x][h.y].node"circle"
                         local initial_color = node.color
 
                         local d = math.distance(h, tower.hex)
-                        local target_color = COLORS.SUNRAY{ a = 1/(d/tower.range) }
+                        local target_color = COLORS.SUNRAY{ a = 1/(d/tower.range) + 0.9 }
                         node:late_action(am.series{
                             am.tween(node, 0.3, { color = target_color }),
                             am.tween(node, 0.3, { color = initial_color })
@@ -239,62 +321,29 @@ function make_and_register_tower(hex, tower_type)
         get_tower_update_function(tower_type)
     )
 
-    local need_to_regen_flow_field = true
     tower.type = tower_type
+    tower.cost = get_tower_cost(tower_type)
+    tower.range = get_tower_range(tower_type)
+    tower.last_shot_time = tower.TOB -- a tower has never shot if its TOB == its last_shot_time
+
+    for k,v in pairs(TOWER_SPECS[tower_type].props) do
+        tower[k] = v
+    end
+
     if tower_type == TOWER_TYPE.REDEYE then
-        tower.range          = 7
-        tower.last_shot_time = tower.TOB
-        tower.target_index   = false
-
-        state.map[hex.x][hex.y].elevation = 2
-
     elseif tower_type == TOWER_TYPE.LIGHTHOUSE then
-        tower.range = 5
         tower.perimeter = ring_map(tower.hex, tower.range)
-        --[[
-        tower.node:append(
-            am.particles2d{
-                source_pos = vec2(0, 12),
-                source_pos_var = vec2(2),
-                start_size = 1,
-                start_size_var = 1,
-                end_size = 1,
-                end_size_var = 1,
-                angle = 0,
-                angle_var = math.pi,
-                speed = 1,
-                speed_var = 2,
-                life = 10,
-                life_var = 1,
-                start_color = COLORS.WHITE,
-                start_color_var = vec4(0.1, 0.1, 0.1, 1),
-                end_color = COLORS.SUNRAY,
-                end_color_var = vec4(0.1),
-                emission_rate = 4,
-                start_particles = 4,
-                max_particles = 200
-            }
-        )
-        ]]
-        -- @HACK
-        need_to_regen_flow_field = false
 
     elseif tower_type == TOWER_TYPE.WALL then
-        state.map[hex.x][hex.y].elevation = 1
-
     elseif tower_type == TOWER_TYPE.MOAT then
-        state.map[hex.x][hex.y].elevation = -1
+    elseif tower_type == TOWER_TYPE.RADAR then
     end
 
-    if need_to_regen_flow_field then
-        generate_and_apply_flow_field(state.map, HEX_GRID_CENTER, state.world)
-    end
-
+    generate_and_apply_flow_field(state.map, HEX_GRID_CENTER, state.world)
     register_entity(TOWERS, tower)
 end
 
 function build_tower(hex, tower_type)
-    update_money(-get_tower_base_cost(tower_type))
     make_and_register_tower(hex, tower_type)
     vplay_sfx(SOUNDS.EXPLOSION4)
 end

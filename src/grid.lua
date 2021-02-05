@@ -17,7 +17,7 @@ HEX_GRID_DIMENSIONS = vec2(HEX_GRID_WIDTH, HEX_GRID_HEIGHT)
 -- leaving y == 0 makes this the center in hex coordinates
 HEX_GRID_CENTER = vec2(math.floor(HEX_GRID_WIDTH/2)
                      , 0)
-                    -- math.floor(HEX_GRID_HEIGHT/2))
+                  -- , math.floor(HEX_GRID_HEIGHT/2))
 
 HEX_GRID_MINIMUM_ELEVATION = -1
 HEX_GRID_MAXIMUM_ELEVATION = 1
@@ -76,7 +76,7 @@ end
 function making_hex_unwalkable_breaks_flow_field(hex, tile)
     local original_elevation = tile.elevation
     -- making the tile's elevation very large *should* make it unwalkable
-    tile.elevation = 10
+    tile.elevation = 999
 
     local flow_field = generate_flow_field(state.map, HEX_GRID_CENTER)
     local result = not hex_map_get(flow_field, 0, 0)
@@ -121,8 +121,6 @@ function generate_and_apply_flow_field(map, start, world)
                                      ^ am.text(string.format("%.1f", flow.priority * 10)))
             else
                 map[i][j].priority = nil
-                log('fire')
-                -- should fire exactly once
             end
         end
     end
@@ -199,9 +197,6 @@ function random_map(seed)
     end
 
     generate_and_apply_flow_field(map, HEX_GRID_CENTER, world)
-
-    world:append(am.translate(hex_to_pixel(HEX_GRID_CENTER))
-                 ^ pack_texture_into_sprite(TEXTURES.SATELLITE, HEX_PIXEL_WIDTH, HEX_PIXEL_HEIGHT))
 
     return map, am.translate(WORLDSPACE_COORDINATE_OFFSET) ^ world
 end

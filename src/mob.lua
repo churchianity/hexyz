@@ -24,7 +24,7 @@ end
 
 -- check if a the tile at |hex| is passable by |mob|
 function mob_can_pass_through(mob, hex)
-    local tile = HEX_MAP.get(hex.x, hex.y)
+    local tile = state.map.get(hex.x, hex.y)
     return tile and tile_is_medium_elevation(tile)
 end
 
@@ -84,7 +84,7 @@ local function update_mob(mob, mob_index)
 
     -- figure out movement
     if last_frame_hex ~= mob.hex or not mob.frame_target then
-        local frame_target, tile = nil, nil
+        local frame_target, tile = false, false
         if mob.path then
             --log('A*')
             -- we have an explicitly stored target
@@ -92,8 +92,8 @@ local function update_mob(mob, mob_index)
 
             if not path_entry then
                 -- we should be just about to reach the target, delete the path.
-                mob.path = nil
-                mob.frame_target = nil
+                mob.path = false
+                mob.frame_target = false
                 return
             end
 
@@ -104,7 +104,7 @@ local function update_mob(mob, mob_index)
             if last_frame_hex ~= mob.hex and not mob_can_pass_through(mob, mob.frame_target) then
                 log('recalc')
                 mob.path = get_mob_path(mob, HEX_MAP, mob.hex, HEX_GRID_CENTER)
-                mob.frame_target = nil
+                mob.frame_target = false
             end
         else
             -- use the map's flow field - gotta find the the best neighbour
@@ -139,12 +139,19 @@ local function update_mob(mob, mob_index)
 
     -- do movement
     if mob.frame_target then
-        -- this is supposed to achieve frame rate independence, but i have no idea if it actually does
-        -- the constant multiplier at the beginning is how many pixels we want a mob with speed 1 to move in one frame
-        local rate = 4 * mob.speed / state.perf.avg_fps
+        -- it's totally possible that the target we have was invalidated by a tower placed this frame,
+        -- or between when we last calculated this target and now
+        -- check for that now
+        if mob_can_pass_through(mob, mob.frame_target) then
+            -- this is supposed to achieve frame rate independence, but i have no idea if it actually does
+            -- the constant multiplier at the beginning is how many pixels we want a mob with speed 1 to move in one frame
+            local rate = 4 * mob.speed / state.perf.avg_fps
 
-        mob.position = mob.position + math.normalize(hex_to_pixel(mob.frame_target) - mob.position) * rate
-        mob.node.position2d = mob.position
+            mob.position = mob.position + math.normalize(hex_to_pixel(mob.frame_target) - mob.position) * rate
+            mob.node.position2d = mob.position
+        else
+            mob.frame_target = false
+        end
     else
         log('no target')
     end

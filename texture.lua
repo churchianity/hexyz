@@ -1,24 +1,37 @@
 
+local function load_texture(filepath)
+    local status, texture = pcall(am.texture2d, filepath)
+
+    if status then
+        return texture
+    else
+        return am.texture2d("res/bagel.jpg")
+    end
+end
 
 TEXTURES = {
-    LOGO                = am.texture2d("res/logo.png"),
+    LOGO                    = load_texture("res/logo.png"),
 
-    BUTTON1             = am.texture2d("res/button1.png"),
-    WIDER_BUTTON1       = am.texture2d("res/wider_button1.png"),
-    TAB_ICON            = am.texture2d("res/tab_icon.png"),
-    SATELLITE           = am.texture2d("res/satelite.png"),
+    BUTTON1                 = load_texture("res/button1.png"),
+    WIDER_BUTTON1           = load_texture("res/wider_button1.png"),
+    TAB_ICON                = load_texture("res/tab_icon.png"),
 
-    TOWER_REDEYE        = am.texture2d("res/tower_redeye.png"),
-    TOWER_LIGHTHOUSE    = am.texture2d("res/tower_lighthouse.png"),
-    TOWER_WALL          = am.texture2d("res/tower_wall.png"),
-    TOWER_MOAT          = am.texture2d("res/tower_moat.png"),
+    -- tower stuff
+    TOWER_WALL              = load_texture("res/tower_wall.png"),
+    TOWER_WALL_ICON         = load_texture("res/tower_wall_icon.png"),
+    TOWER_HOWITZER          = load_texture("res/tower_howitzer.png"),
+    TOWER_HOWITZER_ICON     = load_texture("res/tower_howitzer_icon.png"),
+    TOWER_REDEYE            = load_texture("res/tower_redeye.png"),
+    TOWER_REDEYE_ICON       = load_texture("res/tower_redeye_icon.png"),
+    TOWER_MOAT              = load_texture("res/tower_moat.png"),
+    TOWER_MOAT_ICON         = load_texture("res/tower_moat_icon.png"),
+    TOWER_RADAR             = load_texture("res/tower_radar.png"),
+    TOWER_RADAR_ICON        = load_texture("res/tower_radar_icon.png"),
+    TOWER_LIGHTHOUSE        = load_texture("res/tower_lighthouse.png"),
+    TOWER_LIGHTHOUSE_ICON   = load_texture("res/tower_lighthouse_icon.png"),
 
-    TOWER_REDEYE_ICON       = am.texture2d("res/tower_redeye_icon.png"),
-    TOWER_LIGHTHOUSE_ICON   = am.texture2d("res/tower_lighthouse_icon.png"),
-    TOWER_WALL_ICON         = am.texture2d("res/tower_wall_icon.png"),
-    TOWER_MOAT_ICON         = am.texture2d("res/tower_moat_icon.png"),
-
-    MOB_BEEPER          = am.texture2d("res/mob_beeper.png"),
+    -- mob stuff
+    MOB_BEEPER          = load_texture("res/mob_beeper.png"),
 }
 
 function pack_texture_into_sprite(texture, width, height)
