@@ -92,7 +92,6 @@ local function make_tower_node(tower_type)
 
     elseif tower_type == TOWER_TYPE.MOAT then
         return am.circle(vec2(0), HEX_SIZE, (COLORS.WATER){a=1}, 6)
-
     end
 end
 

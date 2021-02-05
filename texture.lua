@@ -1,6 +1,8 @@
 
 
 TEXTURES = {
+    LOGO                = am.texture2d("res/logo.png"),
+
     BUTTON1             = am.texture2d("res/button1.png"),
     WIDER_BUTTON1       = am.texture2d("res/wider_button1.png"),
     TAB_ICON            = am.texture2d("res/tab_icon.png"),
