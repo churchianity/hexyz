@@ -73,6 +73,17 @@ function grid_heuristic(source, target)
     return math.distance(source, target)
 end
 
+function making_hex_unwalkable_breaks_flow_field(hex, tile)
+    local original_elevation = tile.elevation
+    -- making the tile's elevation very large *should* make it unwalkable
+    tile.elevation = 10
+
+    local flow_field = generate_flow_field(state.map, HEX_GRID_CENTER)
+    local result = not hex_map_get(flow_field, 0, 0)
+    tile.elevation = original_elevation
+    return result
+end
+
 function grid_cost(map, from, to)
     local t1, t2 = map.get(from.x, from.y), map.get(to.x, to.y)
 
@@ -86,8 +97,12 @@ function grid_cost(map, from, to)
     return epsilon - cost
 end
 
+function generate_flow_field(map, start)
+    return dijkstra(map, start, nil, grid_cost)
+end
+
 function generate_and_apply_flow_field(map, start, world)
-    local flow = dijkstra(map, start, nil, grid_cost)
+    local flow_field = generate_flow_field(map, start)
 
     local flow_field_hidden = world and world"flow_field" and world"flow_field".hidden or true
     if world and world"flow_field" then
@@ -95,14 +110,18 @@ function generate_and_apply_flow_field(map, start, world)
     end
 
     local overlay_group = am.group():tag"flow_field"
-    for i,_ in pairs(flow) do
-        for j,f in pairs(flow[i]) do
-            if f then
-                map[i][j].priority = f.priority
+    for i,_ in pairs(map) do
+        for j,f in pairs(map[i]) do
+            local flow = hex_map_get(flow_field, i, j)
+
+            if flow then
+                map[i][j].priority = flow.priority
 
                 overlay_group:append(am.translate(hex_to_pixel(vec2(i, j)))
-                                     ^ am.text(string.format("%.1f", f.priority * 10)))
+                                     ^ am.text(string.format("%.1f", flow.priority * 10)))
             else
+                map[i][j].priority = nil
+                log('fire')
                 -- should fire exactly once
             end
         end
@@ -128,6 +147,7 @@ function random_map(seed)
     local neg_mask = am.rect(0, 0, HEX_GRID_PIXEL_WIDTH, HEX_GRID_PIXEL_HEIGHT, COLORS.TRUE_BLACK):tag"negative_mask"
 
     local world = am.group(neg_mask):tag"world"
+    local edge_nodes = {}
     for i,_ in pairs(map) do
         for j,noise in pairs(map[i]) do
             local evenq = hex_to_evenq(vec2(i, j))
@@ -136,6 +156,9 @@ function random_map(seed)
             or -evenq.y == 0 or -evenq.y == (HEX_GRID_HEIGHT - 1) then
                 -- if we're on an edge -- terraform edges to be passable
                 noise = 0
+
+                -- it's nice to also store the coords for edge nodes in a separate table for later
+                table.insert(edge_nodes, vec2(i, j))
 
             elseif j == HEX_GRID_CENTER.y and i == HEX_GRID_CENTER.x then
                 -- also terraform the center of the grid to be passable

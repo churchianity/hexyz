@@ -1,13 +1,9 @@
 
 
-
-
 state = {}
-local function get_initial_game_state(seed)
-    local STARTING_MONEY = 50
-    local map, world = random_map(seed)
+
 -- top right display types
-TRDTS = {
+local TRDTS = {
     NOTHING         = 0,
     CENTERED_EVENQ  = 1,
     EVENQ           = 2,
@@ -17,6 +13,10 @@ TRDTS = {
     SEED            = 6,
     TILE            = 7,
 }
+
+local function get_initial_game_state(seed)
+    local STARTING_MONEY = 50
+    local map, world = random_map(seed)
 
     return {
         map = map,              -- map of hex coords map[x][y] to some stuff at that location
@@ -68,6 +68,10 @@ local function get_top_right_display_text(display_type)
 end
 
 local function can_do_build(hex, tile, tower_type)
+    if making_hex_unwalkable_breaks_flow_field(hex, tile) then
+        return false
+    end
+
     if not can_afford_tower(state.money, tower_type) then
         return false
     end
@@ -157,7 +161,7 @@ local function game_action(scene)
         state.top_right_display_type = (state.top_right_display_type + 1) % #table.keys(TRDTS)
 
     elseif WIN:key_pressed"f2" then
-        WORLD"flow_field".hidden = not WORLD"flow_field".hidden
+        state.world"flow_field".hidden = not state.world"flow_field".hidden
 
     elseif WIN:key_pressed"tab" then
         if WIN:key_down"lshift" then
@@ -321,6 +325,8 @@ function make_hex_cursor(position, radius, color_f)
 end
 
 function game_scene()
+
+
     local score = am.translate(WIN.left + 10, WIN.top - 20) ^ am.text("", "left"):tag"score"
     local money = am.translate(WIN.left + 10, WIN.top - 40) ^ am.text("", "left"):tag"money"
     local top_right_display = am.translate(WIN.right - 10, WIN.top - 20) ^ am.text("", "right", "top"):tag"top_right_display"
