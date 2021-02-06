@@ -25,7 +25,7 @@ end
 -- check if a the tile at |hex| is passable by |mob|
 function mob_can_pass_through(mob, hex)
     local tile = state.map.get(hex.x, hex.y)
-    return tile and tile_is_medium_elevation(tile)
+    return tile_is_medium_elevation(tile)
 end
 
 function mob_die(mob, mob_index)

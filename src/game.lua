@@ -23,7 +23,7 @@ local TRDTS = {
 }
 
 local function get_initial_game_state(seed)
-    local STARTING_MONEY = 50
+    local STARTING_MONEY = 10000
     local map, world = random_map(seed)
 
     return {
@@ -130,15 +130,28 @@ local function game_action(scene)
     if WIN:mouse_pressed"left" then
         if interactable then
             if buildable then
+                local broken, flow_field = making_hex_unwalkable_breaks_flow_field(hex, tile)
                 local cost = get_tower_cost(state.selected_tower_type)
-                if cost > state.money then
+
+                if broken then
                     local node = WIN.scene("cursor"):child(2)
                     node.color = COLORS.CLARET
                     node:action(am.tween(0.1, { color = COLORS.TRANSPARENT }))
                     play_sfx(SOUNDS.BIRD2)
+
+                elseif cost > state.money then
+                    local node = WIN.scene("cursor"):child(2)
+                    node.color = COLORS.CLARET
+                    node:action(am.tween(0.1, { color = COLORS.TRANSPARENT }))
+                    play_sfx(SOUNDS.BIRD2)
+
                 else
                     update_money(-cost)
-                    build_tower(hex, state.selected_tower_type)
+                    build_tower(hex, state.selected_tower_type, flow_field)
+
+                    if flow_field then
+                        apply_flow_field(state.map, flow_field, state.world)
+                    end
                 end
             end
         end

@@ -54,35 +54,23 @@ function tile_is_medium_elevation(tile)
     return tile.elevation >= -0.5 and tile.elevation < 0.5
 end
 
--- map elevation to appropriate color
 function color_at(elevation)
-    if elevation < -0.5 then -- lowest elevation
+    if elevation <= -0.5 then -- lowest elevation
         return COLORS.WATER{ a = (elevation + 1.4) / 2 + 0.2 }
 
-    elseif elevation < 0 then -- med-low elevation
+    elseif elevation <= 0 then -- med-low elevation
         return math.lerp(COLORS.DIRT, COLORS.GRASS, elevation + 0.5){ a = (elevation + 1.8) / 2 + 0.3 }
 
-    elseif elevation < 0.5 then -- med-high elevation
+    elseif elevation <= 0.5 then -- med-high elevation
         return math.lerp(COLORS.DIRT, COLORS.GRASS, elevation + 0.5){ a = (elevation + 1.6) / 2 + 0.3 }
 
-    elseif elevation < 1 then     -- high elevation
+    elseif elevation <= 1 then     -- high elevation
         return COLORS.MOUNTAIN{ ra = elevation }
     end
 end
 
 function grid_heuristic(source, target)
     return math.distance(source, target)
-end
-
-function making_hex_unwalkable_breaks_flow_field(hex, tile)
-    local original_elevation = tile.elevation
-    -- making the tile's elevation very large *should* make it unwalkable
-    tile.elevation = 999
-
-    local flow_field = generate_flow_field(state.map, HEX_GRID_CENTER)
-    local result = not hex_map_get(flow_field, 0, 0)
-    tile.elevation = original_elevation
-    return result, flow_field
 end
 
 function grid_cost(map, from, to)
@@ -102,9 +90,7 @@ function generate_flow_field(map, start)
     return dijkstra(map, start, nil, grid_cost)
 end
 
-function generate_and_apply_flow_field(map, start, world)
-    local flow_field = generate_flow_field(map, start)
-
+function apply_flow_field(map, flow_field, world)
     local flow_field_hidden = world and world"flow_field" and world"flow_field".hidden or true
     if world and world"flow_field" then
         world:remove"flow_field"
@@ -134,6 +120,21 @@ function generate_and_apply_flow_field(map, start, world)
         overlay_group.hidden = flow_field_hidden
         world:append(overlay_group)
     end
+end
+
+function making_hex_unwalkable_breaks_flow_field(hex, tile)
+    if not mob_can_pass_through(nil, hex, tile) then
+        return false
+    end
+
+    local original_elevation = tile.elevation
+    -- making the tile's elevation very large *should* make it unwalkable
+    tile.elevation = 999
+
+    local flow_field = generate_flow_field(state.map, HEX_GRID_CENTER)
+    local result = not hex_map_get(flow_field, 0, 0)
+    tile.elevation = original_elevation
+    return result, flow_field
 end
 
 function random_map(seed)
@@ -197,7 +198,7 @@ function random_map(seed)
         end)
     end
 
-    generate_and_apply_flow_field(map, HEX_GRID_CENTER, world)
+    apply_flow_field(map, generate_flow_field(map, HEX_GRID_CENTER), world)
 
     return map, am.translate(WORLDSPACE_COORDINATE_OFFSET) ^ world
 end

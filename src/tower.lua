@@ -330,13 +330,18 @@ function make_and_register_tower(hex, tower_type)
     if tower_type == TOWER_TYPE.REDEYE then
     elseif tower_type == TOWER_TYPE.LIGHTHOUSE then
         tower.perimeter = ring_map(tower.hex, tower.range)
+        local tile = state.map.get(hex.x, hex.y)
+        tile.elevation = tile.elevation + 0.5
 
     elseif tower_type == TOWER_TYPE.WALL then
+        state.map.get(hex.x, hex.y).elevation = 0.5
+
     elseif tower_type == TOWER_TYPE.MOAT then
+        state.map.get(hex.x, hex.y).elevation = -0.49
+
     elseif tower_type == TOWER_TYPE.RADAR then
     end
 
-    generate_and_apply_flow_field(state.map, HEX_GRID_CENTER, state.world)
     register_entity(TOWERS, tower)
 end
 
