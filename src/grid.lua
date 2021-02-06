@@ -38,14 +38,15 @@ end
 -- transform coordinates by this to pretend 0,0 is elsewhere
 WORLDSPACE_COORDINATE_OFFSET = -HEX_GRID_PIXEL_DIMENSIONS/2
 
--- the outer edges of the map are not interactable, most action occurs in the center-ish
-HEX_GRID_INTERACTABLE_REGION_PADDING = 4
-function evenq_is_interactable(evenq)
+-- the outer edges of the map are not interactable
+-- the interactable region is defined with this function and constant
+HEX_GRID_INTERACTABLE_REGION_MARGIN = 4
+function evenq_is_in_interactable_region(evenq)
     return point_in_rect(evenq, {
-        x1 =                   HEX_GRID_INTERACTABLE_REGION_PADDING,
-        x2 = HEX_GRID_WIDTH  - HEX_GRID_INTERACTABLE_REGION_PADDING,
-        y1 =                   HEX_GRID_INTERACTABLE_REGION_PADDING,
-        y2 = HEX_GRID_HEIGHT - HEX_GRID_INTERACTABLE_REGION_PADDING
+        x1 =                   HEX_GRID_INTERACTABLE_REGION_MARGIN,
+        x2 = HEX_GRID_WIDTH  - HEX_GRID_INTERACTABLE_REGION_MARGIN,
+        y1 =                   HEX_GRID_INTERACTABLE_REGION_MARGIN,
+        y2 = HEX_GRID_HEIGHT - HEX_GRID_INTERACTABLE_REGION_MARGIN
     })
 end
 
@@ -81,7 +82,7 @@ function making_hex_unwalkable_breaks_flow_field(hex, tile)
     local flow_field = generate_flow_field(state.map, HEX_GRID_CENTER)
     local result = not hex_map_get(flow_field, 0, 0)
     tile.elevation = original_elevation
-    return result
+    return result, flow_field
 end
 
 function grid_cost(map, from, to)

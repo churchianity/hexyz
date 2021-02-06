@@ -129,7 +129,7 @@ do
         end)
 
         tower_cursors[i] = am.group{
-            make_hex_cursor(vec2(0), get_tower_range(i), vec4(0), coroutine_),
+            make_hex_cursor(get_tower_range(i), vec4(0), coroutine_),
             tower_sprite
         }
     end
@@ -179,11 +179,6 @@ local function make_tower_node(tower_type)
     end
 end
 
-function can_afford_tower(money, tower_type)
-    local cost = get_tower_cost(tower_type)
-    return (money - cost) >= 0
-end
-
 local function get_tower_update_function(tower_type)
     if tower_type == TOWER_TYPE.REDEYE then
         return update_tower_redeye
@@ -207,7 +202,9 @@ function tower_on_hex(hex)
     return table.find(TOWERS, function(tower) return tower.hex == hex end)
 end
 
-function tower_is_buildable_on(hex, tile, tower_type)
+function tower_type_is_buildable_on(hex, tile, tower_type)
+    if not tower_type then return false end
+
     local blocking_towers       = towers_on_hex(hex)
     local blocking_mobs         = mobs_on_hex(hex)
 

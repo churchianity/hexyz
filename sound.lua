@@ -13,6 +13,7 @@ SOUNDS = {
     SELECT1         = 76036806,
     PUSH2           = 57563308,
     BIRD1           = 50838307,
+    BIRD2           = 16549407,
     RANDOM1         = 85363309,
     RANDOM2         = 15482409,
     RANDOM3         = 58658009,
