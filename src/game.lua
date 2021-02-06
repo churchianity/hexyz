@@ -68,14 +68,7 @@ local function get_top_right_display_text(hex, evenq, centered_evenq, display_ty
 end
 
 local function handle_left_click(hex, tile, tower_type, toolbelt_button)
-    if play_error_sound then
-        play_sfx(SOUNDS.BIRD2)
-    end
-    if flash_tower_cursor then
-        local node = WIN.scene("cursor"):child(1):child(2)
-        node.color = COLORS.CLARET
-        node:action(am.tween(0.1, { color = COLORS.TRANSPARENT }))
-    end
+
 end
 
 -- initialized later, as part of the init of the toolbelt
@@ -137,8 +130,16 @@ local function game_action(scene)
     if WIN:mouse_pressed"left" then
         if interactable then
             if buildable then
-                update_money(-get_tower_cost(state.selected_tower_type))
-                build_tower(hex, state.selected_tower_type)
+                local cost = get_tower_cost(state.selected_tower_type)
+                if cost > state.money then
+                    local node = WIN.scene("cursor"):child(2)
+                    node.color = COLORS.CLARET
+                    node:action(am.tween(0.1, { color = COLORS.TRANSPARENT }))
+                    play_sfx(SOUNDS.BIRD2)
+                else
+                    update_money(-cost)
+                    build_tower(hex, state.selected_tower_type)
+                end
             end
         end
     end
