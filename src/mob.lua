@@ -2,8 +2,25 @@
 
 MOBS = {}
 
+MOB_TYPE = {
+    BEEPER = 1,
+}
+
 MAX_MOB_SIZE = hex_height(HEX_SIZE, ORIENTATION.FLAT) / 2
 MOB_SIZE = MAX_MOB_SIZE
+
+MOB_SPECS = {
+    [MOB_TYPE.BEEPER] = {
+        health = 10,
+        speed = 10,
+        bounty = 5,
+        hurtbox_radius = MOB_SIZE/2
+    }
+}
+
+function get_mob_spec(mob_type)
+    return MOB_SPECS[mob_type]
+end
 
 function mobs_on_hex(hex)
     local t = {}
@@ -15,8 +32,8 @@ function mobs_on_hex(hex)
     return t
 end
 
--- @NOTE returns i,v in the table
 function mob_on_hex(hex)
+    -- table.find returns i,v in the table
     return table.find(MOBS, function(mob)
         return mob and mob.hex == hex
     end)
@@ -134,7 +151,7 @@ local function update_mob(mob, mob_index)
     end
 
     if mob.frame_target and mob.frame_target == last_frame_hex then
-        --log('backpedaling')
+        log('backpedaling')
     end
 
     -- do movement
@@ -143,9 +160,7 @@ local function update_mob(mob, mob_index)
         -- or between when we last calculated this target and now
         -- check for that now
         if mob_can_pass_through(mob, mob.frame_target) then
-            -- this is supposed to achieve frame rate independence, but i have no idea if it actually does
-            -- the constant multiplier at the beginning is how many pixels we want a mob with speed 1 to move in one frame
-            local rate = 4 * mob.speed / state.perf.avg_fps
+            local rate = 4 * mob.speed * am.delta_time
 
             mob.position = mob.position + math.normalize(hex_to_pixel(mob.frame_target) - mob.position) * rate
             mob.node.position2d = mob.position
@@ -171,21 +186,24 @@ local function make_and_register_mob(mob_type)
         update_mob
     )
 
-    --mob.path           = get_mob_path(mob, HEX_MAP, mob.hex, HEX_GRID_CENTER)
-    mob.health         = 10
-    mob.speed          = 10
-    mob.bounty         = 5
-    mob.hurtbox_radius = MOB_SIZE/2
+    mob.type = mob_type
+
+    local spec = get_mob_spec(mob_type)
+    mob.health = spec.health
+    mob.speed = spec.speed
+    mob.bounty = spec.bounty
+    mob.hurtbox_radius = spec.hurtbox_radius
 
     register_entity(MOBS, mob)
+    return mob
 end
 
-local SPAWN_CHANCE = 45
+local SPAWN_CHANCE = 25
 function do_mob_spawning()
     --if WIN:key_pressed"space" then
     if math.random(SPAWN_CHANCE) == 1 then
     --if #MOBS < 1 then
-        make_and_register_mob()
+        make_and_register_mob(MOB_TYPE.BEEPER)
     end
 end
 

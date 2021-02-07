@@ -9,6 +9,9 @@ entity structure:
     update          - function  - runs every frame with itself and its index in some array as an argument
     node            - node      - scene graph node
 
+    type            - enum      - sub type - unset if 'basic' entity
+    props           - table     - table of properties specific to this entity subtype
+
     ...             - any       - a bunch of other shit depending on what entity type it is
 }
 --]]
@@ -31,6 +34,8 @@ function make_basic_entity(hex, node, update, position)
 
     entity.update = update
     entity.node = am.translate(entity.position) ^ node
+    entity.type = false
+    entity.props = {}
 
     return entity
 end

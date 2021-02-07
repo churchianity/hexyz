@@ -84,7 +84,7 @@ function select_toolbelt_button(i)
 end
 
 function do_day_night_cycle()
-    local tstep = (math.sin(state.time / 100) + 1) / state.perf.avg_fps
+    local tstep = (math.sin(state.time / 100) + 1) * am.delta_time
     state.world"negative_mask".color = vec4(tstep){a=1}
 end
 
@@ -92,7 +92,10 @@ local function game_pause()
     WIN.scene"game".paused = true
     WIN.scene"game":append(am.group{
         am.rect(WIN.left, WIN.bottom, WIN.right, WIN.top, COLORS.TRANSPARENT),
-        am.scale(3) ^ am.text("Paused.\nEscape to Resume\nf4 to start a new game", COLORS.BLACK)
+        am.scale(3)
+        ^ am.text(string.format(
+            "Paused.\nSeed: %d\nEscape to Resume\nf4 to start a new game", state.map.seed
+        ), COLORS.BLACK)
     }
     :tag"pause_menu")
     WIN.scene:action(function()
@@ -286,6 +289,7 @@ local function make_game_toolbelt()
     toolbelt:append(tower_select_square)
 
     local keys = { '1', '2', '3', '4', 'q', 'w', 'e', 'r', 'a', 's', 'd', 'f' }
+    --local keys = { '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=' }
     -- order of this array is the order of towers on the toolbelt.
     local tower_type_values = {
         TOWER_TYPE.WALL,
@@ -391,6 +395,9 @@ end
 function game_init()
     state = get_initial_game_state()
     build_tower(HEX_GRID_CENTER, TOWER_TYPE.RADAR)
+
+    -- hack to make the center tile passable even though there's a tower on it
+    state.map.get(HEX_GRID_CENTER.x, HEX_GRID_CENTER.y).elevation = 0
 
     WIN.scene:remove("game")
     WIN.scene:append(game_scene())

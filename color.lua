@@ -12,7 +12,7 @@ COLORS = {
 
     -- non-standard hues
     WATER               = vec4(0.12, 0.25, 0.3, 1),
-    GRASS               = vec4(0.10, 0.25, 0.10, 1),
+    GRASS               = vec4(0.05, 0.22, 0.11, 1),
     DIRT                = vec4(0.22, 0.20, 0.10, 1),
     MOUNTAIN            = vec4(0.95, 0.30, 0.20, 1),
 

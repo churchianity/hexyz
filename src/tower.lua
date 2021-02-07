@@ -15,7 +15,7 @@ TOWER_TYPE = {
     LIGHTHOUSE = 6
 }
 
-local TOWER_SPECS = {
+TOWER_SPECS = {
     [TOWER_TYPE.WALL] = {
         name = "Wall",
         placement_rules_text = "Place on grass or dirt",
@@ -24,17 +24,17 @@ local TOWER_SPECS = {
         icon_texture = TEXTURES.TOWER_WALL_ICON,
         cost = 10,
         range = 0,
-        props = {}
+        fire_rate = 2,
     },
     [TOWER_TYPE.HOWITZER] = {
         name = "HOWITZER",
         placement_rules_text = "Place on non-Water",
         short_description = "Fires artillery. Range and cost increase with elevation of terrain underneath.",
-        texture = TEXTURES.TOWER_SHELL,
-        icon_texture = TEXTURES.TOWER_SHELL_ICON,
+        texture = TEXTURES.TOWER_HOWITZER,
+        icon_texture = TEXTURES.TOWER_HOWITZER_ICON,
         cost = 20,
         range = 10,
-        props = {}
+        fire_rate = 4,
     },
     [TOWER_TYPE.REDEYE] = {
         name = "Redeye",
@@ -44,7 +44,7 @@ local TOWER_SPECS = {
         icon_texture = TEXTURES.TOWER_REDEYE_ICON,
         cost = 20,
         range = 12,
-        props = {}
+        fire_rate = 1,
     },
     [TOWER_TYPE.MOAT] = {
         name = "Moat",
@@ -54,7 +54,7 @@ local TOWER_SPECS = {
         icon_texture = TEXTURES.TOWER_MOAT_ICON,
         cost = 10,
         range = 0,
-        props = {}
+        fire_rate = 2,
     },
     [TOWER_TYPE.RADAR] = {
         name = "Radar",
@@ -64,7 +64,7 @@ local TOWER_SPECS = {
         icon_texture = TEXTURES.TOWER_RADAR_ICON,
         cost = 20,
         range = 0,
-        props = {}
+        fire_rate = 1,
     },
     [TOWER_TYPE.LIGHTHOUSE] = {
         name = "Lighthouse",
@@ -74,7 +74,7 @@ local TOWER_SPECS = {
         icon_texture = TEXTURES.TOWER_LIGHTHOUSE_ICON,
         cost = 20,
         range = 8,
-        props = {}
+        fire_rate = 1,
     },
 }
 
@@ -101,6 +101,9 @@ function get_tower_cost(tower_type)
 end
 function get_tower_range(tower_type)
     return TOWER_SPECS[tower_type].range
+end
+function get_tower_fire_rate(tower_type)
+    return TOWER_SPECS[tower_type].fire_rate
 end
 
 local function make_tower_sprite(tower_type)
@@ -143,6 +146,9 @@ local function make_tower_node(tower_type)
     if tower_type == TOWER_TYPE.REDEYE then
         return make_tower_sprite(tower_type)
 
+    elseif tower_type == TOWER_TYPE.HOWITZER then
+        return make_tower_sprite(tower_type)
+
     elseif tower_type == TOWER_TYPE.LIGHTHOUSE then
         return am.group(
             make_tower_sprite(tower_type),
@@ -165,7 +171,8 @@ local function make_tower_node(tower_type)
                 end_color_var = vec4(0.1),
                 emission_rate = 4,
                 start_particles = 4,
-                max_particles = 200
+                max_particles = 200,
+                warmup_time = 5
             }
         )
     elseif tower_type == TOWER_TYPE.WALL then
@@ -182,6 +189,9 @@ end
 local function get_tower_update_function(tower_type)
     if tower_type == TOWER_TYPE.REDEYE then
         return update_tower_redeye
+
+    elseif tower_type == TOWER_TYPE.HOWITZER then
+        return update_tower_howitzer
 
     elseif tower_type == TOWER_TYPE.LIGHTHOUSE then
         return update_tower_lighthouse
@@ -213,7 +223,19 @@ function tower_type_is_buildable_on(hex, tile, tower_type)
 
     local blocked = mobs_blocking or towers_blocking
 
-    if tower_type == TOWER_TYPE.REDEYE then
+    if tower_type == TOWER_TYPE.HOWITZER then
+        if not mobs_blocking and towers_blocking then
+            blocked = false
+            for _,tower in pairs(TOWERS) do
+                if tower.type ~= TOWER_TYPE.WALL then
+                    blocked = true
+                    break
+                end
+            end
+        end
+        return not blocked and tile.elevation >= -0.5
+
+    elseif tower_type == TOWER_TYPE.REDEYE then
         if not mobs_blocking and towers_blocking then
             blocked = false
             for _,tower in pairs(TOWERS) do
@@ -249,7 +271,7 @@ function update_tower_redeye(tower, tower_index)
     if not tower.target_index then
         for index,mob in pairs(MOBS) do
             if mob then
-                local d = math.distance(mob.position, tower.position) / (HEX_SIZE * 2)
+                local d = math.distance(mob.hex, tower.hex)
                 if d <= tower.range then
                     tower.target_index = index
                     break
@@ -260,19 +282,49 @@ function update_tower_redeye(tower, tower_index)
         if MOBS[tower.target_index] == false then
             tower.target_index = false
 
-        elseif (state.time - tower.last_shot_time) > 1 then
+        elseif (state.time - tower.last_shot_time) > tower.fire_rate then
             local mob = MOBS[tower.target_index]
 
             make_and_register_projectile(
                 tower.hex,
-                math.normalize(hex_to_pixel(mob.hex) - tower.position),
-                15,
-                5,
-                10
+                PROJECTILE_TYPE.LASER,
+                math.normalize(mob.position - tower.position)
             )
 
             tower.last_shot_time = state.time
             vplay_sfx(SOUNDS.LASER2)
+        end
+    end
+end
+
+function update_tower_howitzer(tower, tower_index)
+    if not tower.target_index then
+        for index,mob in pairs(MOBS) do
+            if mob then
+                local d = math.distance(mob.hex, tower.hex)
+                if d <= tower.range then
+                    tower.target_index = index
+                    break
+                end
+            end
+        end
+    else
+        if MOBS[tower.target_index] == false then
+            tower.target_index = false
+
+        elseif (state.time - tower.last_shot_time) > tower.fire_rate then
+            local mob = MOBS[tower.target_index]
+
+            local projectile = make_and_register_projectile(
+                tower.hex,
+                PROJECTILE_TYPE.SHELL,
+                math.normalize(mob.position - tower.position)
+            )
+
+            projectile.props.z = tower.props.z
+
+            tower.last_shot_time = state.time
+            play_sfx(SOUNDS.EXPLOSION2)
         end
     end
 end
@@ -293,6 +345,7 @@ function update_tower_lighthouse(tower, tower_index)
                 if made_it then
                     m.path = path
 
+                    --[[
                     local area = spiral_map(tower.hex, tower.range)
                     for _,h in pairs(area) do
                         local node = state.map[h.x][h.y].node"circle"
@@ -305,6 +358,7 @@ function update_tower_lighthouse(tower, tower_index)
                             am.tween(node, 0.3, { color = initial_color })
                         })
                     end
+                    ]]
                 end
             end
         end
@@ -319,30 +373,39 @@ function make_and_register_tower(hex, tower_type)
     )
 
     tower.type = tower_type
-    tower.cost = get_tower_cost(tower_type)
-    tower.range = get_tower_range(tower_type)
-    tower.last_shot_time = tower.TOB -- a tower has never shot if its TOB == its last_shot_time
 
-    for k,v in pairs(TOWER_SPECS[tower_type].props) do
-        tower[k] = v
-    end
+    local spec = get_tower_spec(tower_type)
+    tower.cost = spec.cost
+    tower.range = spec.range
+    tower.fire_rate = spec.fire_rate
+    tower.last_shot_time = -spec.fire_rate
 
     if tower_type == TOWER_TYPE.REDEYE then
+        local tile = state.map.get(hex.x, hex.y)
+        tile.elevation = tile.elevation + 0.6
+
+    elseif tower_type == TOWER_TYPE.HOWITZER then
+        local tile = state.map.get(hex.x, hex.y)
+        tile.elevation = tile.elevation + 0.6
+        tower.props.z = tile.elevation
+
     elseif tower_type == TOWER_TYPE.LIGHTHOUSE then
         tower.perimeter = ring_map(tower.hex, tower.range)
         local tile = state.map.get(hex.x, hex.y)
-        tile.elevation = tile.elevation + 0.5
+        tile.elevation = tile.elevation + 0.6
 
     elseif tower_type == TOWER_TYPE.WALL then
-        state.map.get(hex.x, hex.y).elevation = 0.5
+        state.map.get(hex.x, hex.y).elevation = 0.6
 
     elseif tower_type == TOWER_TYPE.MOAT then
-        state.map.get(hex.x, hex.y).elevation = -0.49
+        state.map.get(hex.x, hex.y).elevation = -0.6
 
     elseif tower_type == TOWER_TYPE.RADAR then
+        local tile = state.map.get(hex.x, hex.y)
+        tile.elevation = tile.elevation + 0.6
     end
 
-    register_entity(TOWERS, tower)
+    return register_entity(TOWERS, tower)
 end
 
 function build_tower(hex, tower_type)

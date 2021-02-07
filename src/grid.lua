@@ -174,7 +174,7 @@ function random_map(seed)
                 noise = noise * d^0.125 -- arbitrary, seems to work good
             end
 
-            -- light shading on edge cells @TODO replace this with a skylight, that can move
+            -- light shading on edge cells
             local mask = vec4(0, 0, 0, math.max(((evenq.x - HEX_GRID_WIDTH/2) / HEX_GRID_WIDTH) ^ 2
                                              , ((-evenq.y - HEX_GRID_HEIGHT/2) / HEX_GRID_HEIGHT) ^ 2))
             local color = color_at(noise) - mask
