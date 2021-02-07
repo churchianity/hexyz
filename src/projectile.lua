@@ -7,11 +7,11 @@ PROJECTILE_TYPE = {
     LASER = 2,
 }
 
-PROJECTILE_SPECS = {
+local PROJECTILE_SPECS = {
     [PROJECTILE_TYPE.SHELL] = {
         velocity = 13,
         damage = 20,
-        hitbox_radius = 3
+        hitbox_radius = 20
     },
     [PROJECTILE_TYPE.LASER] = {
         velocity = 25,
@@ -19,7 +19,6 @@ PROJECTILE_SPECS = {
         hitbox_radius = 10
     },
 }
-
 
 function get_projectile_velocity(projectile_type)
     return PROJECTILE_SPECS[projectile_type].velocity
@@ -34,17 +33,41 @@ function get_projectile_spec(projectile_type)
     return PROJECTILE_SPECS[projectile_type]
 end
 
-local function update_projectile_shell(projectile, projectile_index)
-    projectile.position        = projectile.position + projectile.vector * projectile.velocity
-    projectile.node.position2d = projectile.position
-    projectile.hex             = pixel_to_hex(projectile.position)
-    projectile.props.z         = projectile.props.z - 0.6 * am.delta_time
+local function make_shell_explosion_node(source_position)
+    return am.particles2d{
+        source_pos = source_position,
+        source_pos_var = vec2(4),
+        start_size = 2,
+        start_size_var = 1,
+        end_size = 0,
+        end_size_var = 0,
+        angle = 0,
+        angle_var = math.pi,
+        speed = 25,
+        speed_var = 15,
+        life = 10,
+        life_var = 1,
+        start_color = COLORS.VERY_DARK_GRAY,
+        start_color_var = vec4(0.2),
+        end_color = vec4(0),
+        end_color_var = vec4(0.1),
+        emission_rate = 100,
+        start_particles = 150,
+        max_particles = 150,
+        gravity = vec2(0, -10),
+        warmup_time = 1
+    }
+    :action(coroutine.create(function(self)
+        am.wait(am.delay(3))
+    end))
+end
 
-    if projectile.props.z <= 0 then
-        log('exploded cuz we hit da grund')
-        delete_entity(PROJECTILES, projectile_index)
-        return true
-    end
+local function update_projectile_shell(projectile, projectile_index)
+    projectile.position = projectile.position + projectile.vector * projectile.velocity
+    projectile.node.position2d = projectile.position
+    projectile.hex = pixel_to_hex(projectile.position)
+
+    projectile.props.z = projectile.props.z - 0.6 * am.delta_time
 
     -- check if we hit something
     -- get a list of hexes that could have something we could hit on them
@@ -52,30 +75,49 @@ local function update_projectile_shell(projectile, projectile_index)
     -- this is done to avoid having to check every mob on screen, though maybe it's not necessary.
     local do_explode = false
     local search_hexes = spiral_map(projectile.hex, 1)
+    local mobs = {}
     for _,hex in pairs(search_hexes) do
-
         for mob_index,mob in pairs(mobs_on_hex(hex)) do
-            if mob and circles_intersect(mob.position
-                                       , projectile.position
-                                       , mob.hurtbox_radius
-                                       , projectile.hitbox_radius) then
-                do_explode = true
-                break
+            if mob then
+                table.insert(mobs, mob_index, mob)
+
+                if circles_intersect(mob.position
+                                   , projectile.position
+                                   , mob.hurtbox_radius
+                                   , projectile.hitbox_radius) then
+                    log('exploded cuz we hit a boi')
+                    do_explode = true
+                    -- we don't break here because if we hit a mob we have to collect all the mobs on the hexes in the search space anyway
+                end
             end
         end
     end
 
+    local tile = state.map.get(projectile.hex.x, projectile.hex.y)
+    if tile and tile.elevation >= projectile.props.z then
+        log('we exploded cuz we hit something toll')
+        do_explode = true
+
+    elseif projectile.props.z <= 0 then
+        log('exploded cuz we hit da grund')
+        do_explode = true
+    end
+
     if do_explode then
-        log('exploded cuz we hit a boi')
+        log(#mobs)
+        for index,mob in pairs(mobs) do
+            do_hit_mob(mob, 1 / math.distance(mob.position, projectile.position) * projectile.damage, index)
+        end
+        WIN.scene:append(make_shell_explosion_node(projectile.position))
         delete_entity(PROJECTILES, projectile_index)
         return true
     end
 end
 
 local function update_projectile_laser(projectile, projectile_index)
-    projectile.position        = projectile.position + projectile.vector * projectile.velocity
+    projectile.position = projectile.position + projectile.vector * projectile.velocity
     projectile.node.position2d = projectile.position
-    projectile.hex             = pixel_to_hex(projectile.position)
+    projectile.hex = pixel_to_hex(projectile.position)
 
     -- check if we're out of bounds
     if not point_in_rect(projectile.position + WORLDSPACE_COORDINATE_OFFSET, {

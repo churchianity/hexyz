@@ -12,28 +12,32 @@ function update_money(diff) state.money = state.money + diff end
 
 -- top right display types
 local TRDTS = {
-    NOTHING         = 0,
-    CENTERED_EVENQ  = 1,
-    EVENQ           = 2,
-    HEX             = 3,
-    PLATFORM        = 4,
-    PERF            = 5,
-    SEED            = 6,
-    TILE            = 7,
+    NOTHING        = 0,
+    CENTERED_EVENQ = 1,
+    EVENQ          = 2,
+    HEX            = 3,
+    PLATFORM       = 4,
+    PERF           = 5,
+    SEED           = 6,
+    TILE           = 7,
 }
 
 local function get_initial_game_state(seed)
     local STARTING_MONEY = 10000
-    local map, world = random_map(seed)
+    -- 2014
+    local map, world = random_map(2014)
 
     return {
         map = map,              -- map of hex coords map[x][y] to some stuff at that location
         world = world,          -- the root scene graph node for the game 'world'
+        ui = nil,               -- unused, root scene graph node for the 'ui' stuff
 
         perf = {},              -- result of call to am.perf_stats, called every frame
-        time = 0,               -- time since game started in seconds
+        time = 0,               -- real time since game started in seconds
         score = 0,              -- current game score
         money = STARTING_MONEY, -- current money
+
+        current_wave = 0,
 
         selected_tower_type = false,
         selected_toolbelt_button = 9,
@@ -67,10 +71,6 @@ local function get_top_right_display_text(hex, evenq, centered_evenq, display_ty
     return str
 end
 
-local function handle_left_click(hex, tile, tower_type, toolbelt_button)
-
-end
-
 -- initialized later, as part of the init of the toolbelt
 function select_tower_type(tower_type) end
 
@@ -84,27 +84,29 @@ function select_toolbelt_button(i)
 end
 
 function do_day_night_cycle()
-    local tstep = (math.sin(state.time / 100) + 1) * am.delta_time
+    local tstep = (math.sin(state.time * am.delta_time) + 1) / 100
     state.world"negative_mask".color = vec4(tstep){a=1}
 end
 
 local function game_pause()
-    WIN.scene"game".paused = true
-    WIN.scene"game":append(am.group{
+    WIN.scene("game").paused = true
+
+    WIN.scene("game"):append(am.group{
         am.rect(WIN.left, WIN.bottom, WIN.right, WIN.top, COLORS.TRANSPARENT),
         am.scale(3)
         ^ am.text(string.format(
             "Paused.\nSeed: %d\nEscape to Resume\nf4 to start a new game", state.map.seed
-        ), COLORS.BLACK)
+        ), COLORS.BLACK),
     }
     :tag"pause_menu")
+
     WIN.scene:action(function()
-        if WIN:key_pressed"escape" then
-            WIN.scene:remove"pause_menu"
-            WIN.scene"game".paused = false
+        if WIN:key_pressed("escape") then
+            WIN.scene:remove("pause_menu")
+            WIN.scene("game").paused = false
             return true
 
-        elseif WIN:key_pressed"f4" then
+        elseif WIN:key_pressed("f4") then
             game_end()
             return true
         end
@@ -160,11 +162,19 @@ local function game_action(scene)
         end
     end
 
+    if WIN:mouse_pressed"middle" then
+        state.world"scale".scale2d = vec2(1)
+
+    else
+        local mwd = WIN:mouse_wheel_delta()
+        state.world"scale".scale = state.world"scale".scale + vec3(mwd, 0) / 100
+    end
+
     if WIN:key_pressed"escape" then
         game_pause()
 
     elseif WIN:key_pressed"f1" then
-        state.top_right_display_type = (state.top_right_display_type + 1) % #table.keys(TRDTS)
+        state.selected_top_right_display_type = (state.selected_top_right_display_type + 1) % #table.keys(TRDTS)
 
     elseif WIN:key_pressed"f2" then
         state.world"flow_field".hidden = not state.world"flow_field".hidden
@@ -219,7 +229,7 @@ local function make_game_toolbelt()
 
         register_button_widget("toolbelt_tower_button" .. i
                              , am.rect(x1, y1, x2, y2)
-                             , function() select_tower_type(i) end)
+                             , function() select_toolbelt_button(i) end)
 
         return am.translate(vec2(size + padding, 0) * i + offset)
             ^ am.group{
@@ -332,6 +342,7 @@ local function make_game_toolbelt()
 
             WIN.scene:action(am.play(am.sfxr_synth(SOUNDS.SELECT1), false, 1, SFX_VOLUME))
         else
+            -- de-selecting currently selected tower if any
             toolbelt("tower_select_square").hidden = true
 
             WIN.scene:replace("cursor", make_hex_cursor(0, COLORS.TRANSPARENT))
@@ -394,9 +405,9 @@ end
 
 function game_init()
     state = get_initial_game_state()
-    build_tower(HEX_GRID_CENTER, TOWER_TYPE.RADAR)
 
-    -- hack to make the center tile passable even though there's a tower on it
+    build_tower(HEX_GRID_CENTER, TOWER_TYPE.RADAR)
+    -- @HACK to make the center tile passable even though there's a tower on it
     state.map.get(HEX_GRID_CENTER.x, HEX_GRID_CENTER.y).elevation = 0
 
     WIN.scene:remove("game")

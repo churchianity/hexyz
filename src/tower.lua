@@ -321,7 +321,10 @@ function update_tower_howitzer(tower, tower_index)
                 math.normalize(mob.position - tower.position)
             )
 
-            projectile.props.z = tower.props.z
+            -- @HACK, the projectile will explode if it encounters something taller than it,
+            -- but the tower it spawns on quickly becomes taller than it, so we just pad it
+            -- if it's not enough the shell explodes before it leaves its spawning hex
+            projectile.props.z = tower.props.z + 0.1
 
             tower.last_shot_time = state.time
             play_sfx(SOUNDS.EXPLOSION2)

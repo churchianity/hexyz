@@ -86,7 +86,9 @@ local function get_spawn_hex()
     end
 
     -- @NOTE negate 'y' because hexyz algorithms assume south is positive, in amulet north is positive
-    return evenq_to_hex(vec2(x, -y))
+    local hex = evenq_to_hex(vec2(x, -y))
+
+    return hex
 end
 
 local function update_mob(mob, mob_index)
@@ -198,7 +200,7 @@ local function make_and_register_mob(mob_type)
     return mob
 end
 
-local SPAWN_CHANCE = 25
+local SPAWN_CHANCE = 50
 function do_mob_spawning()
     --if WIN:key_pressed"space" then
     if math.random(SPAWN_CHANCE) == 1 then

@@ -292,9 +292,9 @@ function parallelogram_map(width, height, seed)
     local seed = seed or math.random(width * height)
 
     local map = {}
-    for i = 0, width do
+    for i = 0, width - 1 do
         map[i] = {}
-        for j = 0, height do
+        for j = 0, height - 1 do
 
             -- Calculate Noise
             local idelta = i / width
@@ -408,6 +408,7 @@ function hexagonal_map(radius, seed)
 end
 
 -- Returns Unordered Rectangular Map of |width| and |height| with Simplex Noise
+-- @TODO - this doesn't work for pointy orientations
 function rectangular_map(width, height, seed)
     local seed = seed or math.random(width * height)
 

@@ -144,10 +144,10 @@ function random_map(seed)
     -- the world's appearance relies largely on a backdrop which can be scaled in
     -- tone to give the appearance of light or darkness
     -- @NOTE replace this with a shader program
+    -- interestingly, if it's colored white, it almost gives the impression of a winter biome
     local neg_mask = am.rect(0, 0, HEX_GRID_PIXEL_WIDTH, HEX_GRID_PIXEL_HEIGHT, COLORS.TRUE_BLACK):tag"negative_mask"
 
     local world = am.group(neg_mask):tag"world"
-    local edge_nodes = {}
     for i,_ in pairs(map) do
         for j,noise in pairs(map[i]) do
             local evenq = hex_to_evenq(vec2(i, j))
@@ -156,9 +156,6 @@ function random_map(seed)
             or -evenq.y == 0 or -evenq.y == (HEX_GRID_HEIGHT - 1) then
                 -- if we're on an edge -- terraform edges to be passable
                 noise = 0
-
-                -- it's nice to also store the coords for edge nodes in a separate table for later
-                table.insert(edge_nodes, vec2(i, j))
 
             elseif j == HEX_GRID_CENTER.y and i == HEX_GRID_CENTER.x then
                 -- also terraform the center of the grid to be passable

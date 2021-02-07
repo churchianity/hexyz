@@ -11,6 +11,7 @@ end
 
 TEXTURES = {
     LOGO                    = load_texture("res/logo.png"),
+    GEM1                    = load_texture("res/gem1.png"),
 
     BUTTON1                 = load_texture("res/button1.png"),
     WIDER_BUTTON1           = load_texture("res/wider_button1.png"),
