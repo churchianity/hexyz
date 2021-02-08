@@ -11,13 +11,16 @@ MOB_SIZE = MAX_MOB_SIZE
 
 MOB_SPECS = {
     [MOB_TYPE.BEEPER] = {
-        health = 10,
+        health = 20,
         speed = 10,
         bounty = 5,
         hurtbox_radius = MOB_SIZE/2
     }
 }
 
+function get_mob_health(mob_type)
+    return MOB_SPECS[mob_type].health
+end
 function get_mob_spec(mob_type)
     return MOB_SPECS[mob_type]
 end
@@ -60,7 +63,7 @@ function do_hit_mob(mob, damage, mob_index)
         mob_die(mob, mob_index)
     else
         mob.healthbar:action(coroutine.create(function(self)
-            self:child(2).x2 = -HEALTHBAR_WIDTH/2 + mob.health/10 * HEALTHBAR_WIDTH/2
+            self:child(2).x2 = -HEALTHBAR_WIDTH/2 + mob.health/get_mob_health(mob.type) * HEALTHBAR_WIDTH/2
             self.hidden = false
             am.wait(am.delay(0.8))
             self.hidden = true
@@ -189,6 +192,7 @@ local function update_mob(mob, mob_index)
         if mob_can_pass_through(mob, mob.frame_target) then
             local from = state.map.get(mob.hex.x, mob.hex.y)
             local to = state.map.get(mob.frame_target.x, mob.frame_target.y)
+            -- @FIXME changing this '4' constant to '1' breaks mob pathing and I don't know why
             local rate = 4 * mob.speed * am.delta_time - math.abs(from.elevation - to.elevation)
 
             mob.position = mob.position + math.normalize(hex_to_pixel(mob.frame_target) - mob.position) * rate
