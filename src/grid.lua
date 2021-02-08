@@ -55,16 +55,16 @@ function tile_is_medium_elevation(tile)
 end
 
 function color_at(elevation)
-    if elevation <= -0.5 then -- lowest elevation
+    if elevation < -0.5 then -- lowest elevation
         return COLORS.WATER{ a = (elevation + 1.4) / 2 + 0.2 }
 
-    elseif elevation <= 0 then -- med-low elevation
+    elseif elevation < 0 then -- med-low elevation
         return math.lerp(COLORS.DIRT, COLORS.GRASS, elevation + 0.5){ a = (elevation + 1.8) / 2 + 0.3 }
 
-    elseif elevation <= 0.5 then -- med-high elevation
+    elseif elevation < 0.5 then -- med-high elevation
         return math.lerp(COLORS.DIRT, COLORS.GRASS, elevation + 0.5){ a = (elevation + 1.6) / 2 + 0.3 }
 
-    elseif elevation <= 1 then     -- high elevation
+    elseif elevation < 1 then     -- high elevation
         return COLORS.MOUNTAIN{ ra = elevation }
     end
 end
@@ -76,7 +76,10 @@ end
 function grid_cost(map, from, to)
     local t1, t2 = map.get(from.x, from.y), map.get(to.x, to.y)
 
-    local elevation_epsilon = HEX_GRID_MAXIMUM_ELEVATION - HEX_GRID_MINIMUM_ELEVATION
+    -- i have no fucking clue why, but adding +0.2 to the end of this fixes a bug where sometimes two (or more)
+    -- equivalent paths are found and mobs backpedal trying to decide between them
+    -- (seed 2014 at time of writing has this at the bottom)
+    local elevation_epsilon = HEX_GRID_MAXIMUM_ELEVATION - HEX_GRID_MINIMUM_ELEVATION + 0.2
     local elevation_cost = math.abs(math.abs(t1.elevation)^0.5
                                   - math.abs(t2.elevation)^0.5)
 

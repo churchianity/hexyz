@@ -50,18 +50,39 @@ function mob_die(mob, mob_index)
     delete_entity(MOBS, mob_index)
 end
 
+local HEALTHBAR_WIDTH = HEX_PIXEL_WIDTH/2
+local HEALTHBAR_HEIGHT = HEALTHBAR_WIDTH/4
 function do_hit_mob(mob, damage, mob_index)
     mob.health = mob.health - damage
     if mob.health <= 0 then
         update_score(mob.bounty)
         update_money(mob.bounty)
         mob_die(mob, mob_index)
+    else
+        mob.healthbar:action(coroutine.create(function(self)
+            self:child(2).x2 = -HEALTHBAR_WIDTH/2 + mob.health/10 * HEALTHBAR_WIDTH/2
+            self.hidden = false
+            am.wait(am.delay(0.8))
+            self.hidden = true
+        end))
     end
 end
 
--- @TODO performance.
--- try reducing map size by identifying key nodes (inflection points)
--- there are performance hits everytime we spawn a mob and it's Astar's fault
+function make_mob_node(mob_type, mob)
+    local healthbar = am.group{
+        am.rect(-HEALTHBAR_WIDTH/2, -HEALTHBAR_HEIGHT/2, HEALTHBAR_WIDTH/2, HEALTHBAR_HEIGHT/2, COLORS.VERY_DARK_GRAY),
+        am.rect(-HEALTHBAR_WIDTH/2, -HEALTHBAR_HEIGHT/2, HEALTHBAR_WIDTH/2, HEALTHBAR_HEIGHT/2, COLORS.GREEN_YELLOW)
+    }
+    healthbar.hidden = true
+
+    return am.group{
+        am.rotate(state.time)
+        ^ pack_texture_into_sprite(TEXTURES.MOB_BEEPER, MOB_SIZE, MOB_SIZE),
+        am.translate(0, -10)
+        ^ healthbar
+    }
+end
+
 function get_mob_path(mob, map, start, goal)
     return Astar(map, goal, start, grid_heuristic, grid_cost)
 end
@@ -105,8 +126,7 @@ local function update_mob(mob, mob_index)
     if last_frame_hex ~= mob.hex or not mob.frame_target then
         local frame_target, tile = false, false
         if mob.path then
-            --log('A*')
-            -- we have an explicitly stored target
+            -- we (should) have an explicitly stored target
             local path_entry = mob.path[mob.hex.x] and mob.path[mob.hex.x][mob.hex.y]
 
             if not path_entry then
@@ -119,10 +139,8 @@ local function update_mob(mob, mob_index)
             mob.frame_target = path_entry.hex
 
             -- check if our target is valid, and if it's not we aren't going to move this frame.
-            -- recalculate our path.
             if last_frame_hex ~= mob.hex and not mob_can_pass_through(mob, mob.frame_target) then
-                log('recalc')
-                mob.path = get_mob_path(mob, HEX_MAP, mob.hex, HEX_GRID_CENTER)
+                mob.path = false
                 mob.frame_target = false
             end
         else
@@ -137,6 +155,13 @@ local function update_mob(mob, mob_index)
 
                 for _,n in pairs(neighbours) do
                     tile = state.map.get(n.x, n.y)
+
+                    if not tile.priority then
+                        -- if there's no stored priority, that should mean it's the center tile
+                        mob.frame_target = n
+                        break
+                    end
+
                     local current_cost = tile.priority
 
                     if current_cost and current_cost < lowest_cost then
@@ -162,7 +187,9 @@ local function update_mob(mob, mob_index)
         -- or between when we last calculated this target and now
         -- check for that now
         if mob_can_pass_through(mob, mob.frame_target) then
-            local rate = 4 * mob.speed * am.delta_time
+            local from = state.map.get(mob.hex.x, mob.hex.y)
+            local to = state.map.get(mob.frame_target.x, mob.frame_target.y)
+            local rate = 4 * mob.speed * am.delta_time - math.abs(from.elevation - to.elevation)
 
             mob.position = mob.position + math.normalize(hex_to_pixel(mob.frame_target) - mob.position) * rate
             mob.node.position2d = mob.position
@@ -184,7 +211,7 @@ end
 local function make_and_register_mob(mob_type)
     local mob = make_basic_entity(
         get_spawn_hex(),
-        am.rotate(state.time) ^ pack_texture_into_sprite(TEXTURES.MOB_BEEPER, MOB_SIZE, MOB_SIZE),
+        make_mob_node(mob_type),
         update_mob
     )
 
@@ -195,12 +222,13 @@ local function make_and_register_mob(mob_type)
     mob.speed = spec.speed
     mob.bounty = spec.bounty
     mob.hurtbox_radius = spec.hurtbox_radius
+    mob.healthbar = mob.node:child(1):child(2):child(1)
 
     register_entity(MOBS, mob)
     return mob
 end
 
-local SPAWN_CHANCE = 50
+local SPAWN_CHANCE = 25
 function do_mob_spawning()
     --if WIN:key_pressed"space" then
     if math.random(SPAWN_CHANCE) == 1 then

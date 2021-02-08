@@ -35,7 +35,7 @@ end
 
 local function make_shell_explosion_node(source_position)
     return am.particles2d{
-        source_pos = source_position,
+        source_pos = source_position + WORLDSPACE_COORDINATE_OFFSET,
         source_pos_var = vec2(4),
         start_size = 2,
         start_size_var = 1,
@@ -43,17 +43,17 @@ local function make_shell_explosion_node(source_position)
         end_size_var = 0,
         angle = 0,
         angle_var = math.pi,
-        speed = 25,
-        speed_var = 15,
-        life = 10,
+        speed = 85,
+        speed_var = 45,
+        life = 2,
         life_var = 1,
         start_color = COLORS.VERY_DARK_GRAY,
         start_color_var = vec4(0.2),
         end_color = vec4(0),
         end_color_var = vec4(0.1),
-        emission_rate = 100,
-        start_particles = 150,
-        max_particles = 150,
+        emission_rate = 0,
+        start_particles = 100,
+        max_particles = 100,
         gravity = vec2(0, -10),
         warmup_time = 1
     }
@@ -62,12 +62,23 @@ local function make_shell_explosion_node(source_position)
     end))
 end
 
+local SHELL_GRAVITY = 0.6
 local function update_projectile_shell(projectile, projectile_index)
     projectile.position = projectile.position + projectile.vector * projectile.velocity
+
+    if not point_in_rect(projectile.position + WORLDSPACE_COORDINATE_OFFSET, {
+        x1 = WIN.left,
+        y1 = WIN.bottom,
+        x2 = WIN.right,
+        y2 = WIN.top
+    }) then
+        delete_entity(PROJECTILES, projectile_index)
+        return true
+    end
+
     projectile.node.position2d = projectile.position
     projectile.hex = pixel_to_hex(projectile.position)
-
-    projectile.props.z = projectile.props.z - 0.6 * am.delta_time
+    projectile.props.z = projectile.props.z - SHELL_GRAVITY * am.delta_time
 
     -- check if we hit something
     -- get a list of hexes that could have something we could hit on them
@@ -77,15 +88,14 @@ local function update_projectile_shell(projectile, projectile_index)
     local search_hexes = spiral_map(projectile.hex, 1)
     local mobs = {}
     for _,hex in pairs(search_hexes) do
-        for mob_index,mob in pairs(mobs_on_hex(hex)) do
+        for index,mob in pairs(mobs_on_hex(hex)) do
             if mob then
-                table.insert(mobs, mob_index, mob)
+                table.insert(mobs, index, mob)
 
                 if circles_intersect(mob.position
                                    , projectile.position
                                    , mob.hurtbox_radius
                                    , projectile.hitbox_radius) then
-                    log('exploded cuz we hit a boi')
                     do_explode = true
                     -- we don't break here because if we hit a mob we have to collect all the mobs on the hexes in the search space anyway
                 end
@@ -95,18 +105,16 @@ local function update_projectile_shell(projectile, projectile_index)
 
     local tile = state.map.get(projectile.hex.x, projectile.hex.y)
     if tile and tile.elevation >= projectile.props.z then
-        log('we exploded cuz we hit something toll')
         do_explode = true
 
     elseif projectile.props.z <= 0 then
-        log('exploded cuz we hit da grund')
         do_explode = true
     end
 
     if do_explode then
-        log(#mobs)
         for index,mob in pairs(mobs) do
-            do_hit_mob(mob, 1 / math.distance(mob.position, projectile.position) * projectile.damage, index)
+            local damage = (1 / (math.distance(mob.position, projectile.position) / (HEX_PIXEL_WIDTH * 2))) * projectile.damage
+            do_hit_mob(mob, damage, index)
         end
         WIN.scene:append(make_shell_explosion_node(projectile.position))
         delete_entity(PROJECTILES, projectile_index)
@@ -116,8 +124,6 @@ end
 
 local function update_projectile_laser(projectile, projectile_index)
     projectile.position = projectile.position + projectile.vector * projectile.velocity
-    projectile.node.position2d = projectile.position
-    projectile.hex = pixel_to_hex(projectile.position)
 
     -- check if we're out of bounds
     if not point_in_rect(projectile.position + WORLDSPACE_COORDINATE_OFFSET, {
@@ -129,6 +135,9 @@ local function update_projectile_laser(projectile, projectile_index)
         delete_entity(PROJECTILES, projectile_index)
         return true
     end
+
+    projectile.node.position2d = projectile.position
+    projectile.hex = pixel_to_hex(projectile.position)
 
     -- check if we hit something
     -- get a list of hexes that could have something we could hit on them

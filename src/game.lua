@@ -93,7 +93,7 @@ local function game_pause()
 
     WIN.scene("game"):append(am.group{
         am.rect(WIN.left, WIN.bottom, WIN.right, WIN.top, COLORS.TRANSPARENT),
-        am.scale(3)
+        am.scale(2)
         ^ am.text(string.format(
             "Paused.\nSeed: %d\nEscape to Resume\nf4 to start a new game", state.map.seed
         ), COLORS.BLACK),
@@ -163,11 +163,11 @@ local function game_action(scene)
     end
 
     if WIN:mouse_pressed"middle" then
-        state.world"scale".scale2d = vec2(1)
+        WIN.scene("world_scale").scale2d = vec2(1)
 
     else
         local mwd = WIN:mouse_wheel_delta()
-        state.world"scale".scale = state.world"scale".scale + vec3(mwd, 0) / 100
+        WIN.scene("world_scale").scale2d = WIN.scene("world_scale").scale2d + vec2(mwd) / 100
     end
 
     if WIN:key_pressed"escape" then
@@ -389,7 +389,7 @@ function game_scene()
     end))
 
     local scene = am.group{
-        state.world,
+        am.scale(1):tag"world_scale" ^ state.world,
         am.translate(OFF_SCREEN):tag"cursor_translate" ^ make_hex_cursor(0, COLORS.TRANSPARENT),
         score,
         money,

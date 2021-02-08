@@ -215,11 +215,11 @@ end
 function tower_type_is_buildable_on(hex, tile, tower_type)
     if not tower_type then return false end
 
-    local blocking_towers       = towers_on_hex(hex)
-    local blocking_mobs         = mobs_on_hex(hex)
+    local blocking_towers = towers_on_hex(hex)
+    local blocking_mobs = mobs_on_hex(hex)
 
-    local towers_blocking       = #blocking_towers ~= 0
-    local mobs_blocking         = #blocking_mobs ~= 0
+    local towers_blocking = #blocking_towers ~= 0
+    local mobs_blocking = #blocking_mobs ~= 0
 
     local blocked = mobs_blocking or towers_blocking
 
@@ -368,6 +368,7 @@ function update_tower_lighthouse(tower, tower_index)
     end
 end
 
+local TOWER_HEIGHT = 0.6
 function make_and_register_tower(hex, tower_type)
     local tower = make_basic_entity(
         hex,
@@ -385,27 +386,27 @@ function make_and_register_tower(hex, tower_type)
 
     if tower_type == TOWER_TYPE.REDEYE then
         local tile = state.map.get(hex.x, hex.y)
-        tile.elevation = tile.elevation + 0.6
+        tile.elevation = tile.elevation + TOWER_HEIGHT
 
     elseif tower_type == TOWER_TYPE.HOWITZER then
         local tile = state.map.get(hex.x, hex.y)
-        tile.elevation = tile.elevation + 0.6
+        tile.elevation = tile.elevation + TOWER_HEIGHT
         tower.props.z = tile.elevation
 
     elseif tower_type == TOWER_TYPE.LIGHTHOUSE then
         tower.perimeter = ring_map(tower.hex, tower.range)
         local tile = state.map.get(hex.x, hex.y)
-        tile.elevation = tile.elevation + 0.6
+        tile.elevation = tile.elevation + TOWER_HEIGHT
 
     elseif tower_type == TOWER_TYPE.WALL then
-        state.map.get(hex.x, hex.y).elevation = 0.6
+        state.map.get(hex.x, hex.y).elevation = TOWER_HEIGHT
 
     elseif tower_type == TOWER_TYPE.MOAT then
-        state.map.get(hex.x, hex.y).elevation = -0.6
+        state.map.get(hex.x, hex.y).elevation = -TOWER_HEIGHT
 
     elseif tower_type == TOWER_TYPE.RADAR then
         local tile = state.map.get(hex.x, hex.y)
-        tile.elevation = tile.elevation + 0.6
+        tile.elevation = tile.elevation + TOWER_HEIGHT
     end
 
     return register_entity(TOWERS, tower)
