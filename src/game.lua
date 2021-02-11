@@ -25,7 +25,7 @@ local TRDTS = {
 local function get_initial_game_state(seed)
     local STARTING_MONEY = 10000
     -- 2014
-    local map, world = random_map(2014)
+    local map, world = random_map()
 
     return {
         map = map,              -- map of hex coords map[x][y] to some stuff at that location
@@ -38,11 +38,22 @@ local function get_initial_game_state(seed)
         money = STARTING_MONEY, -- current money
 
         current_wave = 0,
+        time_until_next_wave = 15,
+        time_until_next_break = 0,
+        spawning = false,
 
         selected_tower_type = false,
         selected_toolbelt_button = 9,
         selected_top_right_display_type = TRDTS.SEED,
     }
+end
+
+local function get_wave_timer_text()
+    if state.spawning then
+        return string.format("wave over: %.2f", state.time_until_next_break)
+    else
+        return string.format("next wave: %.2f", state.time_until_next_wave)
+    end
 end
 
 local function get_top_right_display_text(hex, evenq, centered_evenq, display_type)
@@ -85,7 +96,7 @@ end
 
 function do_day_night_cycle()
     local tstep = (math.sin(state.time * am.delta_time) + 1) / 100
-    state.world"negative_mask".color = vec4(tstep){a=1}
+    --state.world"negative_mask".color = vec4(tstep){a=1}
 end
 
 local function game_pause()
@@ -113,12 +124,40 @@ local function game_pause()
     end)
 end
 
+local function get_wave_time(current_wave)
+    return 30
+end
+
+local function get_break_time(current_wave)
+    return 15
+end
+
 local function game_action(scene)
     if state.score < 0 then game_end() return true end
 
     state.perf  = am.perf_stats()
     state.time  = state.time + am.delta_time
     state.score = state.score + am.delta_time
+
+    if state.spawning then
+        state.time_until_next_break = state.time_until_next_break - am.delta_time
+
+        if state.time_until_next_break <= 0 then
+            state.time_until_next_break = 0
+
+            state.spawning = false
+            state.time_until_next_wave = get_wave_time(state.current_wave)
+        end
+    else
+        state.time_until_next_wave = state.time_until_next_wave - am.delta_time
+
+        if state.time_until_next_wave <= 0 then
+            state.time_until_next_wave = 0
+
+            state.spawning = true
+            state.time_until_next_break = get_break_time(state.current_wave)
+        end
+    end
 
     local mouse          = WIN:mouse_position()
     local hex            = pixel_to_hex(mouse - WORLDSPACE_COORDINATE_OFFSET)
@@ -165,9 +204,9 @@ local function game_action(scene)
     if WIN:mouse_pressed"middle" then
         WIN.scene("world_scale").scale2d = vec2(1)
 
-    else
+    elseif WIN:key_down"lctrl" then
         local mwd = WIN:mouse_wheel_delta()
-        WIN.scene("world_scale").scale2d = WIN.scene("world_scale").scale2d + vec2(mwd) / 100
+        WIN.scene("world_scale").scale2d = WIN.scene("world_scale").scale2d + vec2(mwd.y) / 100
     end
 
     if WIN:key_pressed"escape" then
@@ -204,9 +243,6 @@ local function game_action(scene)
     do_gui_updates()
     do_day_night_cycle()
 
-    WIN.scene("top_right_display").text = get_top_right_display_text(hex, evenq, centered_evenq, state.selected_top_right_display_type)
-    WIN.scene("score").text = string.format("SCORE: %.2f", state.score)
-    WIN.scene("money").text = string.format("MONEY: %d", state.money)
     if interactable then
         WIN.scene("cursor").hidden = false
 
@@ -218,6 +254,11 @@ local function game_action(scene)
     else
         WIN.scene("cursor").hidden = true
     end
+
+    WIN.scene("score").text = string.format("SCORE: %.2f", state.score)
+    WIN.scene("money").text = string.format("MONEY: %d", state.money)
+    WIN.scene("wave_timer").text = get_wave_timer_text()
+    WIN.scene("top_right_display").text = get_top_right_display_text(hex, evenq, centered_evenq, state.selected_top_right_display_type)
 end
 
 local function make_game_toolbelt()
@@ -378,6 +419,10 @@ function game_scene()
     local money = am.translate(WIN.left + 10, WIN.top - 40)
                   ^ am.text("", "left"):tag"money"
 
+    local wave_timer = am.translate(0, WIN.top - 30)
+                       ^ am.scale(1.5)
+                       ^ am.text(string.format("Next Wave: %d", state.time_until_next_wave)):tag"wave_timer"
+
     local top_right_display = am.translate(WIN.right - 10, WIN.top - 20)
                               ^ am.text("", "right", "top"):tag"top_right_display"
 
@@ -393,6 +438,7 @@ function game_scene()
         am.translate(OFF_SCREEN):tag"cursor_translate" ^ make_hex_cursor(0, COLORS.TRANSPARENT),
         score,
         money,
+        wave_timer,
         top_right_display,
         make_game_toolbelt(),
         curtain,

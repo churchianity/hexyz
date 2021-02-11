@@ -21,6 +21,7 @@ TEXTURES = {
     TOWER_WALL              = load_texture("res/tower_wall.png"),
     TOWER_WALL_ICON         = load_texture("res/tower_wall_icon.png"),
     TOWER_HOWITZER          = load_texture("res/tower_howitzer.png"),
+    CANNON1                 = load_texture("res/cannon1.png"),
     TOWER_HOWITZER_ICON     = load_texture("res/tower_howitzer_icon.png"),
     TOWER_REDEYE            = load_texture("res/tower_redeye.png"),
     TOWER_REDEYE_ICON       = load_texture("res/tower_redeye_icon.png"),
@@ -33,6 +34,7 @@ TEXTURES = {
 
     -- mob stuff
     MOB_BEEPER          = load_texture("res/mob_beeper.png"),
+    MOB_SPOODER         = load_texture("res/mob_spooder.png"),
 }
 
 function pack_texture_into_sprite(texture, width, height)

@@ -18,7 +18,7 @@ TOWER_TYPE = {
 TOWER_SPECS = {
     [TOWER_TYPE.WALL] = {
         name = "Wall",
-        placement_rules_text = "Place on grass or dirt",
+        placement_rules_text = "Place on Ground",
         short_description = "Restricts movement",
         texture = TEXTURES.TOWER_WALL,
         icon_texture = TEXTURES.TOWER_WALL_ICON,
@@ -27,9 +27,9 @@ TOWER_SPECS = {
         fire_rate = 2,
     },
     [TOWER_TYPE.HOWITZER] = {
-        name = "HOWITZER",
+        name = "Howitzer",
         placement_rules_text = "Place on non-Water",
-        short_description = "Fires artillery. Range and cost increase with elevation of terrain underneath.",
+        short_description = "Fires artillery. Range increases with elevation of terrain underneath.",
         texture = TEXTURES.TOWER_HOWITZER,
         icon_texture = TEXTURES.TOWER_HOWITZER_ICON,
         cost = 20,
@@ -48,7 +48,7 @@ TOWER_SPECS = {
     },
     [TOWER_TYPE.MOAT] = {
         name = "Moat",
-        placement_rules_text = "Place on grass or dirt",
+        placement_rules_text = "Place on Ground",
         short_description = "Restricts movement",
         texture = TEXTURES.TOWER_MOAT,
         icon_texture = TEXTURES.TOWER_MOAT_ICON,
@@ -58,7 +58,7 @@ TOWER_SPECS = {
     },
     [TOWER_TYPE.RADAR] = {
         name = "Radar",
-        placement_rules_text = "Place on any non-water",
+        placement_rules_text = "Place on any non-Water",
         short_description = "Provides information about incoming waves.",
         texture = TEXTURES.TOWER_RADAR,
         icon_texture = TEXTURES.TOWER_RADAR_ICON,
@@ -68,7 +68,7 @@ TOWER_SPECS = {
     },
     [TOWER_TYPE.LIGHTHOUSE] = {
         name = "Lighthouse",
-        placement_rules_text = "Place next to - but not on - Water or Moats",
+        placement_rules_text = "Place on Ground, adjacent to Water or Moats",
         short_description = "Attracts nearby mobs; temporarily redirects their path",
         texture = TEXTURES.TOWER_LIGHTHOUSE,
         icon_texture = TEXTURES.TOWER_LIGHTHOUSE_ICON,
@@ -147,10 +147,12 @@ local function make_tower_node(tower_type)
         return make_tower_sprite(tower_type)
 
     elseif tower_type == TOWER_TYPE.HOWITZER then
-        return make_tower_sprite(tower_type)
-
+        return am.group{
+            make_tower_sprite(tower_type),
+            am.rotate(0) ^ am.sprite("res/cannon1.png")
+        }
     elseif tower_type == TOWER_TYPE.LIGHTHOUSE then
-        return am.group(
+        return am.group{
             make_tower_sprite(tower_type),
             am.particles2d{
                 source_pos = vec2(0, 12),
@@ -174,12 +176,12 @@ local function make_tower_node(tower_type)
                 max_particles = 200,
                 warmup_time = 5
             }
-        )
+        }
     elseif tower_type == TOWER_TYPE.WALL then
         return am.circle(vec2(0), HEX_SIZE, COLORS.VERY_DARK_GRAY, 6)
 
     elseif tower_type == TOWER_TYPE.MOAT then
-        return am.circle(vec2(0), HEX_SIZE, (COLORS.WATER){a=1}, 6)
+        return am.circle(vec2(0), HEX_SIZE, COLORS.WATER{a=1}, 6)
 
     elseif tower_type == TOWER_TYPE.RADAR then
         return make_tower_sprite(tower_type)
@@ -226,7 +228,7 @@ function tower_type_is_buildable_on(hex, tile, tower_type)
     if tower_type == TOWER_TYPE.HOWITZER then
         if not mobs_blocking and towers_blocking then
             blocked = false
-            for _,tower in pairs(TOWERS) do
+            for _,tower in pairs(blocking_towers) do
                 if tower.type ~= TOWER_TYPE.WALL then
                     blocked = true
                     break
@@ -238,7 +240,7 @@ function tower_type_is_buildable_on(hex, tile, tower_type)
     elseif tower_type == TOWER_TYPE.REDEYE then
         if not mobs_blocking and towers_blocking then
             blocked = false
-            for _,tower in pairs(TOWERS) do
+            for _,tower in pairs(blocking_towers) do
                 if tower.type ~= TOWER_TYPE.WALL then
                     blocked = true
                     break
@@ -314,22 +316,28 @@ function update_tower_howitzer(tower, tower_index)
 
         elseif (state.time - tower.last_shot_time) > tower.fire_rate then
             local mob = MOBS[tower.target_index]
+            local theta = math.atan((tower.hex.y - mob.hex.y)/(tower.hex.x - mob.hex.x))
 
-            local projectile = make_and_register_projectile(
-                tower.hex,
-                PROJECTILE_TYPE.SHELL,
-                math.normalize(mob.position - tower.position)
-            )
+            if (theta - tower.node("rotate").angle) < 0.1 then
+                local projectile = make_and_register_projectile(
+                    tower.hex,
+                    PROJECTILE_TYPE.SHELL,
+                    math.normalize(mob.position - tower.position)
+                )
 
-            -- @HACK, the projectile will explode if it encounters something taller than it,
-            -- but the tower it spawns on quickly becomes taller than it, so we just pad it
-            -- if it's not enough the shell explodes before it leaves its spawning hex
-            projectile.props.z = tower.props.z + 0.1
+                -- @HACK, the projectile will explode if it encounters something taller than it,
+                -- but the tower it spawns on quickly becomes taller than it, so we just pad it
+                -- if it's not enough the shell explodes before it leaves its spawning hex
+                projectile.props.z = tower.props.z + 0.1
 
-            tower.last_shot_time = state.time
-            play_sfx(SOUNDS.EXPLOSION2)
+                tower.last_shot_time = state.time
+                play_sfx(SOUNDS.EXPLOSION2)
+            end
+        else
+            tower.node("rotate").angle = tower.node("rotate").angle + state.time * 0.5
         end
     end
+    tower.node("rotate").angle = math.wrapf(tower.node("rotate").angle, math.pi*2)
 end
 
 function update_tower_lighthouse(tower, tower_index)
@@ -368,7 +376,7 @@ function update_tower_lighthouse(tower, tower_index)
     end
 end
 
-local TOWER_HEIGHT = 0.6
+local TOWER_HEIGHT = 1
 function make_and_register_tower(hex, tower_type)
     local tower = make_basic_entity(
         hex,
@@ -409,7 +417,8 @@ function make_and_register_tower(hex, tower_type)
         tile.elevation = tile.elevation + TOWER_HEIGHT
     end
 
-    return register_entity(TOWERS, tower)
+    register_entity(TOWERS, tower)
+    return tower
 end
 
 function build_tower(hex, tower_type)

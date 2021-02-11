@@ -4,6 +4,7 @@ MOBS = {}
 
 MOB_TYPE = {
     BEEPER = 1,
+    SPOODER = 2
 }
 
 MAX_MOB_SIZE = hex_height(HEX_SIZE, ORIENTATION.FLAT) / 2
@@ -11,6 +12,12 @@ MOB_SIZE = MAX_MOB_SIZE
 
 MOB_SPECS = {
     [MOB_TYPE.BEEPER] = {
+        health = 30,
+        speed = 8,
+        bounty = 15,
+        hurtbox_radius = MOB_SIZE/2
+    },
+    [MOB_TYPE.SPOODER] = {
         health = 20,
         speed = 10,
         bounty = 5,
@@ -73,24 +80,32 @@ end
 
 function make_mob_node(mob_type, mob)
     local healthbar = am.group{
-        am.rect(-HEALTHBAR_WIDTH/2, -HEALTHBAR_HEIGHT/2, HEALTHBAR_WIDTH/2, HEALTHBAR_HEIGHT/2, COLORS.VERY_DARK_GRAY),
+        --am.rect(-HEALTHBAR_WIDTH/2, -HEALTHBAR_HEIGHT/2, HEALTHBAR_WIDTH/2, HEALTHBAR_HEIGHT/2, COLORS.VERY_DARK_GRAY),
         am.rect(-HEALTHBAR_WIDTH/2, -HEALTHBAR_HEIGHT/2, HEALTHBAR_WIDTH/2, HEALTHBAR_HEIGHT/2, COLORS.GREEN_YELLOW)
     }
     healthbar.hidden = true
 
-    return am.group{
-        am.rotate(state.time)
-        ^ pack_texture_into_sprite(TEXTURES.MOB_BEEPER, MOB_SIZE, MOB_SIZE),
-        am.translate(0, -10)
-        ^ healthbar
-    }
+    if mob_type == MOB_TYPE.BEEPER then
+        return am.group{
+            am.rotate(state.time)
+            ^ pack_texture_into_sprite(TEXTURES.MOB_BEEPER, MOB_SIZE, MOB_SIZE),
+            am.translate(0, -10)
+            ^ healthbar
+        }
+    elseif mob_type == MOB_TYPE.SPOODER then
+        return am.group{
+            am.rotate(0)
+            ^ pack_texture_into_sprite(TEXTURES.MOB_SPOODER, MOB_SIZE, MOB_SIZE),
+            am.translate(0, -10)
+            ^ healthbar
+        }
+    end
 end
 
 function get_mob_path(mob, map, start, goal)
     return Astar(map, goal, start, grid_heuristic, grid_cost)
 end
 
--- @FIXME there's a bug here where the position of the spawn hex is sometimes 1 closer to the center than we want
 local function get_spawn_hex()
     -- ensure we spawn on an random tile along the map's edges
     local roll = math.random(HEX_GRID_WIDTH * 2 + HEX_GRID_HEIGHT * 2) - 1
@@ -115,7 +130,7 @@ local function get_spawn_hex()
     return hex
 end
 
-local function update_mob(mob, mob_index)
+local function resolve_frame_target_for_mob(mob)
     local last_frame_hex = mob.hex
     mob.hex = pixel_to_hex(mob.position)
 
@@ -161,7 +176,8 @@ local function update_mob(mob, mob_index)
 
                     if not tile.priority then
                         -- if there's no stored priority, that should mean it's the center tile
-                        mob.frame_target = n
+                        -- in which case, it should be the best target
+                        lowest_cost_hex = n
                         break
                     end
 
@@ -179,21 +195,48 @@ local function update_mob(mob, mob_index)
             end
         end
     end
+end
 
-    if mob.frame_target and mob.frame_target == last_frame_hex then
-        log('backpedaling')
-    end
+local function update_mob_spooder(mob, mob_index)
+    resolve_frame_target_for_mob(mob)
 
-    -- do movement
     if mob.frame_target then
+        -- do movement
         -- it's totally possible that the target we have was invalidated by a tower placed this frame,
         -- or between when we last calculated this target and now
         -- check for that now
         if mob_can_pass_through(mob, mob.frame_target) then
             local from = state.map.get(mob.hex.x, mob.hex.y)
             local to = state.map.get(mob.frame_target.x, mob.frame_target.y)
-            -- @FIXME changing this '4' constant to '1' breaks mob pathing and I don't know why
-            local rate = 4 * mob.speed * am.delta_time - math.abs(from.elevation - to.elevation)
+            local rate = (math.abs(from.elevation - to.elevation) * 100) * mob.speed * am.delta_time
+
+            mob.position = mob.position + math.normalize(hex_to_pixel(mob.frame_target) - mob.position) * rate
+            mob.node.position2d = mob.position
+        else
+            mob.frame_target = false
+        end
+    else
+        log('no target')
+    end
+
+    -- passive animation
+    if math.random() < 0.1 then
+        mob.node"rotate":action(am.tween(0.3, { angle = math.random(math.rad(0, -180))}))
+    end
+end
+
+local function update_mob_beeper(mob, mob_index)
+    resolve_frame_target_for_mob(mob)
+
+    if mob.frame_target then
+        -- do movement
+        -- it's totally possible that the target we have was invalidated by a tower placed this frame,
+        -- or between when we last calculated this target and now
+        -- check for that now
+        if mob_can_pass_through(mob, mob.frame_target) then
+            local from = state.map.get(mob.hex.x, mob.hex.y)
+            local to = state.map.get(mob.frame_target.x, mob.frame_target.y)
+            local rate = (4 * mob.speed - math.abs(to.elevation - from.elevation)) * am.delta_time
 
             mob.position = mob.position + math.normalize(hex_to_pixel(mob.frame_target) - mob.position) * rate
             mob.node.position2d = mob.position
@@ -212,21 +255,40 @@ local function update_mob(mob, mob_index)
     end
 end
 
+local function get_mob_update_function(mob_type)
+    if mob_type == MOB_TYPE.BEEPER then
+        return update_mob_beeper
+
+    elseif mob_type == MOB_TYPE.SPOODER then
+        return update_mob_spooder
+    end
+end
+
+local function grow_mob_health(mob_type, spec_health, time)
+    return spec_health * math.log(time)
+end
+local function grow_mob_speed(mob_type, spec_speed, time)
+    return spec_speed
+end
+local function grow_mob_bounty(mob_type, spec_speed, time)
+    return spec_speed * math.log(time)
+end
+
 local function make_and_register_mob(mob_type)
     local mob = make_basic_entity(
         get_spawn_hex(),
         make_mob_node(mob_type),
-        update_mob
+        get_mob_update_function(mob_type)
     )
 
     mob.type = mob_type
 
     local spec = get_mob_spec(mob_type)
-    mob.health = spec.health
-    mob.speed = spec.speed
-    mob.bounty = spec.bounty
+    mob.health = grow_mob_health(mob_type, spec.health, state.time)
+    mob.speed = grow_mob_speed(mob_type, spec.speed, state.time)
+    mob.bounty = grow_mob_bounty(mob_type, spec.bounty, state.time)
     mob.hurtbox_radius = spec.hurtbox_radius
-    mob.healthbar = mob.node:child(1):child(2):child(1)
+    mob.healthbar = mob.node:child(1):child(2):child(1) -- lmao
 
     register_entity(MOBS, mob)
     return mob
@@ -235,7 +297,7 @@ end
 local SPAWN_CHANCE = 25
 function do_mob_spawning()
     --if WIN:key_pressed"space" then
-    if math.random(SPAWN_CHANCE) == 1 then
+    if state.spawning and math.random(SPAWN_CHANCE) == 1 then
     --if #MOBS < 1 then
         make_and_register_mob(MOB_TYPE.BEEPER)
     end

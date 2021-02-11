@@ -115,10 +115,6 @@ function apply_flow_field(map, flow_field, world)
         end
     end
 
-    -- dijkstra doesn't set the priority of the center, do it ourselves
-    map[HEX_GRID_CENTER.x][HEX_GRID_CENTER.y].priority = -1
-    overlay_group:append(am.translate(hex_to_pixel(vec2(HEX_GRID_CENTER.x, HEX_GRID_CENTER.y)))
-                         ^ am.text(string.format("%.1f", -10)))
     if world then
         overlay_group.hidden = flow_field_hidden
         world:append(overlay_group)
