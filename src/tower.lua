@@ -217,11 +217,14 @@ end
 function tower_type_is_buildable_on(hex, tile, tower_type)
     if not tower_type then return false end
 
+    -- @TODO remove this shit
+    if hex == HEX_GRID_CENTER then return false end
+
     local blocking_towers = towers_on_hex(hex)
     local blocking_mobs = mobs_on_hex(hex)
 
-    local towers_blocking = #blocking_towers ~= 0
-    local mobs_blocking = #blocking_mobs ~= 0
+    local towers_blocking = table.count(blocking_towers) ~= 0
+    local mobs_blocking = table.count(blocking_mobs) ~= 0
 
     local blocked = mobs_blocking or towers_blocking
 

@@ -21,8 +21,19 @@ function math.lerp(v1, v2, t)
     return v1 * t + v2 * (1 - t)
 end
 
+-- don't use this with sparse arrays
 function table.rchoice(t)
     return t[math.floor(math.random() * #t) + 1]
+end
+
+function table.count(t)
+    local count = 0
+    for i,v in pairs(t) do
+        if v ~= nil then
+            count = count + 1
+        end
+    end
+    return count
 end
 
 function table.find(t, predicate)

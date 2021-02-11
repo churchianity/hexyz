@@ -23,7 +23,7 @@ local TRDTS = {
 }
 
 local function get_initial_game_state(seed)
-    local STARTING_MONEY = 100
+    local STARTING_MONEY = 100000
     -- 2014
     local map, world = random_map()
 
@@ -41,7 +41,7 @@ local function get_initial_game_state(seed)
         time_until_next_wave = 15,
         time_until_next_break = 0,
         spawning = false,
-        spawn_chance = 25,
+        spawn_chance = 55,
 
         selected_tower_type = false,
         selected_toolbelt_button = 9,
@@ -96,11 +96,11 @@ function select_toolbelt_button(i)
 end
 
 local function get_wave_time(current_wave)
-    return math.log(current_wave) + 90
+    return 90
 end
 
 local function get_break_time(current_wave)
-    return math.log(current_wave) + 15
+    return 15
 end
 
 function do_day_night_cycle()
@@ -140,13 +140,14 @@ local function game_action(scene)
     state.time = state.time + am.delta_time
     state.score = state.score + am.delta_time
 
-    state.spawn_chance = state.spawn_chance - math.floor(state.time / 100)
+    --state.spawn_chance = math.clamp(state.spawn_chance - math.floor(state.time / 100), 1, 25)
 
     if state.spawning then
         state.time_until_next_break = state.time_until_next_break - am.delta_time
 
         if state.time_until_next_break <= 0 then
             state.time_until_next_break = 0
+            state.current_wave = state.current_wave + 1
 
             state.spawning = false
             state.time_until_next_wave = get_wave_time(state.current_wave)
@@ -156,7 +157,6 @@ local function game_action(scene)
 
         if state.time_until_next_wave <= 0 then
             state.time_until_next_wave = 0
-            state.current_wave = state.current_wave + 1
 
             state.spawning = true
             state.time_until_next_break = get_break_time(state.current_wave)

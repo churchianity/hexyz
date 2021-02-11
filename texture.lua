@@ -1,4 +1,5 @@
 
+
 local function load_texture(filepath)
     local status, texture = pcall(am.texture2d, filepath)
 
