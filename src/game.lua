@@ -23,7 +23,7 @@ local TRDTS = {
 }
 
 local function get_initial_game_state(seed)
-    local STARTING_MONEY = 10000
+    local STARTING_MONEY = 100
     -- 2014
     local map, world = random_map()
 
@@ -37,10 +37,11 @@ local function get_initial_game_state(seed)
         score = 0,              -- current game score
         money = STARTING_MONEY, -- current money
 
-        current_wave = 0,
+        current_wave = 1,
         time_until_next_wave = 15,
         time_until_next_break = 0,
         spawning = false,
+        spawn_chance = 25,
 
         selected_tower_type = false,
         selected_toolbelt_button = 9,
@@ -50,9 +51,9 @@ end
 
 local function get_wave_timer_text()
     if state.spawning then
-        return string.format("wave over: %.2f", state.time_until_next_break)
+        return string.format("WAVE (%d) OVER: %.2f", state.current_wave, state.time_until_next_break)
     else
-        return string.format("next wave: %.2f", state.time_until_next_wave)
+        return string.format("NEXT WAVE (%d): %.2f", state.current_wave, state.time_until_next_wave)
     end
 end
 
@@ -94,6 +95,14 @@ function select_toolbelt_button(i)
     end
 end
 
+local function get_wave_time(current_wave)
+    return math.log(current_wave) + 90
+end
+
+local function get_break_time(current_wave)
+    return math.log(current_wave) + 15
+end
+
 function do_day_night_cycle()
     local tstep = (math.sin(state.time * am.delta_time) + 1) / 100
     --state.world"negative_mask".color = vec4(tstep){a=1}
@@ -124,20 +133,14 @@ local function game_pause()
     end)
 end
 
-local function get_wave_time(current_wave)
-    return 30
-end
-
-local function get_break_time(current_wave)
-    return 15
-end
-
 local function game_action(scene)
     if state.score < 0 then game_end() return true end
 
-    state.perf  = am.perf_stats()
-    state.time  = state.time + am.delta_time
+    state.perf = am.perf_stats()
+    state.time = state.time + am.delta_time
     state.score = state.score + am.delta_time
+
+    state.spawn_chance = state.spawn_chance - math.floor(state.time / 100)
 
     if state.spawning then
         state.time_until_next_break = state.time_until_next_break - am.delta_time
@@ -153,6 +156,7 @@ local function game_action(scene)
 
         if state.time_until_next_wave <= 0 then
             state.time_until_next_wave = 0
+            state.current_wave = state.current_wave + 1
 
             state.spawning = true
             state.time_until_next_break = get_break_time(state.current_wave)
@@ -239,7 +243,7 @@ local function game_action(scene)
     end
 
     do_entity_updates()
-    do_mob_spawning()
+    do_mob_spawning(state.spawn_chance)
     do_gui_updates()
     do_day_night_cycle()
 
@@ -419,9 +423,8 @@ function game_scene()
     local money = am.translate(WIN.left + 10, WIN.top - 40)
                   ^ am.text("", "left"):tag"money"
 
-    local wave_timer = am.translate(0, WIN.top - 30)
-                       ^ am.scale(1.5)
-                       ^ am.text(string.format("Next Wave: %d", state.time_until_next_wave)):tag"wave_timer"
+    local wave_timer = am.translate(0, WIN.top - 20)
+                       ^ am.text(get_wave_timer_text()):tag"wave_timer"
 
     local top_right_display = am.translate(WIN.right - 10, WIN.top - 20)
                               ^ am.text("", "right", "top"):tag"top_right_display"

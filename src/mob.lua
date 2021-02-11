@@ -70,7 +70,7 @@ function do_hit_mob(mob, damage, mob_index)
         mob_die(mob, mob_index)
     else
         mob.healthbar:action(coroutine.create(function(self)
-            self:child(2).x2 = -HEALTHBAR_WIDTH/2 + mob.health/get_mob_health(mob.type) * HEALTHBAR_WIDTH/2
+            self:child(1).x2 = -HEALTHBAR_WIDTH/2 + mob.health/get_mob_health(mob.type) * HEALTHBAR_WIDTH/2
             self.hidden = false
             am.wait(am.delay(0.8))
             self.hidden = true
@@ -130,7 +130,7 @@ local function get_spawn_hex()
     return hex
 end
 
-local function resolve_frame_target_for_mob(mob)
+local function resolve_frame_target_for_mob(mob, mob_index)
     local last_frame_hex = mob.hex
     mob.hex = pixel_to_hex(mob.position)
 
@@ -191,14 +191,14 @@ local function resolve_frame_target_for_mob(mob)
 
                 mob.frame_target = lowest_cost_hex
             else
-                log('no neighbours')
+                --log('no neighbours')
             end
         end
     end
 end
 
 local function update_mob_spooder(mob, mob_index)
-    resolve_frame_target_for_mob(mob)
+    resolve_frame_target_for_mob(mob, mob_index)
 
     if mob.frame_target then
         -- do movement
@@ -216,7 +216,7 @@ local function update_mob_spooder(mob, mob_index)
             mob.frame_target = false
         end
     else
-        log('no target')
+        --log('no target')
     end
 
     -- passive animation
@@ -226,7 +226,7 @@ local function update_mob_spooder(mob, mob_index)
 end
 
 local function update_mob_beeper(mob, mob_index)
-    resolve_frame_target_for_mob(mob)
+    resolve_frame_target_for_mob(mob, mob_index)
 
     if mob.frame_target then
         -- do movement
@@ -294,10 +294,9 @@ local function make_and_register_mob(mob_type)
     return mob
 end
 
-local SPAWN_CHANCE = 25
-function do_mob_spawning()
+function do_mob_spawning(spawn_chance)
     --if WIN:key_pressed"space" then
-    if state.spawning and math.random(SPAWN_CHANCE) == 1 then
+    if state.spawning and math.random(spawn_chance) == 1 then
     --if #MOBS < 1 then
         make_and_register_mob(MOB_TYPE.BEEPER)
     end

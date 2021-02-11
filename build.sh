@@ -1,4 +1,4 @@
 
 # add -mac, -windows, -linux, or -html if you only want one target
-rm -ri bin/*
+rm -r bin/*
 amulet export -r -d bin/ -a .
