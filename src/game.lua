@@ -84,23 +84,15 @@ local function get_top_right_display_text(hex, evenq, centered_evenq, display_ty
 end
 
 -- initialized later, as part of the init of the toolbelt
-function select_tower_type(tower_type) end
-
-function select_toolbelt_button(i)
-    state.selected_toolbelt_button = i
-    if i <= 10 then
-        select_tower_type(i)
-    else
-        select_tower_type(nil)
-    end
-end
+local function select_tower_type(tower_type) end
+local function select_toolbelt_button(i) end
 
 local function get_wave_time(current_wave)
-    return 15
+    return 90
 end
 
 local function get_break_time(current_wave)
-    return 90
+    return 15
 end
 
 function do_day_night_cycle()
@@ -150,7 +142,7 @@ local function game_action(scene)
             state.current_wave = state.current_wave + 1
 
             state.spawning = false
-            state.time_until_next_wave = get_wave_time(state.current_wave)
+            state.time_until_next_wave = get_break_time(state.current_wave)
         end
     else
         state.time_until_next_wave = state.time_until_next_wave - am.delta_time
@@ -159,7 +151,7 @@ local function game_action(scene)
             state.time_until_next_wave = 0
 
             state.spawning = true
-            state.time_until_next_break = get_break_time(state.current_wave)
+            state.time_until_next_break = get_wave_time(state.current_wave)
         end
     end
 
@@ -224,9 +216,9 @@ local function game_action(scene)
 
     elseif WIN:key_pressed"tab" then
         if WIN:key_down"lshift" then
-            select_toolbelt_button((state.selected_toolbelt_button + 12 - 2) % 12 + 1)
+            select_toolbelt_button((state.selected_toolbelt_button + table.count(TOWER_TYPE) - 2) % table.count(TOWER_TYPE) + 1)
         else
-            select_toolbelt_button((state.selected_toolbelt_button) % 12 + 1)
+            select_toolbelt_button((state.selected_toolbelt_button) % table.count(TOWER_TYPE) + 1)
         end
     elseif WIN:key_pressed"1" then select_toolbelt_button(1)
     elseif WIN:key_pressed"2" then select_toolbelt_button(2)
@@ -354,7 +346,7 @@ local function make_game_toolbelt()
         TOWER_TYPE.RADAR,
         TOWER_TYPE.LIGHTHOUSE
     }
-    for i = 1, #keys do
+    for i,v in pairs(tower_type_values) do
         local icon_texture = get_tower_icon_texture(tower_type_values[i])
         toolbelt:append(
             toolbelt_button(
@@ -391,6 +383,16 @@ local function make_game_toolbelt()
             toolbelt("tower_select_square").hidden = true
 
             WIN.scene:replace("cursor", make_hex_cursor(0, COLORS.TRANSPARENT))
+        end
+    end
+
+    select_toolbelt_button = function(i)
+        state.selected_toolbelt_button = i
+
+        if tower_type_values[i] then
+            select_tower_type(i)
+        else
+            select_tower_type(nil)
         end
     end
 

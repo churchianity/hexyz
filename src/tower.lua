@@ -112,7 +112,7 @@ function get_tower_fire_rate(tower_type)
     return TOWER_SPECS[tower_type].fire_rate
 end
 function get_tower_size(tower_type)
-    return TOWER_SPECS[tower_type.size]
+    return TOWER_SPECS[tower_type].size
 end
 
 local function make_tower_sprite(tower_type)
@@ -212,15 +212,24 @@ end
 function towers_on_hex(hex)
     local t = {}
     for tower_index,tower in pairs(TOWERS) do
-        if tower and tower.hex == hex then
-            table.insert(t, tower_index, tower)
+        if tower then
+            for _,h in pairs(tower.hexes) do
+                if h == hex then
+                    table.insert(t, tower_index, tower)
+                    break
+                end
+            end
         end
     end
     return t
 end
 
 function tower_on_hex(hex)
-    return table.find(TOWERS, function(tower) return tower.hex == hex end)
+    return table.find(TOWERS, function(tower)
+        for _,h in pairs(tower.hexes) do
+            if h == hex then return true end
+        end
+    end)
 end
 
 function tower_type_is_buildable_on(hex, tile, tower_type)
@@ -229,8 +238,17 @@ function tower_type_is_buildable_on(hex, tile, tower_type)
     -- @TODO remove this shit
     if hex == HEX_GRID_CENTER then return false end
 
-    local blocking_towers = towers_on_hex(hex)
-    local blocking_mobs = mobs_on_hex(hex)
+    local blocking_towers = {}
+    local blocking_mobs = {}
+
+    for _,h in pairs(spiral_map(hex, get_tower_size(tower_type))) do
+        table.append(blocking_towers, towers_on_hex(hex))
+        table.append(blocking_mobs, mobs_on_hex(hex))
+    end
+
+    if WIN:key_down"space" then
+        log(table.tostring(blocking_towers))
+    end
 
     local towers_blocking = table.count(blocking_towers) ~= 0
     local mobs_blocking = table.count(blocking_mobs) ~= 0
@@ -403,6 +421,8 @@ function make_and_register_tower(hex, tower_type)
     tower.range = spec.range
     tower.fire_rate = spec.fire_rate
     tower.last_shot_time = -spec.fire_rate
+    tower.size = spec.size
+    tower.hexes = spiral_map(tower.hex, tower.size)
 
     if tower_type == TOWER_TYPE.REDEYE then
         local tile = state.map.get(hex.x, hex.y)
