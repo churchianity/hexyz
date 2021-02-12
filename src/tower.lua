@@ -25,6 +25,7 @@ TOWER_SPECS = {
         cost = 10,
         range = 0,
         fire_rate = 2,
+        size = 0,
     },
     [TOWER_TYPE.HOWITZER] = {
         name = "Howitzer",
@@ -35,6 +36,7 @@ TOWER_SPECS = {
         cost = 20,
         range = 10,
         fire_rate = 4,
+        size = 1,
     },
     [TOWER_TYPE.REDEYE] = {
         name = "Redeye",
@@ -45,6 +47,7 @@ TOWER_SPECS = {
         cost = 20,
         range = 12,
         fire_rate = 1,
+        size = 1,
     },
     [TOWER_TYPE.MOAT] = {
         name = "Moat",
@@ -55,6 +58,7 @@ TOWER_SPECS = {
         cost = 10,
         range = 0,
         fire_rate = 2,
+        size = 0,
     },
     [TOWER_TYPE.RADAR] = {
         name = "Radar",
@@ -65,6 +69,7 @@ TOWER_SPECS = {
         cost = 20,
         range = 0,
         fire_rate = 1,
+        size = 1,
     },
     [TOWER_TYPE.LIGHTHOUSE] = {
         name = "Lighthouse",
@@ -75,6 +80,7 @@ TOWER_SPECS = {
         cost = 20,
         range = 8,
         fire_rate = 1,
+        size = 1,
     },
 }
 
@@ -105,41 +111,12 @@ end
 function get_tower_fire_rate(tower_type)
     return TOWER_SPECS[tower_type].fire_rate
 end
+function get_tower_size(tower_type)
+    return TOWER_SPECS[tower_type.size]
+end
 
 local function make_tower_sprite(tower_type)
     return pack_texture_into_sprite(get_tower_texture(tower_type), HEX_PIXEL_WIDTH, HEX_PIXEL_HEIGHT)
-end
-
-do
-    local tower_cursors = {}
-    for _,i in pairs(TOWER_TYPE) do
-        local tower_sprite = make_tower_sprite(i)
-        tower_sprite.color = COLORS.TRANSPARENT
-
-        local coroutine_ = coroutine.create(function(node)
-            local flash_on = {}
-            local flash_off = {}
-            while true do
-                for _,n in node:child_pairs() do
-                    table.insert(flash_on, am.tween(n, 1, { color = vec4(0.4) }))
-                    table.insert(flash_off, am.tween(n, 1, { color = vec4(0) }))
-                end
-                am.wait(am.parallel(flash_on))
-                am.wait(am.parallel(flash_off))
-                flash_on = {}
-                flash_off = {}
-            end
-        end)
-
-        tower_cursors[i] = am.group{
-            make_hex_cursor(get_tower_range(i), vec4(0), coroutine_),
-            tower_sprite
-        }
-    end
-
-    function get_tower_cursor(tower_type)
-        return tower_cursors[tower_type]
-    end
 end
 
 local function make_tower_node(tower_type)
@@ -185,6 +162,38 @@ local function make_tower_node(tower_type)
 
     elseif tower_type == TOWER_TYPE.RADAR then
         return make_tower_sprite(tower_type)
+    end
+end
+
+do
+    local tower_cursors = {}
+    for _,i in pairs(TOWER_TYPE) do
+        local tower_sprite = make_tower_sprite(i)
+        tower_sprite.color = COLORS.TRANSPARENT
+
+        local coroutine_ = coroutine.create(function(node)
+            local flash_on = {}
+            local flash_off = {}
+            while true do
+                for _,n in node:child_pairs() do
+                    table.insert(flash_on, am.tween(n, 1, { color = vec4(0.4) }))
+                    table.insert(flash_off, am.tween(n, 1, { color = vec4(0) }))
+                end
+                am.wait(am.parallel(flash_on))
+                am.wait(am.parallel(flash_off))
+                flash_on = {}
+                flash_off = {}
+            end
+        end)
+
+        tower_cursors[i] = am.group{
+            make_hex_cursor(get_tower_range(i), vec4(0), coroutine_),
+            tower_sprite
+        }
+    end
+
+    function get_tower_cursor(tower_type)
+        return tower_cursors[tower_type]
     end
 end
 

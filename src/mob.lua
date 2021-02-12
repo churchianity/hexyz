@@ -32,6 +32,16 @@ function get_mob_spec(mob_type)
     return MOB_SPECS[mob_type]
 end
 
+local function grow_mob_health(mob_type, spec_health, time)
+    return spec_health * math.log(time)
+end
+local function grow_mob_speed(mob_type, spec_speed, time)
+    return spec_speed
+end
+local function grow_mob_bounty(mob_type, spec_speed, time)
+    return spec_speed * math.log(time)
+end
+
 function mobs_on_hex(hex)
     local t = {}
     for mob_index,mob in pairs(MOBS) do
@@ -70,7 +80,8 @@ function do_hit_mob(mob, damage, mob_index)
         mob_die(mob, mob_index)
     else
         mob.healthbar:action(coroutine.create(function(self)
-            self:child(1).x2 = -HEALTHBAR_WIDTH/2 + mob.health/get_mob_health(mob.type) * HEALTHBAR_WIDTH/2
+            local x2 = -HEALTHBAR_WIDTH/2 + mob.health/grow_mob_health(mob.type, get_mob_health(mob.type), state.time) * HEALTHBAR_WIDTH/2
+            self:child(2).x2 = x2
             self.hidden = false
             am.wait(am.delay(0.8))
             self.hidden = true
@@ -80,7 +91,7 @@ end
 
 function make_mob_node(mob_type, mob)
     local healthbar = am.group{
-        --am.rect(-HEALTHBAR_WIDTH/2, -HEALTHBAR_HEIGHT/2, HEALTHBAR_WIDTH/2, HEALTHBAR_HEIGHT/2, COLORS.VERY_DARK_GRAY),
+        am.rect(-HEALTHBAR_WIDTH/2, -HEALTHBAR_HEIGHT/2, HEALTHBAR_WIDTH/2, HEALTHBAR_HEIGHT/2, COLORS.VERY_DARK_GRAY),
         am.rect(-HEALTHBAR_WIDTH/2, -HEALTHBAR_HEIGHT/2, HEALTHBAR_WIDTH/2, HEALTHBAR_HEIGHT/2, COLORS.GREEN_YELLOW)
     }
     healthbar.hidden = true
@@ -262,16 +273,6 @@ local function get_mob_update_function(mob_type)
     elseif mob_type == MOB_TYPE.SPOODER then
         return update_mob_spooder
     end
-end
-
-local function grow_mob_health(mob_type, spec_health, time)
-    return spec_health * math.log(time)
-end
-local function grow_mob_speed(mob_type, spec_speed, time)
-    return spec_speed
-end
-local function grow_mob_bounty(mob_type, spec_speed, time)
-    return spec_speed * math.log(time)
 end
 
 local function make_and_register_mob(mob_type)

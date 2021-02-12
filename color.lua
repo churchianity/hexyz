@@ -10,7 +10,7 @@ COLORS = {
     VERY_DARK_GRAY      = vec4(35/255, 35/255, 25/255, 1),
     TRUE_BLACK          = vec4(0, 0, 0, 1),
 
-    -- non-standard hues
+    -- non-standard ??? hues
     WATER               = vec4(0.12, 0.25, 0.3, 1),
     GRASS               = vec4(0.05, 0.22, 0.11, 1),
     DIRT                = vec4(0.22, 0.20, 0.10, 1),

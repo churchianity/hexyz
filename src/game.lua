@@ -96,11 +96,11 @@ function select_toolbelt_button(i)
 end
 
 local function get_wave_time(current_wave)
-    return 90
+    return 15
 end
 
 local function get_break_time(current_wave)
-    return 15
+    return 90
 end
 
 function do_day_night_cycle()
