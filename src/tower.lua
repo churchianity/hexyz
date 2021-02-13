@@ -26,6 +26,7 @@ TOWER_SPECS = {
         range = 0,
         fire_rate = 2,
         size = 0,
+        height = 1,
     },
     [TOWER_TYPE.HOWITZER] = {
         name = "Howitzer",
@@ -37,6 +38,7 @@ TOWER_SPECS = {
         range = 10,
         fire_rate = 4,
         size = 1,
+        height = 1,
     },
     [TOWER_TYPE.REDEYE] = {
         name = "Redeye",
@@ -48,6 +50,7 @@ TOWER_SPECS = {
         range = 12,
         fire_rate = 1,
         size = 1,
+        height = 1,
     },
     [TOWER_TYPE.MOAT] = {
         name = "Moat",
@@ -59,6 +62,7 @@ TOWER_SPECS = {
         range = 0,
         fire_rate = 2,
         size = 0,
+        height = -1,
     },
     [TOWER_TYPE.RADAR] = {
         name = "Radar",
@@ -70,6 +74,7 @@ TOWER_SPECS = {
         range = 0,
         fire_rate = 1,
         size = 1,
+        height = 1,
     },
     [TOWER_TYPE.LIGHTHOUSE] = {
         name = "Lighthouse",
@@ -81,6 +86,7 @@ TOWER_SPECS = {
         range = 8,
         fire_rate = 1,
         size = 1,
+        height = 1,
     },
 }
 
@@ -100,7 +106,7 @@ function get_tower_texture(tower_type)
     return TOWER_SPECS[tower_type].texture
 end
 function get_tower_icon_texture(tower_type)
-    return TOWER_SPECS[tower_type] and TOWER_SPECS[tower_type].icon_texture
+    return TOWER_SPECS[tower_type].icon_texture
 end
 function get_tower_cost(tower_type)
     return TOWER_SPECS[tower_type].cost
@@ -119,14 +125,15 @@ local function make_tower_sprite(tower_type)
     return pack_texture_into_sprite(get_tower_texture(tower_type), HEX_PIXEL_WIDTH, HEX_PIXEL_HEIGHT)
 end
 
+local HEX_FLOWER_DIMENSIONS = vec2(115, 125)
 local function make_tower_node(tower_type)
     if tower_type == TOWER_TYPE.REDEYE then
         return make_tower_sprite(tower_type)
 
     elseif tower_type == TOWER_TYPE.HOWITZER then
         return am.group{
-            make_tower_sprite(tower_type),
-            am.rotate(0) ^ am.sprite("res/cannon1.png")
+            pack_texture_into_sprite(TEXTURES.HEX_FLOWER, HEX_FLOWER_DIMENSIONS.x, HEX_FLOWER_DIMENSIONS.y),
+            am.rotate(0) ^ pack_texture_into_sprite(TEXTURES.CANNON1, 100, 100)
         }
     elseif tower_type == TOWER_TYPE.LIGHTHOUSE then
         return am.group{
@@ -168,7 +175,7 @@ end
 do
     local tower_cursors = {}
     for _,i in pairs(TOWER_TYPE) do
-        local tower_sprite = make_tower_sprite(i)
+        local tower_sprite = make_tower_node(i)
         tower_sprite.color = COLORS.TRANSPARENT
 
         local coroutine_ = coroutine.create(function(node)
@@ -240,23 +247,37 @@ function tower_type_is_buildable_on(hex, tile, tower_type)
 
     local blocking_towers = {}
     local blocking_mobs = {}
+    local has_water = false
+    local has_mountain = false
+    local has_ground = false
 
     for _,h in pairs(spiral_map(hex, get_tower_size(tower_type))) do
-        table.append(blocking_towers, towers_on_hex(hex))
-        table.append(blocking_mobs, mobs_on_hex(hex))
-    end
+        table.merge(blocking_towers, towers_on_hex(h))
+        table.merge(blocking_mobs, mobs_on_hex(h))
 
-    if WIN:key_down"space" then
-        log(table.tostring(blocking_towers))
+        local tile = state.map.get(h.x, h.y)
+        -- this should always be true, unless it is possible to place a tower
+        -- where part of the tower overflows the edge of the map
+        if tile then
+            if is_water_elevation(tile.elevation) then
+                has_water = true
+
+            elseif is_mountain_elevation(tile.elevation) then
+                has_mountain = true
+
+            else
+                has_ground = true
+            end
+        end
     end
 
     local towers_blocking = table.count(blocking_towers) ~= 0
     local mobs_blocking = table.count(blocking_mobs) ~= 0
-
     local blocked = mobs_blocking or towers_blocking
 
     if tower_type == TOWER_TYPE.HOWITZER then
         if not mobs_blocking and towers_blocking then
+            -- you can build howitzers on top of walls.
             blocked = false
             for _,tower in pairs(blocking_towers) do
                 if tower.type ~= TOWER_TYPE.WALL then
@@ -265,10 +286,11 @@ function tower_type_is_buildable_on(hex, tile, tower_type)
                 end
             end
         end
-        return not blocked and tile.elevation >= -0.5
+        return not (blocked or has_water)
 
     elseif tower_type == TOWER_TYPE.REDEYE then
         if not mobs_blocking and towers_blocking then
+            -- you can build redeyes on top of walls
             blocked = false
             for _,tower in pairs(blocking_towers) do
                 if tower.type ~= TOWER_TYPE.WALL then
@@ -277,7 +299,10 @@ function tower_type_is_buildable_on(hex, tile, tower_type)
                 end
             end
         end
-        return not blocked and tile.elevation > 0.5
+        return not blocked
+               and not has_water
+               and not has_ground
+               and has_mountain
 
     elseif tower_type == TOWER_TYPE.LIGHTHOUSE then
         local has_water_neighbour = false
@@ -289,7 +314,10 @@ function tower_type_is_buildable_on(hex, tile, tower_type)
                 break
             end
         end
-        return not blocked and tile_is_medium_elevation(tile) and has_water_neighbour
+        return not blocked
+           and not has_mountain
+           and not has_water
+           and has_water_neighbour
 
     elseif tower_type == TOWER_TYPE.WALL then
         return not blocked and tile_is_medium_elevation(tile)
@@ -406,7 +434,6 @@ function update_tower_lighthouse(tower, tower_index)
     end
 end
 
-local TOWER_HEIGHT = 1
 function make_and_register_tower(hex, tower_type)
     local tower = make_basic_entity(
         hex,
@@ -423,30 +450,15 @@ function make_and_register_tower(hex, tower_type)
     tower.last_shot_time = -spec.fire_rate
     tower.size = spec.size
     tower.hexes = spiral_map(tower.hex, tower.size)
+    tower.height = spec.height
 
-    if tower_type == TOWER_TYPE.REDEYE then
-        local tile = state.map.get(hex.x, hex.y)
-        tile.elevation = tile.elevation + TOWER_HEIGHT
+    for _,h in pairs(tower.hexes) do
+        local tile = state.map.get(h.x, h.y)
+        tile.elevation = tile.elevation + tower.height
+    end
 
-    elseif tower_type == TOWER_TYPE.HOWITZER then
-        local tile = state.map.get(hex.x, hex.y)
-        tile.elevation = tile.elevation + TOWER_HEIGHT
-        tower.props.z = tile.elevation
-
-    elseif tower_type == TOWER_TYPE.LIGHTHOUSE then
-        tower.perimeter = ring_map(tower.hex, tower.range)
-        local tile = state.map.get(hex.x, hex.y)
-        tile.elevation = tile.elevation + TOWER_HEIGHT
-
-    elseif tower_type == TOWER_TYPE.WALL then
-        state.map.get(hex.x, hex.y).elevation = TOWER_HEIGHT
-
-    elseif tower_type == TOWER_TYPE.MOAT then
-        state.map.get(hex.x, hex.y).elevation = -TOWER_HEIGHT
-
-    elseif tower_type == TOWER_TYPE.RADAR then
-        local tile = state.map.get(hex.x, hex.y)
-        tile.elevation = tile.elevation + TOWER_HEIGHT
+    if tower.type == TOWER_TYPE.HOWITZER then
+        tower.props.z = tower.height
     end
 
     register_entity(TOWERS, tower)

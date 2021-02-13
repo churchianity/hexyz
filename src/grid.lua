@@ -50,6 +50,14 @@ function evenq_is_in_interactable_region(evenq)
     })
 end
 
+function is_water_elevation(elevation)
+    return elevation < -0.5
+end
+
+function is_mountain_elevation(elevation)
+    return elevation >= 0.5
+end
+
 function tile_is_medium_elevation(tile)
     return tile.elevation >= -0.5 and tile.elevation < 0.5
 end
@@ -121,18 +129,30 @@ function apply_flow_field(map, flow_field, world)
     end
 end
 
-function making_hex_unwalkable_breaks_flow_field(hex, tile)
-    if not mob_can_pass_through(nil, hex, tile) then
-        return false
-    end
+function building_tower_breaks_flow_field(tower_type, hex)
+    local hexes = spiral_map(hex, get_tower_size(tower_type))
+    local original_elevations = {}
+    for _,h in pairs(hexes) do
+        local tile = state.map.get(h.x, h.y)
 
-    local original_elevation = tile.elevation
-    -- making the tile's elevation very large *should* make it unwalkable
-    tile.elevation = 999
+        if not mob_can_pass_through(nil, h, tile) then
+            return false
+        end
+
+        table.insert(original_elevations, tile.elevation)
+
+        -- making the tile's elevation very large *should* make it unwalkable
+        tile.elevation = 999
+    end
 
     local flow_field = generate_flow_field(state.map, HEX_GRID_CENTER)
     local result = not hex_map_get(flow_field, 0, 0)
-    tile.elevation = original_elevation
+    log(result)
+
+    for i,h in pairs(hexes) do
+        state.map.get(h.x, h.y).elevation = original_elevations[i]
+    end
+
     return result, flow_field
 end
 

@@ -83,6 +83,16 @@ local function get_top_right_display_text(hex, evenq, centered_evenq, display_ty
     return str
 end
 
+function alert(message)
+    WIN.scene:append(
+        am.scale(3) ^ am.text(message)
+        :action(coroutine.create(function(self)
+            am.wait(am.tween(self, 1, { color = vec4(0) }))
+            WIN.scene:remove(self)
+        end))
+    )
+end
+
 -- initialized later, as part of the init of the toolbelt
 local function select_tower_type(tower_type) end
 local function select_toolbelt_button(i) end
@@ -170,19 +180,21 @@ local function game_action(scene)
     if WIN:mouse_pressed"left" then
         if interactable then
             if buildable then
-                local broken, flow_field = making_hex_unwalkable_breaks_flow_field(hex, tile)
+                local broken, flow_field = building_tower_breaks_flow_field(state.selected_tower_type, hex)
                 local cost = get_tower_cost(state.selected_tower_type)
 
                 if broken then
                     local node = WIN.scene("cursor"):child(2)
                     node.color = COLORS.CLARET
                     node:action(am.tween(0.1, { color = COLORS.TRANSPARENT }))
+                    alert("breaks flow field")
                     play_sfx(SOUNDS.BIRD2)
 
                 elseif cost > state.money then
                     local node = WIN.scene("cursor"):child(2)
                     node.color = COLORS.CLARET
                     node:action(am.tween(0.1, { color = COLORS.TRANSPARENT }))
+                    alert("not enough $$$$")
                     play_sfx(SOUNDS.BIRD2)
 
                 else
@@ -259,16 +271,7 @@ end
 
 local function make_game_toolbelt()
     local function toolbelt_button(size, half_size, tower_texture, padding, i, offset, key_name)
-        local x1 = (size + padding) * i + offset.x
-        local y1 = offset.y
-        local x2 = (size + padding) * i + offset.x + size
-        local y2 = offset.y + size
-
-        register_button_widget("toolbelt_tower_button" .. i
-                             , am.rect(x1, y1, x2, y2)
-                             , function() select_toolbelt_button(i) end)
-
-        return am.translate(vec2(size + padding, 0) * i + offset)
+        local button = am.translate(vec2(size + padding, 0) * i + offset)
             ^ am.group{
                 am.translate(0, half_size)
                 ^ pack_texture_into_sprite(TEXTURES.BUTTON1, size, size),
@@ -283,6 +286,20 @@ local function make_game_toolbelt()
                     ^ am.text(key_name, COLORS.BLACK)
                 }
             }
+
+        local x1 = (size + padding) * i + offset.x - half_size
+        local y1 = offset.y
+        local x2 = (size + padding) * i + offset.x + size - half_size
+        local y2 = offset.y + size
+        local rect = { x1 = x1, y1 = y1, x2 = x2, y2 = y2 }
+
+        button:action(function(self)
+            if WIN:mouse_pressed"left" and point_in_rect(WIN:mouse_position(), rect) then
+                select_toolbelt_button(i)
+            end
+        end)
+
+        return button
     end
 
     local toolbelt_height = hex_height(HEX_SIZE) * 2
@@ -362,6 +379,7 @@ local function make_game_toolbelt()
     end
 
     select_tower_type = function(tower_type)
+        log(tower_type)
         state.selected_tower_type = tower_type
 
         if get_tower_spec(tower_type) then

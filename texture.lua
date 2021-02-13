@@ -33,6 +33,8 @@ TEXTURES = {
     TOWER_LIGHTHOUSE        = load_texture("res/tower_lighthouse.png"),
     TOWER_LIGHTHOUSE_ICON   = load_texture("res/tower_lighthouse_icon.png"),
 
+    HEX_FLOWER              = load_texture("res/thing.png"),
+
     -- mob stuff
     MOB_BEEPER          = load_texture("res/mob_beeper.png"),
     MOB_SPOODER         = load_texture("res/mob_spooder.png"),
