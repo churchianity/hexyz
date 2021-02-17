@@ -15,6 +15,7 @@ do
         title       = title,
         highdpi     = true,
         letterbox   = true,
+        --mode        = "fullscreen",
         --projection  = projection
     }
 
@@ -32,16 +33,13 @@ require "src/geometry"
 require "src/hexyz"
 require "src/game"
 require "src/grid"
-require "src/gui"
 require "src/mob"
 require "src/projectile"
 require "src/tower"
 
-
 -- global audio settings
 MUSIC_VOLUME = 0.1
 SFX_VOLUME   = 0.1
-
 
 function main_action() end
 function main_scene() end

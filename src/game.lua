@@ -38,7 +38,7 @@ local function get_initial_game_state(seed)
         money = STARTING_MONEY, -- current money
 
         current_wave = 1,
-        time_until_next_wave = 15,
+        time_until_next_wave = 0,
         time_until_next_break = 0,
         spawning = false,
         spawn_chance = 55,
@@ -142,7 +142,7 @@ local function game_action(scene)
     state.time = state.time + am.delta_time
     state.score = state.score + am.delta_time
 
-    --state.spawn_chance = math.clamp(state.spawn_chance - math.floor(state.time / 100), 1, 25)
+    state.spawn_chance = math.clamp(state.spawn_chance - math.floor(state.time / 100), 1, 25)
 
     if state.spawning then
         state.time_until_next_break = state.time_until_next_break - am.delta_time
@@ -187,15 +187,15 @@ local function game_action(scene)
                     local node = WIN.scene("cursor"):child(2)
                     node.color = COLORS.CLARET
                     node:action(am.tween(0.1, { color = COLORS.TRANSPARENT }))
-                    alert("breaks flow field")
                     play_sfx(SOUNDS.BIRD2)
+                    alert("breaks flow field")
 
                 elseif cost > state.money then
                     local node = WIN.scene("cursor"):child(2)
                     node.color = COLORS.CLARET
                     node:action(am.tween(0.1, { color = COLORS.TRANSPARENT }))
-                    alert("not enough $$$$")
                     play_sfx(SOUNDS.BIRD2)
+                    alert("not enough $$$$")
 
                 else
                     update_money(-cost)
@@ -232,15 +232,15 @@ local function game_action(scene)
         else
             select_toolbelt_button((state.selected_toolbelt_button) % table.count(TOWER_TYPE) + 1)
         end
-    elseif WIN:key_pressed"1" then select_toolbelt_button(1)
-    elseif WIN:key_pressed"2" then select_toolbelt_button(2)
-    elseif WIN:key_pressed"3" then select_toolbelt_button(3)
-    elseif WIN:key_pressed"4" then select_toolbelt_button(4)
-    elseif WIN:key_pressed"q" then select_toolbelt_button(5)
-    elseif WIN:key_pressed"w" then select_toolbelt_button(6)
-    elseif WIN:key_pressed"e" then select_toolbelt_button(7)
-    elseif WIN:key_pressed"r" then select_toolbelt_button(8)
-    elseif WIN:key_pressed"a" then select_toolbelt_button(9)
+    elseif WIN:key_pressed"1" then select_toolbelt_button( 1)
+    elseif WIN:key_pressed"2" then select_toolbelt_button( 2)
+    elseif WIN:key_pressed"3" then select_toolbelt_button( 3)
+    elseif WIN:key_pressed"4" then select_toolbelt_button( 4)
+    elseif WIN:key_pressed"q" then select_toolbelt_button( 5)
+    elseif WIN:key_pressed"w" then select_toolbelt_button( 6)
+    elseif WIN:key_pressed"e" then select_toolbelt_button( 7)
+    elseif WIN:key_pressed"r" then select_toolbelt_button( 8)
+    elseif WIN:key_pressed"a" then select_toolbelt_button( 9)
     elseif WIN:key_pressed"s" then select_toolbelt_button(10)
     elseif WIN:key_pressed"d" then select_toolbelt_button(11)
     elseif WIN:key_pressed"f" then select_toolbelt_button(12)
@@ -248,7 +248,6 @@ local function game_action(scene)
 
     do_entity_updates()
     do_mob_spawning(state.spawn_chance)
-    do_gui_updates()
     do_day_night_cycle()
 
     if interactable then
@@ -379,7 +378,6 @@ local function make_game_toolbelt()
     end
 
     select_tower_type = function(tower_type)
-        log(tower_type)
         state.selected_tower_type = tower_type
 
         if get_tower_spec(tower_type) then
@@ -475,9 +473,11 @@ end
 function game_init()
     state = get_initial_game_state()
 
-    build_tower(HEX_GRID_CENTER, TOWER_TYPE.RADAR)
-    -- @HACK to make the center tile passable even though there's a tower on it
-    state.map.get(HEX_GRID_CENTER.x, HEX_GRID_CENTER.y).elevation = 0
+    local home_tower = build_tower(HEX_GRID_CENTER, TOWER_TYPE.RADAR)
+    for _,h in pairs(home_tower.hexes) do
+        -- @HACK to make the center tile(s) passable even though there's a tower on it
+        state.map.get(h.x, h.y).elevation = 0
+    end
 
     WIN.scene:remove("game")
     WIN.scene:append(game_scene())

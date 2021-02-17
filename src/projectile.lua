@@ -10,7 +10,7 @@ PROJECTILE_TYPE = {
 local PROJECTILE_SPECS = {
     [PROJECTILE_TYPE.SHELL] = {
         velocity = 13,
-        damage = 20,
+        damage = 15,
         hitbox_radius = 20
     },
     [PROJECTILE_TYPE.LASER] = {
@@ -105,10 +105,10 @@ local function update_projectile_shell(projectile, projectile_index)
 
     local tile = state.map.get(projectile.hex.x, projectile.hex.y)
     if tile and tile.elevation >= projectile.props.z then
-        do_explode = true
+        --do_explode = true
 
     elseif projectile.props.z <= 0 then
-        do_explode = true
+        --do_explode = true
     end
 
     if do_explode then
@@ -200,9 +200,12 @@ function get_projectile_update_function(projectile_type)
 end
 
 function make_and_register_projectile(hex, projectile_type, vector)
-    local projectile = make_basic_entity(hex
-                                       , make_projectile_node(projectile_type, vector)
-                                       , get_projectile_update_function(projectile_type))
+    local projectile = make_basic_entity(
+        hex,
+        make_projectile_node(projectile_type, vector),
+        get_projectile_update_function(projectile_type)
+    )
+
     projectile.type = projectile_type
     projectile.vector = vector
 

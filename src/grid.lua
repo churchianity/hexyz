@@ -130,13 +130,14 @@ function apply_flow_field(map, flow_field, world)
 end
 
 function building_tower_breaks_flow_field(tower_type, hex)
-    local hexes = spiral_map(hex, get_tower_size(tower_type))
     local original_elevations = {}
+    local all_impassable = true
+    local hexes = spiral_map(hex, get_tower_size(tower_type))
     for _,h in pairs(hexes) do
         local tile = state.map.get(h.x, h.y)
 
-        if not mob_can_pass_through(nil, h, tile) then
-            return false
+        if all_impassable and mob_can_pass_through(nil, h) then
+            all_impassable = false
         end
 
         table.insert(original_elevations, tile.elevation)
@@ -145,9 +146,18 @@ function building_tower_breaks_flow_field(tower_type, hex)
         tile.elevation = 999
     end
 
+    -- if no mobs can pass over any of the tiles we're building on
+    -- there is no need to regenerate the flow field, or do anything more
+    -- (besides return all the tile's elevations back to their original state)
+    if all_impassable then
+        for i,h in pairs(hexes) do
+            state.map.get(h.x, h.y).elevation = original_elevations[i]
+        end
+        return false
+    end
+
     local flow_field = generate_flow_field(state.map, HEX_GRID_CENTER)
     local result = not hex_map_get(flow_field, 0, 0)
-    log(result)
 
     for i,h in pairs(hexes) do
         state.map.get(h.x, h.y).elevation = original_elevations[i]
@@ -164,7 +174,14 @@ function random_map(seed)
     -- tone to give the appearance of light or darkness
     -- @NOTE replace this with a shader program
     -- interestingly, if it's colored white, it almost gives the impression of a winter biome
-    local neg_mask = am.rect(0, 0, HEX_GRID_PIXEL_WIDTH, HEX_GRID_PIXEL_HEIGHT, COLORS.TRUE_BLACK):tag"negative_mask"
+    local neg_mask = am.rect(
+        0,
+        0,
+        HEX_GRID_PIXEL_WIDTH,
+        HEX_GRID_PIXEL_HEIGHT,
+        COLORS.TRUE_BLACK
+    )
+    :tag"negative_mask"
 
     local world = am.group(neg_mask):tag"world"
     for i,_ in pairs(map) do
@@ -209,6 +226,7 @@ function random_map(seed)
 
     getmetatable(map).__index.neighbours = function(hex)
         return table.filter(hex_neighbours(hex), function(_hex)
+            --local interactable = evenq_is_in_interactable_region(hex_to_evenq(_hex))
             local tile = map.get(_hex.x, _hex.y)
             return tile and tile_is_medium_elevation(tile)
         end)

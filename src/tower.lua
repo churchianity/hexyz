@@ -30,7 +30,7 @@ TOWER_SPECS = {
     },
     [TOWER_TYPE.HOWITZER] = {
         name = "Howitzer",
-        placement_rules_text = "Place on non-Water",
+        placement_rules_text = "Place on non-Water, non-Mountain or on Walls",
         short_description = "Fires artillery. Range increases with elevation of terrain underneath.",
         texture = TEXTURES.TOWER_HOWITZER,
         icon_texture = TEXTURES.TOWER_HOWITZER_ICON,
@@ -73,7 +73,7 @@ TOWER_SPECS = {
         cost = 20,
         range = 0,
         fire_rate = 1,
-        size = 1,
+        size = 0,
         height = 1,
     },
     [TOWER_TYPE.LIGHTHOUSE] = {
@@ -133,7 +133,9 @@ local function make_tower_node(tower_type)
     elseif tower_type == TOWER_TYPE.HOWITZER then
         return am.group{
             pack_texture_into_sprite(TEXTURES.HEX_FLOWER, HEX_FLOWER_DIMENSIONS.x, HEX_FLOWER_DIMENSIONS.y),
-            am.rotate(0) ^ pack_texture_into_sprite(TEXTURES.CANNON1, 100, 100)
+            am.rotate(state.time or 0) ^ am.group{
+                pack_texture_into_sprite(TEXTURES.CANNON1, 100, 100)
+            }
         }
     elseif tower_type == TOWER_TYPE.LIGHTHOUSE then
         return am.group{
@@ -286,7 +288,7 @@ function tower_type_is_buildable_on(hex, tile, tower_type)
                 end
             end
         end
-        return not (blocked or has_water)
+        return not (blocked or has_water or has_mountain)
 
     elseif tower_type == TOWER_TYPE.REDEYE then
         if not mobs_blocking and towers_blocking then
@@ -359,6 +361,7 @@ end
 
 function update_tower_howitzer(tower, tower_index)
     if not tower.target_index then
+        -- we don't have a target
         for index,mob in pairs(MOBS) do
             if mob then
                 local d = math.distance(mob.hex, tower.hex)
@@ -368,19 +371,23 @@ function update_tower_howitzer(tower, tower_index)
                 end
             end
         end
+        tower.node("rotate").angle = math.wrapf(tower.node("rotate").angle + 0.2 * am.delta_time, math.pi*2)
     else
+        -- we should have a target
         if MOBS[tower.target_index] == false then
+            -- the target we have was invalidated
             tower.target_index = false
 
-        elseif (state.time - tower.last_shot_time) > tower.fire_rate then
+        else
+            -- the target we have is valid
             local mob = MOBS[tower.target_index]
-            local theta = math.atan((tower.hex.y - mob.hex.y)/(tower.hex.x - mob.hex.x))
+            local vector = math.normalize(mob.position - tower.position)
 
-            if (theta - tower.node("rotate").angle) < 0.1 then
+            if (state.time - tower.last_shot_time) > tower.fire_rate then
                 local projectile = make_and_register_projectile(
                     tower.hex,
                     PROJECTILE_TYPE.SHELL,
-                    math.normalize(mob.position - tower.position)
+                    vector
                 )
 
                 -- @HACK, the projectile will explode if it encounters something taller than it,
@@ -391,11 +398,13 @@ function update_tower_howitzer(tower, tower_index)
                 tower.last_shot_time = state.time
                 play_sfx(SOUNDS.EXPLOSION2)
             end
-        else
-            tower.node("rotate").angle = tower.node("rotate").angle + state.time * 0.5
+
+            local theta = math.rad(90) - math.atan((tower.position.y - mob.position.y)/(tower.position.x - mob.position.x))
+            local diff = tower.node("rotate").angle - theta
+
+            tower.node("rotate").angle = -theta + math.pi/2
         end
     end
-    tower.node("rotate").angle = math.wrapf(tower.node("rotate").angle, math.pi*2)
 end
 
 function update_tower_lighthouse(tower, tower_index)
@@ -449,7 +458,11 @@ function make_and_register_tower(hex, tower_type)
     tower.fire_rate = spec.fire_rate
     tower.last_shot_time = -spec.fire_rate
     tower.size = spec.size
-    tower.hexes = spiral_map(tower.hex, tower.size)
+    if tower.size == 0 then
+        tower.hexes = { tower.hex }
+    else
+        tower.hexes = spiral_map(tower.hex, tower.size)
+    end
     tower.height = spec.height
 
     for _,h in pairs(tower.hexes) do
@@ -466,8 +479,10 @@ function make_and_register_tower(hex, tower_type)
 end
 
 function build_tower(hex, tower_type)
-    make_and_register_tower(hex, tower_type)
+    local tower = make_and_register_tower(hex, tower_type)
     vplay_sfx(SOUNDS.EXPLOSION4)
+
+    return tower
 end
 
 function delete_all_towers()
