@@ -298,7 +298,7 @@ local function make_and_register_mob(mob_type)
 end
 
 function do_mob_spawning(spawn_chance)
-    --if WIN:key_pressed"space" then
+    --if win:key_pressed"space" then
     if state.spawning and math.random(spawn_chance) == 1 then
     --if #MOBS < 1 then
         make_and_register_mob(MOB_TYPE.BEEPER)

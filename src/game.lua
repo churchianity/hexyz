@@ -28,12 +28,12 @@ local function get_initial_game_state(seed)
     local map, world = random_map()
 
     return {
-        map = map,              -- map of hex coords map[x][y] to some stuff at that location
+        map = map,              -- map of hex coords map[x][y] to a 'tile'
         world = world,          -- the root scene graph node for the game 'world'
         ui = nil,               -- unused, root scene graph node for the 'ui' stuff
 
         perf = {},              -- result of call to am.perf_stats, called every frame
-        time = 0,               -- real time since game started in seconds
+        time = 0,               -- real time since the *current* game started in seconds
         score = 0,              -- current game score
         money = STARTING_MONEY, -- current money
 
@@ -44,7 +44,7 @@ local function get_initial_game_state(seed)
         spawn_chance = 55,
 
         selected_tower_type = false,
-        selected_toolbelt_button = 9,
+        selected_toolbelt_button = false,
         selected_top_right_display_type = TRDTS.SEED,
     }
 end
@@ -84,11 +84,11 @@ local function get_top_right_display_text(hex, evenq, centered_evenq, display_ty
 end
 
 function alert(message)
-    WIN.scene:append(
+    win.scene:append(
         am.scale(3) ^ am.text(message)
         :action(coroutine.create(function(self)
             am.wait(am.tween(self, 1, { color = vec4(0) }))
-            WIN.scene:remove(self)
+            win.scene:remove(self)
         end))
     )
 end
@@ -111,10 +111,10 @@ function do_day_night_cycle()
 end
 
 local function game_pause()
-    WIN.scene("game").paused = true
+    win.scene("game").paused = true
 
-    WIN.scene("game"):append(am.group{
-        am.rect(WIN.left, WIN.bottom, WIN.right, WIN.top, COLORS.TRANSPARENT),
+    win.scene("game"):append(am.group{
+        am.rect(win.left, win.bottom, win.right, win.top, COLORS.TRANSPARENT),
         am.scale(2)
         ^ am.text(string.format(
             "Paused.\nSeed: %d\nEscape to Resume\nf4 to start a new game", state.map.seed
@@ -122,13 +122,13 @@ local function game_pause()
     }
     :tag"pause_menu")
 
-    WIN.scene:action(function()
-        if WIN:key_pressed("escape") then
-            WIN.scene:remove("pause_menu")
-            WIN.scene("game").paused = false
+    win.scene:action(function()
+        if win:key_pressed("escape") then
+            win.scene:remove("pause_menu")
+            win.scene("game").paused = false
             return true
 
-        elseif WIN:key_pressed("f4") then
+        elseif win:key_pressed("f4") then
             game_end()
             return true
         end
@@ -165,7 +165,7 @@ local function game_action(scene)
         end
     end
 
-    local mouse          = WIN:mouse_position()
+    local mouse          = win:mouse_position()
     local hex            = pixel_to_hex(mouse - WORLDSPACE_COORDINATE_OFFSET, vec2(HEX_SIZE))
     local rounded_mouse  = hex_to_pixel(hex, vec2(HEX_SIZE)) + WORLDSPACE_COORDINATE_OFFSET
     local evenq          = hex_to_evenq(hex)
@@ -177,21 +177,21 @@ local function game_action(scene)
     local buildable = tower_type_is_buildable_on(hex, tile, state.selected_tower_type)
     local firable = false
 
-    if WIN:mouse_pressed"left" then
+    if win:mouse_pressed"left" then
         if interactable then
             if buildable then
                 local broken, flow_field = building_tower_breaks_flow_field(state.selected_tower_type, hex)
                 local cost = get_tower_cost(state.selected_tower_type)
 
                 if broken then
-                    local node = WIN.scene("cursor"):child(2)
+                    local node = win.scene("cursor"):child(2)
                     node.color = COLORS.CLARET
                     node:action(am.tween(0.1, { color = COLORS.TRANSPARENT }))
                     play_sfx(SOUNDS.BIRD2)
                     alert("breaks flow field")
 
                 elseif cost > state.money then
-                    local node = WIN.scene("cursor"):child(2)
+                    local node = win.scene("cursor"):child(2)
                     node.color = COLORS.CLARET
                     node:action(am.tween(0.1, { color = COLORS.TRANSPARENT }))
                     play_sfx(SOUNDS.BIRD2)
@@ -209,41 +209,41 @@ local function game_action(scene)
         end
     end
 
-    if WIN:mouse_pressed"middle" then
-        WIN.scene("world_scale").scale2d = vec2(1)
+    if win:mouse_pressed"middle" then
+        win.scene("world_scale").scale2d = vec2(1)
 
-    elseif WIN:key_down"lctrl" then
-        local mwd = WIN:mouse_wheel_delta()
-        WIN.scene("world_scale").scale2d = WIN.scene("world_scale").scale2d + vec2(mwd.y) / 100
+    elseif win:key_down"lctrl" then
+        local mwd = win:mouse_wheel_delta()
+        win.scene("world_scale").scale2d = win.scene("world_scale").scale2d + vec2(mwd.y) / 100
     end
 
-    if WIN:key_pressed"escape" then
+    if win:key_pressed"escape" then
         game_pause()
 
-    elseif WIN:key_pressed"f1" then
+    elseif win:key_pressed"f1" then
         state.selected_top_right_display_type = (state.selected_top_right_display_type + 1) % #table.keys(TRDTS)
 
-    elseif WIN:key_pressed"f2" then
+    elseif win:key_pressed"f2" then
         state.world"flow_field".hidden = not state.world"flow_field".hidden
 
-    elseif WIN:key_pressed"tab" then
-        if WIN:key_down"lshift" then
+    elseif win:key_pressed"tab" then
+        if win:key_down"lshift" then
             select_toolbelt_button((state.selected_toolbelt_button + table.count(TOWER_TYPE) - 2) % table.count(TOWER_TYPE) + 1)
         else
             select_toolbelt_button((state.selected_toolbelt_button) % table.count(TOWER_TYPE) + 1)
         end
-    elseif WIN:key_pressed"1" then select_toolbelt_button( 1)
-    elseif WIN:key_pressed"2" then select_toolbelt_button( 2)
-    elseif WIN:key_pressed"3" then select_toolbelt_button( 3)
-    elseif WIN:key_pressed"4" then select_toolbelt_button( 4)
-    elseif WIN:key_pressed"q" then select_toolbelt_button( 5)
-    elseif WIN:key_pressed"w" then select_toolbelt_button( 6)
-    elseif WIN:key_pressed"e" then select_toolbelt_button( 7)
-    elseif WIN:key_pressed"r" then select_toolbelt_button( 8)
-    elseif WIN:key_pressed"a" then select_toolbelt_button( 9)
-    elseif WIN:key_pressed"s" then select_toolbelt_button(10)
-    elseif WIN:key_pressed"d" then select_toolbelt_button(11)
-    elseif WIN:key_pressed"f" then select_toolbelt_button(12)
+    elseif win:key_pressed"1" then select_toolbelt_button( 1)
+    elseif win:key_pressed"2" then select_toolbelt_button( 2)
+    elseif win:key_pressed"3" then select_toolbelt_button( 3)
+    elseif win:key_pressed"4" then select_toolbelt_button( 4)
+    elseif win:key_pressed"q" then select_toolbelt_button( 5)
+    elseif win:key_pressed"w" then select_toolbelt_button( 6)
+    elseif win:key_pressed"e" then select_toolbelt_button( 7)
+    elseif win:key_pressed"r" then select_toolbelt_button( 8)
+    elseif win:key_pressed"a" then select_toolbelt_button( 9)
+    elseif win:key_pressed"s" then select_toolbelt_button(10)
+    elseif win:key_pressed"d" then select_toolbelt_button(11)
+    elseif win:key_pressed"f" then select_toolbelt_button(12)
     end
 
     do_entity_updates()
@@ -251,21 +251,21 @@ local function game_action(scene)
     do_day_night_cycle()
 
     if interactable then
-        WIN.scene("cursor").hidden = false
+        win.scene("cursor").hidden = false
 
         if buildable then
-            WIN.scene("cursor_translate").position2d = rounded_mouse
+            win.scene("cursor_translate").position2d = rounded_mouse
         else
-            WIN.scene("cursor").hidden = true
+            win.scene("cursor").hidden = true
         end
     else
-        WIN.scene("cursor").hidden = true
+        win.scene("cursor").hidden = true
     end
 
-    WIN.scene("score").text = string.format("SCORE: %.2f", state.score)
-    WIN.scene("money").text = string.format("MONEY: %d", state.money)
-    WIN.scene("wave_timer").text = get_wave_timer_text()
-    WIN.scene("top_right_display").text = get_top_right_display_text(hex, evenq, centered_evenq, state.selected_top_right_display_type)
+    win.scene("score").text = string.format("SCORE: %.2f", state.score)
+    win.scene("money").text = string.format("MONEY: %d", state.money)
+    win.scene("wave_timer").text = get_wave_timer_text()
+    win.scene("top_right_display").text = get_top_right_display_text(hex, evenq, centered_evenq, state.selected_top_right_display_type)
 end
 
 local function make_game_toolbelt()
@@ -293,7 +293,7 @@ local function make_game_toolbelt()
         local rect = { x1 = x1, y1 = y1, x2 = x2, y2 = y2 }
 
         button:action(function(self)
-            if WIN:mouse_pressed"left" and point_in_rect(WIN:mouse_position(), rect) then
+            if win:mouse_pressed"left" and point_in_rect(win:mouse_position(), rect) then
                 select_toolbelt_button(i)
             end
         end)
@@ -313,7 +313,7 @@ local function make_game_toolbelt()
         end
 
         local color = COLORS.PALE_SILVER
-        return (am.translate(WIN.left + 10, WIN.bottom + toolbelt_height + 20)
+        return (am.translate(win.left + 10, win.bottom + toolbelt_height + 20)
             ^ am.group{
                 am.translate(0, 60)
                 ^ am.text(name, color, "left"):tag"tower_name",
@@ -332,13 +332,13 @@ local function make_game_toolbelt()
     end
     local toolbelt = am.group{
         am.group():tag"tower_tooltip_text",
-        am.rect(WIN.left, WIN.bottom, WIN.right, WIN.bottom + toolbelt_height, COLORS.TRANSPARENT)
+        am.rect(win.left, win.bottom, win.right, win.bottom + toolbelt_height, COLORS.TRANSPARENT)
     }:tag"toolbelt"
 
     local padding = 15
     local size = toolbelt_height - padding
     local half_size = size/2
-    local offset = vec2(WIN.left + padding*3, WIN.bottom + padding/3)
+    local offset = vec2(win.left + padding*3, win.bottom + padding/3)
     local tab_button = am.translate(vec2(0, half_size) + offset) ^ am.group{
         pack_texture_into_sprite(TEXTURES.WIDER_BUTTON1, 54, 32),
         pack_texture_into_sprite(TEXTURES.TAB_ICON, 25, 25)
@@ -381,7 +381,7 @@ local function make_game_toolbelt()
         state.selected_tower_type = tower_type
 
         if get_tower_spec(tower_type) then
-            WIN.scene:replace("tower_tooltip_text", get_tower_tooltip_text_node(tower_type))
+            win.scene:replace("tower_tooltip_text", get_tower_tooltip_text_node(tower_type))
 
             local new_position = vec2((size + padding) * tower_type, size/2) + offset
             if toolbelt("tower_select_square").hidden then
@@ -391,14 +391,14 @@ local function make_game_toolbelt()
                 toolbelt("tower_select_square"):action(am.tween(0.1, { position2d = new_position }))
             end
 
-            WIN.scene:replace("cursor", get_tower_cursor(tower_type):tag"cursor")
+            win.scene:replace("cursor", get_tower_cursor(tower_type):tag"cursor")
 
-            WIN.scene:action(am.play(am.sfxr_synth(SOUNDS.SELECT1), false, 1, SFX_VOLUME))
+            play_sfx(SOUNDS.SELECT1)
         else
             -- de-selecting currently selected tower if any
             toolbelt("tower_select_square").hidden = true
 
-            WIN.scene:replace("cursor", make_hex_cursor(0, COLORS.TRANSPARENT))
+            win.scene:replace("cursor", make_hex_cursor(0, COLORS.TRANSPARENT))
         end
     end
 
@@ -415,8 +415,9 @@ local function make_game_toolbelt()
     return toolbelt
 end
 
+-- this is a stupid name, it just returns a scene node group of hexagons in a hexagonal shape centered at 0,0, of size |radius|
 -- |color_f| can be a function that takes a hex and returns a color, or just a color
--- |action_f| should be an action that operates on the group node or nil
+-- optionally, |action_f| is a function that operates on the group node every frame
 function make_hex_cursor(radius, color_f, action_f)
     local color = type(color_f) == "userdata" and color_f or nil
     local map = spiral_map(vec2(0), radius)
@@ -435,28 +436,28 @@ function make_hex_cursor(radius, color_f, action_f)
 end
 
 function game_scene()
-    local score = am.translate(WIN.left + 10, WIN.top - 20)
+    local score = am.translate(win.left + 10, win.top - 20)
                   ^ am.text("", "left"):tag"score"
 
-    local money = am.translate(WIN.left + 10, WIN.top - 40)
+    local money = am.translate(win.left + 10, win.top - 40)
                   ^ am.text("", "left"):tag"money"
 
-    local wave_timer = am.translate(0, WIN.top - 20)
+    local wave_timer = am.translate(0, win.top - 20)
                        ^ am.text(get_wave_timer_text()):tag"wave_timer"
 
-    local top_right_display = am.translate(WIN.right - 10, WIN.top - 20)
+    local top_right_display = am.translate(win.right - 10, win.top - 20)
                               ^ am.text("", "right", "top"):tag"top_right_display"
 
-    local curtain = am.rect(WIN.left, WIN.bottom, WIN.right, WIN.top, COLORS.TRUE_BLACK)
+    local curtain = am.rect(win.left, win.bottom, win.right, win.top, COLORS.TRUE_BLACK)
     curtain:action(coroutine.create(function()
         am.wait(am.tween(curtain, 3, { color = vec4(0) }, am.ease.out(am.ease.hyperbola)))
-        WIN.scene:remove(curtain)
+        win.scene:remove(curtain)
         return true
     end))
 
     local scene = am.group{
         am.scale(1):tag"world_scale" ^ state.world,
-        am.translate(OFF_SCREEN):tag"cursor_translate" ^ make_hex_cursor(0, COLORS.TRANSPARENT),
+        am.translate(HEX_GRID_CENTER):tag"cursor_translate" ^ make_hex_cursor(0, COLORS.TRANSPARENT),
         score,
         money,
         wave_timer,
@@ -479,7 +480,7 @@ function game_init()
         state.map.get(h.x, h.y).elevation = 0
     end
 
-    WIN.scene:remove("game")
-    WIN.scene:append(game_scene())
+    win.scene:remove("game")
+    win.scene:append(game_scene())
 end
 

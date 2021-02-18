@@ -1,4 +1,5 @@
 
+
 SOUNDS = {
     -- sfxr_synth seeds
     EXPLOSION1      = 49179102, -- this slowed sounds metal as fuck
@@ -27,10 +28,10 @@ SOUNDS = {
 -- play sound effect with variable pitch
 function vplay_sfx(sound, pitch_range)
     local pitch = (math.random() + 0.5)/(pitch_range and 1/pitch_range or 2)
-    WIN.scene:action(am.play(sound, false, pitch, SFX_VOLUME))
+    win.scene:action(am.play(sound, false, pitch, settings.sfx_volume))
 end
 
 function play_sfx(sound)
-    WIN.scene:action(am.play(sound, false, 1, SFX_VOLUME))
+    win.scene:action(am.play(sound, false, 1, settings.sfx_volume))
 end
 

@@ -67,10 +67,10 @@ local function update_projectile_shell(projectile, projectile_index)
     projectile.position = projectile.position + projectile.vector * projectile.velocity
 
     if not point_in_rect(projectile.position + WORLDSPACE_COORDINATE_OFFSET, {
-        x1 = WIN.left,
-        y1 = WIN.bottom,
-        x2 = WIN.right,
-        y2 = WIN.top
+        x1 = win.left,
+        y1 = win.bottom,
+        x2 = win.right,
+        y2 = win.top
     }) then
         delete_entity(PROJECTILES, projectile_index)
         return true
@@ -116,7 +116,7 @@ local function update_projectile_shell(projectile, projectile_index)
             local damage = (1 / (math.distance(mob.position, projectile.position) / (HEX_PIXEL_WIDTH * 2))) * projectile.damage
             do_hit_mob(mob, damage, index)
         end
-        WIN.scene:append(make_shell_explosion_node(projectile.position))
+        win.scene:append(make_shell_explosion_node(projectile.position))
         delete_entity(PROJECTILES, projectile_index)
         return true
     end
@@ -127,10 +127,10 @@ local function update_projectile_laser(projectile, projectile_index)
 
     -- check if we're out of bounds
     if not point_in_rect(projectile.position + WORLDSPACE_COORDINATE_OFFSET, {
-        x1 = WIN.left,
-        y1 = WIN.bottom,
-        x2 = WIN.right,
-        y2 = WIN.top
+        x1 = win.left,
+        y1 = win.bottom,
+        x2 = win.right,
+        y2 = win.top
     }) then
         delete_entity(PROJECTILES, projectile_index)
         return true

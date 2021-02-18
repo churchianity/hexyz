@@ -8,11 +8,11 @@ HEX_PIXEL_HEIGHT = hex_height(HEX_SIZE, ORIENTATION.FLAT)
 HEX_PIXEL_DIMENSIONS = vec2(HEX_PIXEL_WIDTH, HEX_PIXEL_HEIGHT)
 
 do
-    -- added 2 cell padding, because we terraform the very outer edge and it looks ugly, so hide it
-    local padding = 2
+    -- add padding, because we terraform the very outer edge and it looks ugly, so hide it
+    local padding = 3
 
-    HEX_GRID_WIDTH = math.floor(WIN.width / (HEX_PIXEL_WIDTH + HEX_SIZE) * 2) + padding
-    HEX_GRID_HEIGHT = math.floor(WIN.height / HEX_PIXEL_HEIGHT) + padding
+    HEX_GRID_WIDTH = math.floor(win.width / (HEX_PIXEL_WIDTH + HEX_SIZE) * 2) + padding
+    HEX_GRID_HEIGHT = math.floor(win.height / HEX_PIXEL_HEIGHT) + padding
 
     -- odd numbers are important because we want a 'true' center
     if HEX_GRID_WIDTH % 2 == 0 then
@@ -53,7 +53,7 @@ WORLDSPACE_COORDINATE_OFFSET = -HEX_GRID_PIXEL_DIMENSIONS/2
 
 -- the outer edges of the map are not interactable
 -- the interactable region is defined with this function and constant
-HEX_GRID_INTERACTABLE_REGION_MARGIN = 4
+HEX_GRID_INTERACTABLE_REGION_MARGIN = 3
 function evenq_is_in_interactable_region(evenq)
     return point_in_rect(evenq, {
         x1 =                   HEX_GRID_INTERACTABLE_REGION_MARGIN,
