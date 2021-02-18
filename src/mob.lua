@@ -145,7 +145,7 @@ end
 
 local function resolve_frame_target_for_mob(mob, mob_index)
     local last_frame_hex = mob.hex
-    mob.hex = pixel_to_hex(mob.position)
+    mob.hex = pixel_to_hex(mob.position, vec2(HEX_SIZE))
 
     if mob.hex == HEX_GRID_CENTER then
         update_score(-mob.health)
@@ -223,7 +223,7 @@ local function update_mob_spooder(mob, mob_index)
             local to = state.map.get(mob.frame_target.x, mob.frame_target.y)
             local rate = (math.abs(from.elevation - to.elevation) * 100) * mob.speed * am.delta_time
 
-            mob.position = mob.position + math.normalize(hex_to_pixel(mob.frame_target) - mob.position) * rate
+            mob.position = mob.position + math.normalize(hex_to_pixel(mob.frame_target, vec2(HEX_SIZE)) - mob.position) * rate
             mob.node.position2d = mob.position
         else
             mob.frame_target = false
@@ -251,7 +251,7 @@ local function update_mob_beeper(mob, mob_index)
             local to = state.map.get(mob.frame_target.x, mob.frame_target.y)
             local rate = (4 * mob.speed - math.abs(to.elevation - from.elevation)) * am.delta_time
 
-            mob.position = mob.position + math.normalize(hex_to_pixel(mob.frame_target) - mob.position) * rate
+            mob.position = mob.position + math.normalize(hex_to_pixel(mob.frame_target, vec2(HEX_SIZE)) - mob.position) * rate
             mob.node.position2d = mob.position
         else
             mob.frame_target = false

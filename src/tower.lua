@@ -37,7 +37,7 @@ TOWER_SPECS = {
         cost = 20,
         range = 10,
         fire_rate = 4,
-        size = 1,
+        size = 0,
         height = 1,
     },
     [TOWER_TYPE.REDEYE] = {
@@ -49,7 +49,7 @@ TOWER_SPECS = {
         cost = 20,
         range = 12,
         fire_rate = 1,
-        size = 1,
+        size = 0,
         height = 1,
     },
     [TOWER_TYPE.MOAT] = {
@@ -85,7 +85,7 @@ TOWER_SPECS = {
         cost = 20,
         range = 8,
         fire_rate = 1,
-        size = 1,
+        size = 0,
         height = 1,
     },
 }
@@ -132,9 +132,9 @@ local function make_tower_node(tower_type)
 
     elseif tower_type == TOWER_TYPE.HOWITZER then
         return am.group{
-            pack_texture_into_sprite(TEXTURES.HEX_FLOWER, HEX_FLOWER_DIMENSIONS.x, HEX_FLOWER_DIMENSIONS.y),
+            pack_texture_into_sprite(TEXTURES.HEX_FLOWER, HEX_PIXEL_WIDTH, HEX_PIXEL_HEIGHT),
             am.rotate(state.time or 0) ^ am.group{
-                pack_texture_into_sprite(TEXTURES.CANNON1, 100, 100)
+                pack_texture_into_sprite(TEXTURES.CANNON1, 50, 50)
             }
         }
     elseif tower_type == TOWER_TYPE.LIGHTHOUSE then
@@ -371,7 +371,7 @@ function update_tower_howitzer(tower, tower_index)
                 end
             end
         end
-        tower.node("rotate").angle = math.wrapf(tower.node("rotate").angle + 0.2 * am.delta_time, math.pi*2)
+        tower.node("rotate").angle = math.wrapf(tower.node("rotate").angle + 0.1 * am.delta_time, math.pi*2)
     else
         -- we should have a target
         if MOBS[tower.target_index] == false then

@@ -1,23 +1,34 @@
 
 
 -- distance from hex centerpoint to any vertex
-HEX_SIZE = 20
+HEX_SIZE = 24
 
 HEX_PIXEL_WIDTH = hex_width(HEX_SIZE, ORIENTATION.FLAT)
 HEX_PIXEL_HEIGHT = hex_height(HEX_SIZE, ORIENTATION.FLAT)
 HEX_PIXEL_DIMENSIONS = vec2(HEX_PIXEL_WIDTH, HEX_PIXEL_HEIGHT)
 
--- with 1920x1080, the minimal dimensions to cover the screen is 65x33
--- added 2 cell padding, because we terraform the very outer edge and it looks ugly, so hide it
--- odd numbers are important because we want a 'true' center
-HEX_GRID_WIDTH = 67
-HEX_GRID_HEIGHT = 35
-HEX_GRID_DIMENSIONS = vec2(HEX_GRID_WIDTH, HEX_GRID_HEIGHT)
 
--- leaving y == 0 makes this the center in hex coordinates
-HEX_GRID_CENTER = vec2(math.floor(HEX_GRID_WIDTH/2)
-                     , 0)
-                  -- , math.floor(HEX_GRID_HEIGHT/2))
+-- odd numbers are important because we want a 'true' center
+-- added 2 cell padding, because we terraform the very outer edge and it looks ugly, so hide it
+do
+    -- padding should be an even number if the result of the below calculation returns an odd number,
+    -- and vice-versa
+    local padding = 2
+
+    HEX_GRID_WIDTH = math.floor(WIN.width / (HEX_PIXEL_WIDTH + HEX_SIZE) * 2) + padding
+    HEX_GRID_HEIGHT = math.floor(WIN.height / HEX_PIXEL_HEIGHT) + padding
+    HEX_GRID_DIMENSIONS = vec2(HEX_GRID_WIDTH, HEX_GRID_HEIGHT)
+    log(HEX_GRID_DIMENSIONS)
+
+    assert(HEX_GRID_WIDTH % 2 == 1
+       and HEX_GRID_HEIGHT % 2 == 1
+       , string.format("grid dimensions aren't both odd numbers - %s", tostring(HEX_GRID_DIMENSIONS)))
+
+    -- leaving y == 0 makes this the center in hex coordinates, assuming that our dimensions are correct
+    HEX_GRID_CENTER = vec2(math.floor(HEX_GRID_WIDTH/2)
+                         , 0)
+                      -- , math.floor(HEX_GRID_HEIGHT/2))
+end
 
 HEX_GRID_MINIMUM_ELEVATION = -1
 HEX_GRID_MAXIMUM_ELEVATION = 1
@@ -115,7 +126,7 @@ function apply_flow_field(map, flow_field, world)
             if flow then
                 map[i][j].priority = flow.priority
 
-                overlay_group:append(am.translate(hex_to_pixel(vec2(i, j)))
+                overlay_group:append(am.translate(hex_to_pixel(vec2(i, j), vec2(HEX_SIZE)))
                                      ^ am.text(string.format("%.1f", flow.priority * 10)))
             else
                 map[i][j].priority = nil
@@ -212,7 +223,7 @@ function random_map(seed)
                                              , ((-evenq.y - HEX_GRID_HEIGHT/2) / HEX_GRID_HEIGHT) ^ 2))
             local color = color_at(noise) - mask
 
-            local node = am.translate(hex_to_pixel(vec2(i, j)))
+            local node = am.translate(hex_to_pixel(vec2(i, j), vec2(HEX_SIZE)))
                          ^ am.circle(vec2(0), HEX_SIZE, color, 6)
 
             map.set(i, j, {

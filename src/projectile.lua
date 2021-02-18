@@ -77,7 +77,7 @@ local function update_projectile_shell(projectile, projectile_index)
     end
 
     projectile.node.position2d = projectile.position
-    projectile.hex = pixel_to_hex(projectile.position)
+    projectile.hex = pixel_to_hex(projectile.position, vec2(HEX_SIZE))
     projectile.props.z = projectile.props.z - SHELL_GRAVITY * am.delta_time
 
     -- check if we hit something
@@ -137,7 +137,7 @@ local function update_projectile_laser(projectile, projectile_index)
     end
 
     projectile.node.position2d = projectile.position
-    projectile.hex = pixel_to_hex(projectile.position)
+    projectile.hex = pixel_to_hex(projectile.position, vec2(HEX_SIZE))
 
     -- check if we hit something
     -- get a list of hexes that could have something we could hit on them

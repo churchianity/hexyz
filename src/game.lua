@@ -166,8 +166,8 @@ local function game_action(scene)
     end
 
     local mouse          = WIN:mouse_position()
-    local hex            = pixel_to_hex(mouse - WORLDSPACE_COORDINATE_OFFSET)
-    local rounded_mouse  = hex_to_pixel(hex) + WORLDSPACE_COORDINATE_OFFSET
+    local hex            = pixel_to_hex(mouse - WORLDSPACE_COORDINATE_OFFSET, vec2(HEX_SIZE))
+    local rounded_mouse  = hex_to_pixel(hex, vec2(HEX_SIZE)) + WORLDSPACE_COORDINATE_OFFSET
     local evenq          = hex_to_evenq(hex)
     local centered_evenq = evenq{ y = -evenq.y } - vec2(math.floor(HEX_GRID_WIDTH/2)
                                                       , math.floor(HEX_GRID_HEIGHT/2))
@@ -423,7 +423,7 @@ function make_hex_cursor(radius, color_f, action_f)
     local group = am.group()
 
     for _,h in pairs(map) do
-        local hexagon = am.circle(hex_to_pixel(h), HEX_SIZE, color or color_f(h), 6)
+        local hexagon = am.circle(hex_to_pixel(h, vec2(HEX_SIZE)), HEX_SIZE, color or color_f(h), 6)
         group:append(hexagon)
     end
 

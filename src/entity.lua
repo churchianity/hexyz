@@ -26,10 +26,10 @@ function make_basic_entity(hex, node, update, position)
     -- corresponds to the provided pixel position
     if position then
         entity.position = position
-        entity.hex      = pixel_to_hex(entity.position)
+        entity.hex      = pixel_to_hex(entity.position, vec2(HEX_SIZE))
     else
         entity.hex      = hex
-        entity.position = hex_to_pixel(hex)
+        entity.position = hex_to_pixel(hex, vec2(HEX_SIZE))
     end
 
     entity.update = update
