@@ -7,27 +7,27 @@ HEX_PIXEL_WIDTH = hex_width(HEX_SIZE, ORIENTATION.FLAT)
 HEX_PIXEL_HEIGHT = hex_height(HEX_SIZE, ORIENTATION.FLAT)
 HEX_PIXEL_DIMENSIONS = vec2(HEX_PIXEL_WIDTH, HEX_PIXEL_HEIGHT)
 
-
--- odd numbers are important because we want a 'true' center
--- added 2 cell padding, because we terraform the very outer edge and it looks ugly, so hide it
 do
-    -- padding should be an even number if the result of the below calculation returns an odd number,
-    -- and vice-versa
+    -- added 2 cell padding, because we terraform the very outer edge and it looks ugly, so hide it
     local padding = 2
 
     HEX_GRID_WIDTH = math.floor(WIN.width / (HEX_PIXEL_WIDTH + HEX_SIZE) * 2) + padding
     HEX_GRID_HEIGHT = math.floor(WIN.height / HEX_PIXEL_HEIGHT) + padding
+
+    -- odd numbers are important because we want a 'true' center
+    if HEX_GRID_WIDTH % 2 == 0 then
+        HEX_GRID_WIDTH = HEX_GRID_WIDTH + 1
+    end
+    if HEX_GRID_HEIGHT % 2 == 0 then
+        HEX_GRID_HEIGHT = HEX_GRID_HEIGHT + 1
+    end
+
     HEX_GRID_DIMENSIONS = vec2(HEX_GRID_WIDTH, HEX_GRID_HEIGHT)
-    log(HEX_GRID_DIMENSIONS)
 
-    assert(HEX_GRID_WIDTH % 2 == 1
-       and HEX_GRID_HEIGHT % 2 == 1
-       , string.format("grid dimensions aren't both odd numbers - %s", tostring(HEX_GRID_DIMENSIONS)))
-
-    -- leaving y == 0 makes this the center in hex coordinates, assuming that our dimensions are correct
+    -- leaving y == 0 makes this the center in hex/cube coordinates
+    -- assuming that our dimensions are correct (odd numbers)
     HEX_GRID_CENTER = vec2(math.floor(HEX_GRID_WIDTH/2)
                          , 0)
-                      -- , math.floor(HEX_GRID_HEIGHT/2))
 end
 
 HEX_GRID_MINIMUM_ELEVATION = -1
@@ -47,6 +47,8 @@ end
 
 -- amulet puts 0,0 in the middle of the screen
 -- transform coordinates by this to pretend 0,0 is elsewhere
+-- note this is isn't necessary when adding stuff to the worldspace in general,
+-- because the whole worldspace is translated by this constant
 WORLDSPACE_COORDINATE_OFFSET = -HEX_GRID_PIXEL_DIMENSIONS/2
 
 -- the outer edges of the map are not interactable
@@ -154,7 +156,7 @@ function building_tower_breaks_flow_field(tower_type, hex)
         table.insert(original_elevations, tile.elevation)
 
         -- making the tile's elevation very large *should* make it unwalkable
-        tile.elevation = 999
+        tile.elevation = math.huge
     end
 
     -- if no mobs can pass over any of the tiles we're building on
