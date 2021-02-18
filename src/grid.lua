@@ -1,7 +1,7 @@
 
 
 -- distance from hex centerpoint to any vertex
-HEX_SIZE = 24
+HEX_SIZE = 26
 
 HEX_PIXEL_WIDTH = hex_width(HEX_SIZE, ORIENTATION.FLAT)
 HEX_PIXEL_HEIGHT = hex_height(HEX_SIZE, ORIENTATION.FLAT)

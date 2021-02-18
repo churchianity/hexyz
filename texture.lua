@@ -14,9 +14,11 @@ TEXTURES = {
     LOGO                    = load_texture("res/logo.png"),
     GEM1                    = load_texture("res/gem1.png"),
 
+    -- gui stuff
     BUTTON1                 = load_texture("res/button1.png"),
     WIDER_BUTTON1           = load_texture("res/wider_button1.png"),
     TAB_ICON                = load_texture("res/tab_icon.png"),
+    GUI_SLIDER              = load_texture("res/slider.png"),
 
     -- tower stuff
     TOWER_WALL              = load_texture("res/tower_wall.png"),
@@ -40,12 +42,15 @@ TEXTURES = {
     MOB_SPOODER         = load_texture("res/mob_spooder.png"),
 }
 
-function pack_texture_into_sprite(texture, width, height)
-    return am.sprite{
+function pack_texture_into_sprite(texture, width, height, color)
+    local sprite = am.sprite{
         texture = texture,
         s1 = 0, s2 = 1, t1 = 0, t2 = 1,
         x1 = 0, x2 = width, width = width,
         y1 = 0, y2 = height, height = height
     }
+
+    sprite.color = color or vec4(1)
+    return sprite
 end
 

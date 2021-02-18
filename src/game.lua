@@ -113,12 +113,9 @@ end
 local function game_pause()
     win.scene("game").paused = true
 
-    win.scene("game"):append(am.group{
+    win.scene:append(am.group{
         am.rect(win.left, win.bottom, win.right, win.top, COLORS.TRANSPARENT),
-        am.scale(2)
-        ^ am.text(string.format(
-            "Paused.\nSeed: %d\nEscape to Resume\nf4 to start a new game", state.map.seed
-        ), COLORS.BLACK),
+        gui_textfield(vec2(-300, 0), vec2(200, 100)),
     }
     :tag"pause_menu")
 

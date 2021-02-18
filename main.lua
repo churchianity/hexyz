@@ -1,7 +1,7 @@
 
 
 settings = am.load_state("settings", "json") or {
-    fullscreen = true,
+    fullscreen = false,
     window_width = 1920,
     window_height = 1080,
     music_volume = 0.1,
@@ -36,6 +36,7 @@ require "src/extra"
 require "src/geometry"
 require "src/hexyz"
 require "src/game"
+require "src/gui"
 require "src/grid"
 require "src/mob"
 require "src/projectile"
