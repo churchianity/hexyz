@@ -77,8 +77,8 @@ end
 
 function entity_basic_json_parse(json_string)
     local entity = am.parse_json(json_string)
-    entity.position = vec2(entity.position[0], entity.position[1])
-    entity.hex = vec2(entity.hex[0], entity.hex[1])
+    entity.position = vec2(entity.position[1], entity.position[2])
+    entity.hex = vec2(entity.hex[1], entity.hex[2])
 
     return entity
 end

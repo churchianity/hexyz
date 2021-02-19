@@ -232,11 +232,11 @@ function tower_deserialize(json_string)
 
     tower.hexes = {}
     for i,h in pairs(tower.hexes) do
-        tower.hexes[i] = vec2(tower.hexes[i][0], tower.hexes[i][1])
+        tower.hexes[i] = vec2(tower.hexes[i][1], tower.hexes[i][2])
     end
 
     tower.update = get_tower_update_function(tower.type)
-    tower.node = am.translate(tower.position) ^ make_tower_node(tower_type)
+    tower.node = am.translate(tower.position) ^ make_tower_node(tower.type)
 
     return tower
 end
@@ -364,7 +364,7 @@ function update_tower_redeye(tower, tower_index)
             end
         end
     else
-        if state.mobs[tower.target_index] == false then
+        if not state.mobs[tower.target_index] then
             tower.target_index = false
 
         elseif (state.time - tower.last_shot_time) > tower.fire_rate then
@@ -397,7 +397,8 @@ function update_tower_howitzer(tower, tower_index)
         tower.node("rotate").angle = math.wrapf(tower.node("rotate").angle + 0.1 * am.delta_time, math.pi*2)
     else
         -- we should have a target
-        if state.mobs[tower.target_index] == false then
+        -- @NOTE don't compare to false, empty indexes appear on game reload
+        if not state.mobs[tower.target_index] then
             -- the target we have was invalidated
             tower.target_index = false
 

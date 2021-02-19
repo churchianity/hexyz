@@ -142,7 +142,6 @@ local function game_deserialize(json_string)
     new_state.map, new_state.world = random_map(new_state.seed)
     new_state.seed = nil
 
-    new_state.towers = {}
     for i,t in pairs(new_state.towers) do
         if t then
             new_state.towers[i] = tower_deserialize(t)
@@ -152,7 +151,6 @@ local function game_deserialize(json_string)
         end
     end
 
-    new_state.mobs = {}
     for i,m in pairs(new_state.mobs) do
         if m then
             new_state.mobs[i] = mob_deserialize(m)
@@ -162,7 +160,6 @@ local function game_deserialize(json_string)
         end
     end
 
-    new_state.projectiles = {}
     for i,p in pairs(new_state.projectiles) do
         if p then
             new_state.projectiles[i] = projectile_deserialize(p)
