@@ -16,13 +16,13 @@ math.random()
 
 do
     win = am.window{
-        width       = settings.window_width,
-        height      = settings.window_height,
-        title       = "hexyz",
-        mode        = settings.fullscreen and "fullscreen" or "windowed",
-        highdpi     = true,
-        letterbox   = true,
-        resizable   = true, -- user should probably set their resolution instead of resizing the window, but hey.
+        width     = settings.window_width,
+        height    = settings.window_height,
+        title     = "hexyz",
+        mode      = settings.fullscreen and "fullscreen" or "windowed",
+        highdpi   = true,
+        letterbox = true,
+        resizable = true, -- user should probably set their resolution instead of resizing the window, but hey.
     }
 end
 
@@ -46,6 +46,6 @@ function main_action() end
 function main_scene() end
 
 win.scene = am.group()
-game_init()
+game_init(nil)
 noglobals()
 

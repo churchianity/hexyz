@@ -2,9 +2,9 @@
 
 state = {}
 
-function game_end()
+function game_end(saved_state)
     delete_all_entities()
-    game_init()
+    game_init(saved_state)
 end
 
 function update_score(diff) state.score = state.score + diff end
@@ -36,6 +36,10 @@ local function get_initial_game_state(seed)
         time = 0,               -- real time since the *current* game started in seconds
         score = 0,              -- current game score
         money = STARTING_MONEY, -- current money
+
+        towers = {},
+        mobs = {},
+        projectiles = {},
 
         current_wave = 1,
         time_until_next_wave = 0,
@@ -78,7 +82,7 @@ local function get_top_right_display_text(hex, evenq, centered_evenq, display_ty
         str = "SEED: " .. state.map.seed
 
     elseif display_type == TRDTS.TILE then
-        str = table.tostring(state.map.get(hex.x, hex.y))
+        str = table.tostring(map_get(state.map, hex))
     end
     return str
 end
@@ -119,7 +123,7 @@ local function game_pause()
     }
     :tag"pause_menu")
 
-    win.scene:action(function()
+    win.scene:action(function(self)
         if win:key_pressed("escape") then
             win.scene:remove("pause_menu")
             win.scene("game").paused = false
@@ -130,6 +134,84 @@ local function game_pause()
             return true
         end
     end)
+end
+
+local function game_deserialize(json_string)
+    -- @TODO decode from some compressed format or whatever
+    local new_state = am.parse_json(json_string)
+    new_state.map, new_state.world = random_map(new_state.seed)
+    new_state.seed = nil
+
+    new_state.towers = {}
+    for i,t in pairs(new_state.towers) do
+        if t then
+            new_state.towers[i] = tower_deserialize(t)
+
+            -- @STATEFUL, shouldn't be done here
+            new_state.world:append(new_state.towers[i].node)
+        end
+    end
+
+    new_state.mobs = {}
+    for i,m in pairs(new_state.mobs) do
+        if m then
+            new_state.mobs[i] = mob_deserialize(m)
+
+            -- @STATEFUL, shouldn't be done here
+            new_state.world:append(new_state.mobs[i].node)
+        end
+    end
+
+    new_state.projectiles = {}
+    for i,p in pairs(new_state.projectiles) do
+        if p then
+            new_state.projectiles[i] = projectile_deserialize(p)
+
+            -- @STATEFUL, shouldn't be done here
+            new_state.world:append(new_state.projectiles[i].node)
+        end
+    end
+
+    return new_state
+end
+
+local function game_serialize()
+    local serialized = table.shallow_copy(state)
+    serialized.seed = state.map.seed
+    serialized.map = nil -- we re-generate the entire map from the seed on de-serialize
+
+    -- in order to serialize the game state, we have to convert all relevant userdata into
+    -- something else. this practically only means vectors need to become arrays of floats.
+    -- this is dumb and if i forsaw this i would have probably used float arrays the whole time.
+
+    serialized.towers = {}
+    for i,t in pairs(state.towers) do
+        if t then
+            serialized.towers[i] = tower_serialize(t)
+        end
+    end
+
+    serialized.mobs = {}
+    for i,m in pairs(state.mobs) do
+        if m then
+            serialized.mobs[i] = mob_serialize(m)
+        end
+    end
+
+    serialized.projectiles = {}
+    for i,p in pairs(state.projectiles) do
+        if p then
+            serialized.projectiles[i] = projectile_serialize(p)
+        end
+    end
+
+    -- @TODO b64 encode or otherwise scramble/compress
+    return am.to_json(serialized)
+end
+
+local function game_save()
+    am.save_state("save", game_serialize(), "json")
+    log("succesfully saved!")
 end
 
 local function game_action(scene)
@@ -168,7 +250,7 @@ local function game_action(scene)
     local evenq          = hex_to_evenq(hex)
     local centered_evenq = evenq{ y = -evenq.y } - vec2(math.floor(HEX_GRID_WIDTH/2)
                                                       , math.floor(HEX_GRID_HEIGHT/2))
-    local tile = state.map.get(hex.x, hex.y)
+    local tile = map_get(state.map, hex)
 
     local interactable = evenq_is_in_interactable_region(evenq{ y = -evenq.y })
     local buildable = tower_type_is_buildable_on(hex, tile, state.selected_tower_type)
@@ -222,6 +304,13 @@ local function game_action(scene)
 
     elseif win:key_pressed"f2" then
         state.world"flow_field".hidden = not state.world"flow_field".hidden
+
+    elseif win:key_pressed"f3" then
+        game_save()
+
+    elseif win:key_pressed"f4" then
+        game_end(am.load_state("save", "json"))
+        return true
 
     elseif win:key_pressed"tab" then
         if win:key_down"lshift" then
@@ -468,14 +557,24 @@ function game_scene()
     return scene
 end
 
-function game_init()
-    state = get_initial_game_state()
+function game_init(saved_state)
+    if saved_state then
+        state = game_deserialize(saved_state)
 
+        -- scene nodes aren't (can't be?) serialized, so we re-generate them if we're loading from a save
+
+
+    else
+        state = get_initial_game_state()
+    end
+
+    --[[
     local home_tower = build_tower(HEX_GRID_CENTER, TOWER_TYPE.RADAR)
     for _,h in pairs(home_tower.hexes) do
         -- @HACK to make the center tile(s) passable even though there's a tower on it
-        state.map.get(h.x, h.y).elevation = 0
+        map_get(state.map, h).elevation = 0
     end
+    ]]
 
     win.scene:remove("game")
     win.scene:append(game_scene())

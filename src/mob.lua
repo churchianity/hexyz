@@ -1,6 +1,6 @@
 
 
-MOBS = {}
+state.mobs = {}
 
 MOB_TYPE = {
     BEEPER = 1,
@@ -46,7 +46,7 @@ end
 
 function mobs_on_hex(hex)
     local t = {}
-    for mob_index,mob in pairs(MOBS) do
+    for mob_index,mob in pairs(state.mobs) do
         if mob and mob.hex == hex then
             table.insert(t, mob_index, mob)
         end
@@ -56,20 +56,20 @@ end
 
 function mob_on_hex(hex)
     -- table.find returns i,v in the table
-    return table.find(MOBS, function(mob)
+    return table.find(state.mobs, function(mob)
         return mob and mob.hex == hex
     end)
 end
 
 -- check if a the tile at |hex| is passable by |mob|
 function mob_can_pass_through(mob, hex)
-    local tile = state.map.get(hex.x, hex.y)
+    local tile = map_get(state.map, hex)
     return tile_is_medium_elevation(tile)
 end
 
 function mob_die(mob, mob_index)
     vplay_sfx(SOUNDS.EXPLOSION1)
-    delete_entity(MOBS, mob_index)
+    delete_entity(state.mobs, mob_index)
 end
 
 local HEALTHBAR_WIDTH = HEX_PIXEL_WIDTH/2
@@ -158,7 +158,7 @@ local function resolve_frame_target_for_mob(mob, mob_index)
         local frame_target, tile = false, false
         if mob.path then
             -- we (should) have an explicitly stored target
-            local path_entry = mob.path[mob.hex.x] and mob.path[mob.hex.x][mob.hex.y]
+            local path_entry = map_get(mob.path, mob.hex)
 
             if not path_entry then
                 -- we should be just about to reach the target, delete the path.
@@ -176,16 +176,16 @@ local function resolve_frame_target_for_mob(mob, mob_index)
             end
         else
             -- use the map's flow field - gotta find the the best neighbour
-            local neighbours = state.map.neighbours(mob.hex)
+            local neighbours = grid_neighbours(state.map, mob.hex)
 
             if #neighbours > 0 then
                 local first_neighbour = neighbours[1]
-                tile = state.map.get(first_neighbour.x, first_neighbour.y)
+                tile = map_get(state.map, first_neighbour)
                 local lowest_cost_hex = first_neighbour
                 local lowest_cost = tile.priority or 0
 
                 for _,n in pairs(neighbours) do
-                    tile = state.map.get(n.x, n.y)
+                    tile = map_get(state.map, n)
 
                     if not tile.priority then
                         -- if there's no stored priority, that should mean it's the center tile
@@ -247,8 +247,8 @@ local function update_mob_beeper(mob, mob_index)
         -- or between when we last calculated this target and now
         -- check for that now
         if mob_can_pass_through(mob, mob.frame_target) then
-            local from = state.map.get(mob.hex.x, mob.hex.y)
-            local to = state.map.get(mob.frame_target.x, mob.frame_target.y)
+            local from = map_get(state.map, mob.hex)
+            local to = map_get(state.map, mob.frame_target)
             local rate = (4 * mob.speed - math.abs(to.elevation - from.elevation)) * am.delta_time
 
             mob.position = mob.position + math.normalize(hex_to_pixel(mob.frame_target, vec2(HEX_SIZE)) - mob.position) * rate
@@ -257,7 +257,7 @@ local function update_mob_beeper(mob, mob_index)
             mob.frame_target = false
         end
     else
-        log('no target')
+        --log('no target')
     end
 
     -- passive animation
@@ -280,11 +280,11 @@ end
 local function make_and_register_mob(mob_type)
     local mob = make_basic_entity(
         get_spawn_hex(),
-        make_mob_node(mob_type),
         get_mob_update_function(mob_type)
     )
 
     mob.type = mob_type
+    mob.node = am.translate(mob.position) ^ make_mob_node(mob_type, mob)
 
     local spec = get_mob_spec(mob_type)
     mob.health = grow_mob_health(mob_type, spec.health, state.time)
@@ -293,26 +293,42 @@ local function make_and_register_mob(mob_type)
     mob.hurtbox_radius = spec.hurtbox_radius
     mob.healthbar = mob.node:child(1):child(2):child(1) -- lmao
 
-    register_entity(MOBS, mob)
+    register_entity(state.mobs, mob)
+    return mob
+end
+
+function mob_serialize(mob)
+    local serialized = entity_basic_devectored_copy(mob)
+
+    return am.to_json(serialized)
+end
+
+function mob_deserialize(json_string)
+    local mob = entity_basic_json_parse(json_string)
+
+    mob.update = get_mob_update_function(mob.type)
+    mob.node = am.translate(mob.position) ^ make_mob_node(mob.type, mob)
+    mob.healthbar = mob.node:child(1):child(2):child(1) -- lmaoooo
+
     return mob
 end
 
 function do_mob_spawning(spawn_chance)
     --if win:key_pressed"space" then
     if state.spawning and math.random(spawn_chance) == 1 then
-    --if #MOBS < 1 then
+    --if #state.mobs < 1 then
         make_and_register_mob(MOB_TYPE.BEEPER)
     end
 end
 
 function delete_all_mobs()
-    for mob_index,mob in pairs(MOBS) do
-        if mob then delete_entity(MOBS, mob_index) end
+    for mob_index,mob in pairs(state.mobs) do
+        if mob then delete_entity(state.mobs, mob_index) end
     end
 end
 
 function do_mob_updates()
-    for mob_index,mob in pairs(MOBS) do
+    for mob_index,mob in pairs(state.mobs) do
         if mob and mob.update then
             mob.update(mob, mob_index)
         end

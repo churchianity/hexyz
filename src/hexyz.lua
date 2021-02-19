@@ -244,47 +244,27 @@ function spiral_map(center, radius)
     return setmetatable(map, {__index={center=center, radius=radius}})
 end
 
-local function map_get(t, x, y)
-    return t[x] and t[x][y]
-end
-function hex_map_get(t, x, y)
-    return map_get(t, x, y)
+local function map_get(map, hex, y)
+    if y then return map[hex] and map[hex][y] end
+    return map[hex.x] and map[hex.x][hex.y]
 end
 
-local function map_set(t, x, y, v)
-    if t[x] then
-        t[x][y] = v
+local function map_set(map, hex, y, v)
+    if v then
+        if map[hex] then
+            map[hex][y] = v
+        else
+            map[hex] = {}
+            map[hex][y] = v
+        end
     else
-        t[x] = {}
-        t[x][y] = v
-    end
-
-    return t
-end
-function hex_map_set(t, x, y, v)
-    return map_set(t, x, y, v)
-end
-
-local function map_traverse(t, callback)
-    for i,_ in pairs(t) do
-        for _,entry in pairs(t[i]) do
-            callback(entry)
+        if map[hex.x] then
+            map[hex.x][hex.y] = y
+        else
+            map[hex.x] = {}
+            map[hex.x][hex.y] = y
         end
     end
-end
-
--- @NOTE probably shouldn't use this...
-local function map_partial_set(t, x, y, k, v)
-    local entry = map_get(t, x, y)
-
-    if not entry then
-        map_set(t, x, y, { k = v })
-
-    else
-        entry.k = v
-    end
-
-    return t
 end
 
 -- Returns Unordered Parallelogram-Shaped Map of |width| and |height| with Simplex Noise
@@ -314,13 +294,9 @@ function parallelogram_map(width, height, seed)
         width = width,
         height = height,
         seed = seed,
-        get = function(x, y) return map_get(map, x, y) end,
-        set = function(x, y, v) return map_set(map, x, y, v) end,
-        partial = function(x, y, k, v) return map_partial_set(map, x, y, k, v) end,
-        traverse = function(callback) return map_traverse(map, callback) end,
         neighbours = function(hex)
             return table.filter(hex_neighbours(hex), function(_hex)
-                return map.get(_hex.x, _hex.y)
+                return map_get(map, _hex)
             end)
         end
     }})
@@ -352,13 +328,9 @@ function triangular_map(size, seed)
     return setmetatable(map, { __index = {
         size = size,
         seed = seed,
-        get = function(x, y) return map_get(map, x, y) end,
-        set = function(x, y, v) return map_set(map, x, y, v) end,
-        partial = function(x, y, k, v) return map_partial_set(map, x, y, k, v) end,
-        traverse = function(callback) return map_traverse(map, callback) end,
         neighbours = function(hex)
             return table.filter(hex_neighbours(hex), function(_hex)
-                return map.get(_hex.x, _hex.y)
+                return map_get(map, _hex)
             end)
         end
     }})
@@ -395,13 +367,9 @@ function hexagonal_map(radius, seed)
     return setmetatable(map, { __index = {
         radius = radius,
         seed = seed,
-        get = function(x, y) return map_get(map, x, y) end,
-        set = function(x, y, v) return map_set(map, x, y, v) end,
-        partial = function(x, y, k, v) return map_partial_set(map, x, y, k, v) end,
-        traverse = function(callback) return map_traverse(map, callback) end,
         neighbours = function(hex)
             return table.filter(hex_neighbours(hex), function(_hex)
-                return map.get(_hex.x, _hex.y)
+                return map_get(map, _hex.x, _hex.y)
             end)
         end
     }})
@@ -437,13 +405,9 @@ function rectangular_map(width, height, seed)
         width = width,
         height = height,
         seed = seed,
-        get = function(x, y) return map_get(map, x, y) end,
-        set = function(x, y, v) return map_set(map, x, y, v) end,
-        partial = function(x, y, k, v) return map_partial_set(map, x, y, k, v) end,
-        traverse = function(callback) return map_traverse(map, callback) end,
         neighbours = function(hex)
             return table.filter(hex_neighbours(hex), function(_hex)
-                return map.get(_hex.x, _hex.y)
+                return map_get(map, _hex)
             end)
         end
     }})
@@ -477,7 +441,7 @@ function breadth_first(map, start)
     return distance
 end
 
-function dijkstra(map, start, goal, cost_f)
+function dijkstra(map, start, goal, cost_f, neighbour_f)
     local frontier = {}
     frontier[1] = { hex = start, priority = 0 }
 
@@ -496,15 +460,15 @@ function dijkstra(map, start, goal, cost_f)
             break
         end
 
-        for _,neighbour in pairs(map.neighbours(current.hex)) do
-            local new_cost = map_get(cost_so_far, current.hex.x, current.hex.y) + cost_f(map, current.hex, neighbour)
-            local neighbour_cost = map_get(cost_so_far, neighbour.x, neighbour.y)
+        for _,neighbour in pairs(neighbour_f(map, current.hex)) do
+            local new_cost = map_get(cost_so_far, current.hex) + cost_f(map, current.hex, neighbour)
+            local neighbour_cost = map_get(cost_so_far, neighbour)
 
             if not neighbour_cost or (new_cost < neighbour_cost) then
-                map_set(cost_so_far, neighbour.x, neighbour.y, new_cost)
+                map_set(cost_so_far, neighbour, new_cost)
                 local priority = new_cost + math.distance(start, neighbour)
                 table.insert(frontier, { hex = neighbour, priority = priority })
-                map_set(came_from, neighbour.x, neighbour.y, current)
+                map_set(came_from, neighbour, current)
             end
         end
     end

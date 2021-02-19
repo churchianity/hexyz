@@ -1,6 +1,6 @@
 
 
-PROJECTILES = {}
+state.projectiles = {}
 
 PROJECTILE_TYPE = {
     SHELL = 1,
@@ -72,7 +72,7 @@ local function update_projectile_shell(projectile, projectile_index)
         x2 = win.right,
         y2 = win.top
     }) then
-        delete_entity(PROJECTILES, projectile_index)
+        delete_entity(state.projectiles, projectile_index)
         return true
     end
 
@@ -103,7 +103,7 @@ local function update_projectile_shell(projectile, projectile_index)
         end
     end
 
-    local tile = state.map.get(projectile.hex.x, projectile.hex.y)
+    local tile = map_get(state.map, projectile.hex)
     if tile and tile.elevation >= projectile.props.z then
         --do_explode = true
 
@@ -117,7 +117,7 @@ local function update_projectile_shell(projectile, projectile_index)
             do_hit_mob(mob, damage, index)
         end
         win.scene:append(make_shell_explosion_node(projectile.position))
-        delete_entity(PROJECTILES, projectile_index)
+        delete_entity(state.projectiles, projectile_index)
         return true
     end
 end
@@ -132,7 +132,7 @@ local function update_projectile_laser(projectile, projectile_index)
         x2 = win.right,
         y2 = win.top
     }) then
-        delete_entity(PROJECTILES, projectile_index)
+        delete_entity(state.projectiles, projectile_index)
         return true
     end
 
@@ -177,7 +177,7 @@ local function update_projectile_laser(projectile, projectile_index)
 
     -- hit the mob, delete ourselves, affect the world
     do_hit_mob(closest_mob, projectile.damage, closest_mob_index)
-    delete_entity(PROJECTILES, projectile_index)
+    delete_entity(state.projectiles, projectile_index)
     vplay_sfx(SOUNDS.HIT1, 0.5)
 end
 
@@ -202,11 +202,11 @@ end
 function make_and_register_projectile(hex, projectile_type, vector)
     local projectile = make_basic_entity(
         hex,
-        make_projectile_node(projectile_type, vector),
         get_projectile_update_function(projectile_type)
     )
 
     projectile.type = projectile_type
+    projectile.node = am.translate(projectile.position) ^ make_projectile_node(projectile_type, vector)
     projectile.vector = vector
 
     local spec = get_projectile_spec(projectile_type)
@@ -214,18 +214,36 @@ function make_and_register_projectile(hex, projectile_type, vector)
     projectile.damage = spec.damage
     projectile.hitbox_radius = spec.hitbox_radius
 
-    register_entity(PROJECTILES, projectile)
+    register_entity(state.projectiles, projectile)
+    return projectile
+end
+
+function projectile_serialize(projectile)
+    local serialized = entity_basic_devectored_copy(projectile)
+    serialized.vector = { serialized.vector.x, serialized.vector.y }
+
+    return am.to_json(serialized)
+end
+
+function projectile_deserialize(json_string)
+    local projectile = entity_basic_json_parse(json_string)
+    projectile.vector = vec2(projectile.vector[0], projectile.vector[1])
+
+    projectile.update = get_projectile_update_function(projectile.type)
+    projectile.node = am.translate(projectile.position)
+                      ^ make_projectile_node(projectile.type, projectile.vector)
+
     return projectile
 end
 
 function delete_all_projectiles()
-    for projectile_index,projectile in pairs(PROJECTILES) do
-        if projectile then delete_entity(PROJECTILES, projectile_index) end
+    for projectile_index,projectile in pairs(state.projectiles) do
+        if projectile then delete_entity(state.projectiles, projectile_index) end
     end
 end
 
 function do_projectile_updates()
-    for projectile_index,projectile in pairs(PROJECTILES) do
+    for projectile_index,projectile in pairs(state.projectiles) do
         if projectile and projectile.update then
             projectile.update(projectile, projectile_index)
         end

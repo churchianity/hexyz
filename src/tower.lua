@@ -1,6 +1,6 @@
 
 
-TOWERS = {}
+state.towers = {}
 
 TOWER_TYPE = {
     WALL       = 1,
@@ -125,8 +125,7 @@ local function make_tower_sprite(tower_type)
     return pack_texture_into_sprite(get_tower_texture(tower_type), HEX_PIXEL_WIDTH, HEX_PIXEL_HEIGHT)
 end
 
-local HEX_FLOWER_DIMENSIONS = vec2(115, 125)
-local function make_tower_node(tower_type)
+function make_tower_node(tower_type)
     if tower_type == TOWER_TYPE.REDEYE then
         return make_tower_sprite(tower_type)
 
@@ -218,9 +217,33 @@ local function get_tower_update_function(tower_type)
     end
 end
 
+function tower_serialize(tower)
+    local serialized = entity_basic_devectored_copy(tower)
+
+    for i,h in pairs(serialized.hexes) do
+        serialized.hexes[i] = { h.x, h.y }
+    end
+
+    return am.to_json(serialized)
+end
+
+function tower_deserialize(json_string)
+    local tower = entity_basic_json_parse(json_string)
+
+    tower.hexes = {}
+    for i,h in pairs(tower.hexes) do
+        tower.hexes[i] = vec2(tower.hexes[i][0], tower.hexes[i][1])
+    end
+
+    tower.update = get_tower_update_function(tower.type)
+    tower.node = am.translate(tower.position) ^ make_tower_node(tower_type)
+
+    return tower
+end
+
 function towers_on_hex(hex)
     local t = {}
-    for tower_index,tower in pairs(TOWERS) do
+    for tower_index,tower in pairs(state.towers) do
         if tower then
             for _,h in pairs(tower.hexes) do
                 if h == hex then
@@ -234,7 +257,7 @@ function towers_on_hex(hex)
 end
 
 function tower_on_hex(hex)
-    return table.find(TOWERS, function(tower)
+    return table.find(state.towers, function(tower)
         for _,h in pairs(tower.hexes) do
             if h == hex then return true end
         end
@@ -257,7 +280,7 @@ function tower_type_is_buildable_on(hex, tile, tower_type)
         table.merge(blocking_towers, towers_on_hex(h))
         table.merge(blocking_mobs, mobs_on_hex(h))
 
-        local tile = state.map.get(h.x, h.y)
+        local tile = map_get(state.map, h)
         -- this should always be true, unless it is possible to place a tower
         -- where part of the tower overflows the edge of the map
         if tile then
@@ -309,7 +332,7 @@ function tower_type_is_buildable_on(hex, tile, tower_type)
     elseif tower_type == TOWER_TYPE.LIGHTHOUSE then
         local has_water_neighbour = false
         for _,h in pairs(hex_neighbours(hex)) do
-            local tile = state.map.get(h.x, h.y)
+            local tile = map_get(state.map, h)
 
             if tile and tile.elevation < -0.5 then
                 has_water_neighbour = true
@@ -331,7 +354,7 @@ end
 
 function update_tower_redeye(tower, tower_index)
     if not tower.target_index then
-        for index,mob in pairs(MOBS) do
+        for index,mob in pairs(state.mobs) do
             if mob then
                 local d = math.distance(mob.hex, tower.hex)
                 if d <= tower.range then
@@ -341,11 +364,11 @@ function update_tower_redeye(tower, tower_index)
             end
         end
     else
-        if MOBS[tower.target_index] == false then
+        if state.mobs[tower.target_index] == false then
             tower.target_index = false
 
         elseif (state.time - tower.last_shot_time) > tower.fire_rate then
-            local mob = MOBS[tower.target_index]
+            local mob = state.mobs[tower.target_index]
 
             make_and_register_projectile(
                 tower.hex,
@@ -362,7 +385,7 @@ end
 function update_tower_howitzer(tower, tower_index)
     if not tower.target_index then
         -- we don't have a target
-        for index,mob in pairs(MOBS) do
+        for index,mob in pairs(state.mobs) do
             if mob then
                 local d = math.distance(mob.hex, tower.hex)
                 if d <= tower.range then
@@ -374,13 +397,13 @@ function update_tower_howitzer(tower, tower_index)
         tower.node("rotate").angle = math.wrapf(tower.node("rotate").angle + 0.1 * am.delta_time, math.pi*2)
     else
         -- we should have a target
-        if MOBS[tower.target_index] == false then
+        if state.mobs[tower.target_index] == false then
             -- the target we have was invalidated
             tower.target_index = false
 
         else
             -- the target we have is valid
-            local mob = MOBS[tower.target_index]
+            local mob = state.mobs[tower.target_index]
             local vector = math.normalize(mob.position - tower.position)
 
             if (state.time - tower.last_shot_time) > tower.fire_rate then
@@ -446,17 +469,17 @@ end
 function make_and_register_tower(hex, tower_type)
     local tower = make_basic_entity(
         hex,
-        make_tower_node(tower_type),
         get_tower_update_function(tower_type)
     )
 
     tower.type = tower_type
+    tower.node = am.translate(tower.position) ^ make_tower_node(tower_type)
 
     local spec = get_tower_spec(tower_type)
     tower.cost = spec.cost
     tower.range = spec.range
     tower.fire_rate = spec.fire_rate
-    tower.last_shot_time = -spec.fire_rate
+    tower.last_shot_time = -spec.fire_rate -- lets the tower fire immediately upon being placed
     tower.size = spec.size
     if tower.size == 0 then
         tower.hexes = { tower.hex }
@@ -466,7 +489,7 @@ function make_and_register_tower(hex, tower_type)
     tower.height = spec.height
 
     for _,h in pairs(tower.hexes) do
-        local tile = state.map.get(h.x, h.y)
+        local tile = map_get(state.map, h.x, h.y)
         tile.elevation = tile.elevation + tower.height
     end
 
@@ -474,7 +497,7 @@ function make_and_register_tower(hex, tower_type)
         tower.props.z = tower.height
     end
 
-    register_entity(TOWERS, tower)
+    register_entity(state.towers, tower)
     return tower
 end
 
@@ -486,13 +509,13 @@ function build_tower(hex, tower_type)
 end
 
 function delete_all_towers()
-    for tower_index,tower in pairs(TOWERS) do
-        if tower then delete_entity(TOWERS, tower_index) end
+    for tower_index,tower in pairs(state.towers) do
+        if tower then delete_entity(state.towers, tower_index) end
     end
 end
 
 function do_tower_updates()
-    for tower_index,tower in pairs(TOWERS) do
+    for tower_index,tower in pairs(state.towers) do
         if tower and tower.update then
             tower.update(tower, tower_index)
         end
