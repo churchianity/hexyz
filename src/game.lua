@@ -140,6 +140,10 @@ local function game_deserialize(json_string)
         end
     end
 
+    -- after we have re-constituted all of the towers and modified the map's elevations accordingly,
+    -- we should re-calc the flow-field
+    apply_flow_field(new_state.map, generate_flow_field(new_state.map, HEX_GRID_CENTER), new_state.world)
+
     for i,m in pairs(new_state.mobs) do
         if m then
             new_state.mobs[i] = mob_deserialize(m)

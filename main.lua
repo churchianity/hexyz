@@ -169,7 +169,7 @@ function main_scene(do_backdrop)
                 local node = am.translate(hex_to_pixel(vec2(i, j), vec2(HEX_SIZE)))
                             ^ am.circle(vec2(0), HEX_SIZE, vec4(0), 6)
 
-                node"circle":action(am.tween(1, { color = color }))
+                node"circle":action(am.tween(0.6, { color = color }))
 
                 hex_backdrop:append(node)
             end
