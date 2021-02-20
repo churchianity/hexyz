@@ -146,6 +146,11 @@ local function game_deserialize(json_string)
         if t then
             new_state.towers[i] = tower_deserialize(t)
 
+            for _,h in pairs(new_state.towers[i].hexes) do
+                local tile = hex_map_get(new_state.map, h.x, h.y)
+                tile.elevation = tile.elevation + new_state.towers[i].height
+            end
+
             -- @STATEFUL, shouldn't be done here
             new_state.world:append(new_state.towers[i].node)
         end

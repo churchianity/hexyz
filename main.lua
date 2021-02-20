@@ -44,7 +44,7 @@ require "src/tower"
 
 
 function main_action(self)
-    self"hex_backdrop""rotate".angle = math.wrapf(self"hex_backdrop""rotate".angle - 0.002 * am.delta_time, math.pi*2)
+    self"hex_backdrop""rotate".angle = math.wrapf(self"hex_backdrop""rotate".angle - 0.005 * am.delta_time, math.pi*2)
 end
 
 function make_main_scene_toolbelt()
@@ -54,23 +54,19 @@ function make_main_scene_toolbelt()
         false,
         false,
         {
-            label = "new game",
             texture = TEXTURES.NEW_GAME_HEX,
-            action = function() end
+            action = function() game_init() end
         },
         {
-            label = "load game",
             texture = TEXTURES.LOAD_GAME_HEX,
             action = function() game_init(am.load_state("save", "json")) end
         },
         false,
         {
-            label = "settings",
             texture = TEXTURES.SETTINGS_HEX,
             action = function() end
         },
         {
-            label = "about",
             texture = TEXTURES.ABOUT_HEX,
             action = function() end
         },
@@ -78,7 +74,6 @@ function make_main_scene_toolbelt()
         false,
         false,
         {
-            label = "map editor",
             texture = TEXTURES.MAP_EDITOR_HEX,
             action = function() log("map editor not implemented") end
         },
@@ -167,8 +162,6 @@ function main_scene()
     return group
 end
 
-win.scene = am.group()
 win.scene = main_scene()
---game_init()
 noglobals()
 

@@ -100,7 +100,7 @@ function make_mob_node(mob_type, mob)
 
     if mob_type == MOB_TYPE.BEEPER then
         return am.group{
-            am.rotate(state.time)
+            am.rotate(am.current_time()) -- state.time is not garunteed to be set when deserializing
             ^ pack_texture_into_sprite(TEXTURES.MOB_BEEPER, MOB_SIZE, MOB_SIZE),
             am.translate(0, -10)
             ^ healthbar
