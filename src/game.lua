@@ -117,23 +117,7 @@ end
 local function game_pause()
     win.scene("game").paused = true
 
-    win.scene:append(am.group{
-        am.rect(win.left, win.bottom, win.right, win.top, COLORS.TRANSPARENT),
-        gui_textfield(vec2(-300, 0), vec2(200, 100)),
-    }
-    :tag"pause_menu")
-
-    win.scene:action(function(self)
-        if win:key_pressed("escape") then
-            win.scene:remove("pause_menu")
-            win.scene("game").paused = false
-            return true
-
-        elseif win:key_pressed("f4") then
-            game_end()
-            return true
-        end
-    end)
+    win.scene:append(main_scene(false):tag"pause_menu")
 end
 
 local function game_deserialize(json_string)
@@ -179,6 +163,8 @@ end
 
 local function game_serialize()
     local serialized = table.shallow_copy(state)
+    serialized.version = version
+
     serialized.seed = state.map.seed
     serialized.map = nil -- we re-generate the entire map from the seed on de-serialize
 

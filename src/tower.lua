@@ -231,7 +231,6 @@ function tower_deserialize(json_string)
     local tower = entity_basic_json_parse(json_string)
 
     for i,h in pairs(tower.hexes) do
-        log(h)
         tower.hexes[i] = vec2(tower.hexes[i][1], tower.hexes[i][2])
     end
 

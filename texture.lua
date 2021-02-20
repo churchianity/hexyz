@@ -13,13 +13,14 @@ end
 TEXTURES = {
     LOGO                    = load_texture("res/logo.png"),
     GEM1                    = load_texture("res/gem1.png"),
-    SHADED_HEX              = load_texture("res/shaded_hex1.png"),
+    SHADED_HEX              = load_texture("res/shaded_hex.png"),
 
     NEW_GAME_HEX            = load_texture("res/newgamehex.png"),
     LOAD_GAME_HEX           = load_texture("res/loadgamehex.png"),
     SETTINGS_HEX            = load_texture("res/settingshex.png"),
     MAP_EDITOR_HEX          = load_texture("res/mapeditorhex.png"),
     ABOUT_HEX               = load_texture("res/abouthex.png"),
+    QUIT_HEX                = load_texture("res/quithex.png"),
 
     -- gui stuff
     BUTTON1                 = load_texture("res/button1.png"),

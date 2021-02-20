@@ -2,7 +2,7 @@
 title = "hexyz"
 author = "nick hayashi"
 shortname = "hexyz"
-version = "1.0.0"
+version = "0.1.1"
 support_email = "hayashi.nicholas@gmail.com"
 copyright_message = "Copyright © 2021 Nick Hayashi"
 

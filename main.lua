@@ -27,6 +27,7 @@ do
 end
 
 -- asset interfaces and/or trivial code
+require "conf"
 require "color"
 require "sound"
 require "texture"
@@ -44,7 +45,17 @@ require "src/tower"
 
 
 function main_action(self)
-    self"hex_backdrop""rotate".angle = math.wrapf(self"hex_backdrop""rotate".angle - 0.005 * am.delta_time, math.pi*2)
+    if win:key_pressed("escape") then
+        if win.scene("game") then
+            win.scene("game").paused = false
+            win.scene:remove(self)
+        else
+            --win:close()
+        end
+    end
+    if self"hex_backdrop" then
+        self"hex_backdrop""rotate".angle = math.wrapf(self"hex_backdrop""rotate".angle - 0.005 * am.delta_time, math.pi*2)
+    end
 end
 
 function make_main_scene_toolbelt()
@@ -52,38 +63,41 @@ function make_main_scene_toolbelt()
         false,
         false,
         false,
-        false,
         {
             texture = TEXTURES.NEW_GAME_HEX,
             action = function() game_init() end
         },
+        false,
         {
             texture = TEXTURES.LOAD_GAME_HEX,
             action = function() game_init(am.load_state("save", "json")) end
-        },
-        false,
-        {
-            texture = TEXTURES.SETTINGS_HEX,
-            action = function() end
-        },
-        {
-            texture = TEXTURES.ABOUT_HEX,
-            action = function() end
         },
         false,
         false,
         false,
         {
             texture = TEXTURES.MAP_EDITOR_HEX,
-            action = function() log("map editor not implemented") end
+            action = function() alert("not yet :)") end
         },
-        false
+        {
+            texture = TEXTURES.SETTINGS_HEX,
+            action = function() alert("not yet :)") end
+        },
+        {
+            texture = TEXTURES.ABOUT_HEX,
+            action = function() alert("not yet :)") end
+        },
+        false,
+        {
+            texture = TEXTURES.QUIT_HEX,
+            action = function() win:close() end
+        }
     }
 
     local spacing = 160
 
     -- calculate the dimensions of the whole grid
-    local grid_width = 10
+    local grid_width = 8
     local grid_height = 2
     local hhs = hex_horizontal_spacing(spacing)
     local hvs = hex_vertical_spacing(spacing)
@@ -100,8 +114,9 @@ function make_main_scene_toolbelt()
             local position = hex_to_pixel(hex, vec2(spacing), HEX_ORIENTATION.POINTY)
             local option = options[option_index]
             local texture = option and option.texture or TEXTURES.SHADED_HEX
+            local color = option and COLORS.TRANSPARENT or vec4(0.3)
             local node = am.translate(position)
-                         ^ pack_texture_into_sprite(texture, texture.width, texture.height, COLORS.TRANSPARENT)
+                         ^ pack_texture_into_sprite(texture, texture.width, texture.height, color)
 
             hex_map_set(map, i, j, {
                 node = node,
@@ -109,18 +124,26 @@ function make_main_scene_toolbelt()
             })
             local tile = hex_map_get(map, i, j)
 
+            local selected = false
             node:action(function(self)
                 local mouse = win:mouse_position()
                 local hex_ = pixel_to_hex(mouse - pixel_offset, vec2(spacing), HEX_ORIENTATION.POINTY)
 
-                if hex == hex_ and tile.option then
-                    tile.node"sprite".color = vec4(1)
+                if tile.option then
+                    if hex == hex_ then
+                        if not selected then
+                            play_sfx(SOUNDS.SELECT1)
+                        end
+                        selected = true
+                        tile.node"sprite".color = vec4(1)
 
-                    if win:mouse_pressed("left") then
-                        tile.option.action()
+                        if win:mouse_pressed("left") then
+                            tile.option.action()
+                        end
+                    else
+                        selected = false
+                        tile.node"sprite".color = COLORS.TRANSPARENT
                     end
-                else
-                    tile.node"sprite".color = COLORS.TRANSPARENT
                 end
             end)
 
@@ -132,25 +155,34 @@ function make_main_scene_toolbelt()
     return am.translate(pixel_offset) ^ group
 end
 
-function main_scene()
+function main_scene(do_backdrop)
     local group = am.group()
 
-    local map = hex_hexagonal_map(30)
-    local hex_backdrop = (am.rotate(0) ^ am.group()):tag"hex_backdrop"
-    for i,_ in pairs(map) do
-        for j,n in pairs(map[i]) do
-            local color = map_elevation_color(n)
-            color = color{a=color.a - 0.1}
+    if do_backdrop then
+        local map = hex_hexagonal_map(30)
+        local hex_backdrop = (am.rotate(0) ^ am.group()):tag"hex_backdrop"
+        for i,_ in pairs(map) do
+            for j,n in pairs(map[i]) do
+                local color = map_elevation_color(n)
+                color = color{a=color.a - 0.1}
 
-            local node = am.translate(hex_to_pixel(vec2(i, j), vec2(HEX_SIZE)))
-                         ^ am.circle(vec2(0), HEX_SIZE, vec4(0), 6)
+                local node = am.translate(hex_to_pixel(vec2(i, j), vec2(HEX_SIZE)))
+                            ^ am.circle(vec2(0), HEX_SIZE, vec4(0), 6)
 
-            node"circle":action(am.tween(1, { color = color }))
+                node"circle":action(am.tween(1, { color = color }))
 
-            hex_backdrop:append(node)
+                hex_backdrop:append(node)
+            end
         end
+        group:append(hex_backdrop)
+    else
+        group:append(am.rect(win.left, win.bottom, win.right, win.top, COLORS.TRANSPARENT))
     end
-    group:append(hex_backdrop)
+
+    group:append(
+        am.translate(win.right - 10, win.bottom + 20)
+        ^ am.text(version, COLORS.WHITE, "right")
+    )
 
     local logo_height = 480
     group:append(am.translate(0, win.top - 20 - logo_height/2) ^ am.sprite("res/logo.png"))
@@ -162,6 +194,6 @@ function main_scene()
     return group
 end
 
-win.scene = main_scene()
+win.scene = main_scene(true)
 noglobals()
 
