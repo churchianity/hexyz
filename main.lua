@@ -26,7 +26,7 @@ do
     }
 end
 
--- assets and/or trivial code
+-- asset interfaces and/or trivial code
 require "color"
 require "sound"
 require "texture"
@@ -42,10 +42,64 @@ require "src/mob"
 require "src/projectile"
 require "src/tower"
 
-function main_action() end
-function main_scene() end
+
+function main_action(self)
+    self"hex_backdrop""rotate".angle = math.wrapf(self"hex_backdrop""rotate".angle - 0.002 * am.delta_time, math.pi*2)
+end
+
+function make_main_scene_toolbelt()
+    local options = {
+        {
+            label = "new game",
+            action = function(self) end
+        },
+        {
+            label = "load game",
+            action = function(self) game_init(am.load_state("save", "json")) end
+        },
+        {
+            label = "map editor",
+            action = function(self) log("map editor not implemented") end
+        },
+        {
+            label = "settings",
+            action = function(self) end
+        },
+    }
+    --local map = hex_rectangular_map(10, 20, HEX_ORIENTATION.POINTY)
+
+    return group
+end
+
+function main_scene()
+    local group = am.group()
+
+    local map = hex_hexagonal_map(30)
+    local hex_backdrop = (am.rotate(0) ^ am.group()):tag"hex_backdrop"
+    for i,_ in pairs(map) do
+        for j,n in pairs(map[i]) do
+            local color = map_elevation_color(n)
+            color = color{a=color.a - 0.1}
+
+            local node = am.translate(hex_to_pixel(vec2(i, j), vec2(HEX_SIZE)))
+                         ^ am.circle(vec2(0), HEX_SIZE, vec4(0), 6)
+
+            node"circle":action(am.tween(1, { color = color }))
+
+            hex_backdrop:append(node)
+        end
+    end
+    group:append(hex_backdrop)
+
+    group:append(am.translate(0, 200) ^ am.sprite("res/logo.png"))
+    group:append(make_main_scene_toolbelt())
+
+    group:action(main_action)
+
+    return group
+end
 
 win.scene = am.group()
-game_init(nil)
+game_init()
 noglobals()
 

@@ -13,6 +13,7 @@ end
 TEXTURES = {
     LOGO                    = load_texture("res/logo.png"),
     GEM1                    = load_texture("res/gem1.png"),
+    SHADED_HEX              = load_texture("res/shaded_hex1.png"),
 
     -- gui stuff
     BUTTON1                 = load_texture("res/button1.png"),

@@ -1,14 +1,26 @@
 
 
+-- this is a single file with no dependencies which is meant to perform a bunch of mathy stuff
+-- related to hexagons, grids of them, and pathfinding on them
+--
+-- it basically owes its entire existence to this resource: https://www.redblobgames.com/grids/hexagons/
+-- it uses some datatypes internal to the amulet game engine: http://www.amulet.xyz/
+-- (vec2, mat2)
+-- and some utility functions not present in your standard lua, like:
+--  table.append
+
 if not math.round then
     math.round = function(n) return math.floor(n + 0.5) end
 else
-    log("clobbering a math.round function.")
+    error("clobbering a math.round function, oopsie!")
+end
+
+if not table.append then
 end
 
 
 -- wherever 'orientation' appears as an argument, use one of these two, or set a default just below
-ORIENTATION = {
+HEX_ORIENTATION = {
     -- Forward & Inverse Matrices used for the Flat Orientation
     FLAT = {
         M = mat2(3.0/2.0, 0.0, 3.0^0.5/2.0, 3.0^0.5    ),
@@ -23,70 +35,71 @@ ORIENTATION = {
     }
 }
 
--- whenver |orientation| appears as an argument, if it isn't provided, this is used instead.
-local DEFAULT_ORIENTATION = ORIENTATION.FLAT
+-- whenever |orientation| appears as an argument, if it isn't provided, this is used instead.
+-- this is useful because most of the time you will only care about one orientation
+local HEX_DEFAULT_ORIENTATION = HEX_ORIENTATION.FLAT
 
 -- whenever |size| for a hexagon appears as an argument, if it isn't provided, use this
 -- 'size' here is distance from the centerpoint to any vertex in pixel
-local DEFAULT_HEX_SIZE = vec2(20)
+local HEX_DEFAULT_SIZE = vec2(20)
 
 -- actual width (longest contained horizontal line) of the hexagon
 function hex_width(size, orientation)
-    local orientation = orientation or DEFAULT_ORIENTATION
+    local orientation = orientation or HEX_DEFAULT_ORIENTATION
 
-    if orientation == ORIENTATION.FLAT then
+    if orientation == HEX_ORIENTATION.FLAT then
         return size * 2
 
-    elseif orientation == ORIENTATION.POINTY then
+    elseif orientation == HEX_ORIENTATION.POINTY then
         return math.sqrt(3) * size
     end
 end
 
 -- actual height (tallest contained vertical line) of the hexagon
 function hex_height(size, orientation)
-    local orientation = orientation or DEFAULT_ORIENTATION
+    local orientation = orientation or HEX_DEFAULT_ORIENTATION
 
-    if orientation == ORIENTATION.FLAT then
+    if orientation == HEX_ORIENTATION.FLAT then
         return math.sqrt(3) * size
 
-    elseif orientation == ORIENTATION.POINTY then
+    elseif orientation == HEX_ORIENTATION.POINTY then
         return size * 2
     end
 end
 
 -- returns actual width and height of a hexagon given it's |size| which is the distance from the centerpoint to any vertex in pixels
 function hex_dimensions(size, orientation)
-    local orientation = orientation or DEFAULT_ORIENTATION
+    local orientation = orientation or HEX_DEFAULT_ORIENTATION
     return vec2(hex_width(size, orientation), hex_height(size, orientation))
 end
 
 -- distance between two horizontally adjacent hexagon centerpoints
 function hex_horizontal_spacing(size, orientation)
-    local orientation = orientation or DEFAULT_ORIENTATION
+    local orientation = orientation or HEX_DEFAULT_ORIENTATION
 
-    if orientation == ORIENTATION.FLAT then
+    if orientation == HEX_ORIENTATION.FLAT then
         return hex_width(size, orientation) * 3/4
 
-    elseif orientation == ORIENTATION.POINTY then
+    elseif orientation == HEX_ORIENTATION.POINTY then
         return hex_height(size, orientation)
     end
 end
 
 -- distance between two vertically adjacent hexagon centerpoints
 function hex_vertical_spacing(size, orientation)
-    local orientation = orientation or DEFAULT_ORIENTATION
+    local orientation = orientation or HEX_DEFAULT_ORIENTATION
 
-    if orientation == ORIENTATION.FLAT then
+    if orientation == HEX_ORIENTATION.FLAT then
         return hex_height(size, orientation)
 
-    elseif orientation == ORIENTATION.POINTY then
+    elseif orientation == HEX_ORIENTATION.POINTY then
         return hex_width(size, orientation) * 3/4
     end
 end
 
 -- returns the distance between adjacent hexagon centers in a grid
 function hex_spacing(size, orientation)
-    local orientation = orientation or DEFAULT_ORIENTATION
+    local orientation = orientation or HEX_DEFAULT_ORIENTATION
     return vec2(hex_horizontal_spacing(size, orientation), hex_vertical_spacing(size, orientation))
 end
 
@@ -137,19 +150,19 @@ end
 
 -- Hex to Screen -- Orientation Must be Either POINTY or FLAT
 function hex_to_pixel(hex, size, orientation)
-    local M = orientation and orientation.M or DEFAULT_ORIENTATION.M
+    local M = orientation and orientation.M or HEX_DEFAULT_ORIENTATION.M
 
-    local x = (M[1][1] * hex[1] + M[1][2] * hex[2]) * (size and size[1] or DEFAULT_HEX_SIZE[1])
-    local y = (M[2][1] * hex[1] + M[2][2] * hex[2]) * (size and size[2] or DEFAULT_HEX_SIZE[2])
+    local x = (M[1][1] * hex[1] + M[1][2] * hex[2]) * (size and size[1] or HEX_DEFAULT_SIZE[1])
+    local y = (M[2][1] * hex[1] + M[2][2] * hex[2]) * (size and size[2] or HEX_DEFAULT_SIZE[2])
 
     return vec2(x, y)
 end
 
 -- Screen to Hex -- Orientation Must be Either POINTY or FLAT
 function pixel_to_hex(pix, size, orientation)
-    local W = orientation and orientation.W or DEFAULT_ORIENTATION.W
+    local W = orientation and orientation.W or HEX_DEFAULT_ORIENTATION.W
 
-    local pix = pix / (size or vec2(DEFAULT_HEX_SIZE))
+    local pix = pix / (size or vec2(HEX_DEFAULT_SIZE))
 
     local x = W[1][1] * pix[1] + W[1][2] * pix[2]
     local y = W[2][1] * pix[1] + W[2][2] * pix[2]
@@ -159,14 +172,14 @@ end
 
 -- TODO test, learn am.draw
 function hex_corner_offset(corner, size, orientation)
-    local orientation = orientation or DEFAULT_ORIENTATION
+    local orientation = orientation or HEX_DEFAULT_ORIENTATION
     local angle = 2.0 * math.pi * orientation.angle + corner / 6
     return vec2(size[1] * math.cos(angle), size[2] * math.sin(angle))
 end
 
 -- TODO test this thing
 function hex_corners(hex, size, orientation)
-    local orientation = orientation or DEFAULT_ORIENTATION
+    local orientation = orientation or HEX_DEFAULT_ORIENTATION
     local corners = {}
     local center = hex_to_pixel(hex, size, orientation)
     for i = 0, 5 do
@@ -220,7 +233,7 @@ end
 -- MAPS & STORAGE
 
 -- Returns Ordered Ring-Shaped Map of |radius| from |center|
-function ring_map(center, radius)
+function hex_ring_map(center, radius)
     local map = {}
 
     local walk = center + HEX_DIRECTIONS[6] * radius
@@ -235,21 +248,21 @@ function ring_map(center, radius)
 end
 
 -- Returns Ordered Spiral Hexagonal Map of |radius| Rings from |center|
-function spiral_map(center, radius)
+function hex_spiral_map(center, radius)
     local map = { center }
 
     for i = 1, radius do
-        table.append(map, ring_map(center, i))
+        table.append(map, hex_ring_map(center, i))
     end
     return setmetatable(map, {__index={center=center, radius=radius}})
 end
 
-local function map_get(map, hex, y)
+function hex_map_get(map, hex, y)
     if y then return map[hex] and map[hex][y] end
     return map[hex.x] and map[hex.x][hex.y]
 end
 
-local function map_set(map, hex, y, v)
+function hex_map_set(map, hex, y, v)
     if v then
         if map[hex] then
             map[hex][y] = v
@@ -268,7 +281,7 @@ local function map_set(map, hex, y, v)
 end
 
 -- Returns Unordered Parallelogram-Shaped Map of |width| and |height| with Simplex Noise
-function parallelogram_map(width, height, seed)
+function hex_parallelogram_map(width, height, seed)
     local seed = seed or math.random(width * height)
 
     local map = {}
@@ -296,14 +309,14 @@ function parallelogram_map(width, height, seed)
         seed = seed,
         neighbours = function(hex)
             return table.filter(hex_neighbours(hex), function(_hex)
-                return map_get(map, _hex)
+                return hex_map_get(map, _hex)
             end)
         end
     }})
 end
 
 -- Returns Unordered Triangular (Equilateral) Map of |size| with Simplex Noise
-function triangular_map(size, seed)
+function hex_triangular_map(size, seed)
     local seed = seed or math.random(size * math.cos(size) / 2)
 
     local map = {}
@@ -330,14 +343,14 @@ function triangular_map(size, seed)
         seed = seed,
         neighbours = function(hex)
             return table.filter(hex_neighbours(hex), function(_hex)
-                return map_get(map, _hex)
+                return hex_map_get(map, _hex)
             end)
         end
     }})
 end
 
 -- Returns Unordered Hexagonal Map of |radius| with Simplex Noise
-function hexagonal_map(radius, seed)
+function hex_hexagonal_map(radius, seed)
     local seed = seed or math.random(radius * 2 * math.pi)
 
     local map = {}
@@ -369,7 +382,7 @@ function hexagonal_map(radius, seed)
         seed = seed,
         neighbours = function(hex)
             return table.filter(hex_neighbours(hex), function(_hex)
-                return map_get(map, _hex.x, _hex.y)
+                return hex_map_get(map, _hex.x, _hex.y)
             end)
         end
     }})
@@ -377,37 +390,43 @@ end
 
 -- Returns Unordered Rectangular Map of |width| and |height| with Simplex Noise
 -- @TODO - this doesn't work for pointy orientations
-function rectangular_map(width, height, seed)
+function hex_rectangular_map(width, height, orientation, seed)
+    local orientation = orientation or HEX_DEFAULT_ORIENTATION
     local seed = seed or math.random(width * height)
 
     local map = {}
-    for i = 0, width - 1 do
-        map[i] = {}
-        for j = 0, height - 1 do
+    if orientation == HEX_ORIENTATION.FLAT then
+        for i = 0, width - 1 do
+            map[i] = {}
+            for j = 0, height - 1 do
 
-            -- Begin to Calculate Noise
-            local idelta = i / width
-            local jdelta = j / height
-            local noise = 0
+                -- begin to calculate noise
+                local idelta = i / width
+                local jdelta = j / height
+                local noise = 0
 
-            for oct = 1, 6 do
-                local f = 2/3^oct
-                local l = 2^oct
-                local pos = vec2(idelta + seed * width, jdelta + seed * height)
-                noise = noise + f * math.simplex(pos * l)
+                for oct = 1, 6 do
+                    local f = 2/3^oct
+                    local l = 2^oct
+                    local pos = vec2(idelta + seed * width, jdelta + seed * height)
+                    noise = noise + f * math.simplex(pos * l)
+                end
+                j = j - math.floor(i/2) -- this is what makes it rectangular
+
+                map[i][j] = noise
             end
-            j = j - math.floor(i/2) -- this is what makes it rectangular
-
-            map[i][j] = noise
         end
+    elseif orientation == HEX_ORIENTATION.POINTY then
+        error("don't use this, it's broken")
     end
+
     return setmetatable(map, { __index = {
         width = width,
         height = height,
         seed = seed,
         neighbours = function(hex)
             return table.filter(hex_neighbours(hex), function(_hex)
-                return map_get(map, _hex)
+                return hex_map_get(map, _hex)
             end)
         end
     }})
@@ -415,25 +434,30 @@ end
 
 --============================================================================
 -- PATHFINDING
-
-
-function breadth_first(map, start)
+-- note:
+--  i kinda feel like after implementing these and making the game, there are tons of reasons
+--  why you might want to specialize pathfinding, like you would any other kind of algorithm
+--
+--  so, while (in theory) these algorithms work with the maps in this file, your maps and game
+--  will have lots of other data which you may want your pathfinding algorithms to care about in some way,
+--  that these don't.
+--
+function hex_breadth_first(map, start)
     local frontier = {}
     frontier[1] = start
 
     local distance = {}
-    distance[start.x] = {}
-    distance[start.x][start.y] = 0
+    hex_map_set(distance, start, 0)
 
     while not (#frontier == 0) do
         local current = table.remove(frontier, 1)
 
         for _,neighbour in pairs(map.neighbours(current)) do
-            local d = map_get(distance, neighbour.x, neighbour.y)
+            local d = hex_map_get(distance, neighbour.x, neighbour.y)
             if not d then
                 table.insert(frontier, neighbour)
-                local current_distance = map_get(distance, current.x, current.y)
-                map_set(distance, neighbour.x, neighbour.y, current_distance + 1)
+                local current_distance = hex_map_get(distance, current.x, current.y)
+                hex_map_set(distance, neighbour.x, neighbour.y, current_distance + 1)
             end
         end
     end
@@ -441,17 +465,15 @@ function breadth_first(map, start)
     return distance
 end
 
-function dijkstra(map, start, goal, cost_f, neighbour_f)
+function hex_dijkstra(map, start, goal, cost_f, neighbour_f)
     local frontier = {}
     frontier[1] = { hex = start, priority = 0 }
 
     local came_from = {}
-    came_from[start.x] = {}
-    came_from[start.x][start.y] = false
+    hex_map_set(came_from, start, false)
 
     local cost_so_far = {}
-    cost_so_far[start.x] = {}
-    cost_so_far[start.x][start.y] = 0
+    hex_map_set(cost_so_far, start, 0)
 
     while not (#frontier == 0) do
         local current = table.remove(frontier, 1)
@@ -461,14 +483,14 @@ function dijkstra(map, start, goal, cost_f, neighbour_f)
         end
 
         for _,neighbour in pairs(neighbour_f(map, current.hex)) do
-            local new_cost = map_get(cost_so_far, current.hex) + cost_f(map, current.hex, neighbour)
-            local neighbour_cost = map_get(cost_so_far, neighbour)
+            local new_cost = hex_map_get(cost_so_far, current.hex) + cost_f(map, current.hex, neighbour)
+            local neighbour_cost = hex_map_get(cost_so_far, neighbour)
 
             if not neighbour_cost or (new_cost < neighbour_cost) then
-                map_set(cost_so_far, neighbour, new_cost)
+                hex_map_set(cost_so_far, neighbour, new_cost)
                 local priority = new_cost + math.distance(start, neighbour)
                 table.insert(frontier, { hex = neighbour, priority = priority })
-                map_set(came_from, neighbour, current)
+                hex_map_set(came_from, neighbour, current)
             end
         end
     end
@@ -476,7 +498,7 @@ function dijkstra(map, start, goal, cost_f, neighbour_f)
     return came_from
 end
 
--- generic A* pathfinding
+-- A* pathfinding
 --
 --  |heuristic| has the form:
 --  function(source, target)     -- source and target are vec2's
@@ -486,20 +508,15 @@ end
 --  function (from, to)         -- from and to are vec2's
 --      return some numeric value
 --
--- returns a map that has map[hex.x][hex.y] = { hex = vec2, priority = number },
--- where the hex is the spot it thinks you should go to from the indexed hex, and priority is the cost of that decision,
--- as well as 'made_it' a bool that tells you if we were successful in reaching |goal|
-function Astar(map, start, goal, heuristic, cost_f)
+function hex_Astar(map, start, goal, heuristic, cost_f)
     local path = {}
-    path[start.x] = {}
-    path[start.x][start.y] = false
+    hex_map_set(path, start, false)
 
     local frontier = {}
     frontier[1] = { hex = start, priority = 0 }
 
     local path_so_far = {}
-    path_so_far[start.x] = {}
-    path_so_far[start.x][start.y] = 0
+    hex_map_set(path_so_far, start, 0)
 
     local made_it = false
     while not (#frontier == 0) do
@@ -511,14 +528,14 @@ function Astar(map, start, goal, heuristic, cost_f)
         end
 
         for _,next_ in pairs(map.neighbours(current.hex)) do
-            local new_cost = map_get(path_so_far, current.hex.x, current.hex.y) + cost_f(map, current.hex, next_)
-            local next_cost = map_get(path_so_far, next_.x, next_.y)
+            local new_cost = hex_map_get(path_so_far, current.hex.x, current.hex.y) + cost_f(map, current.hex, next_)
+            local next_cost = hex_map_get(path_so_far, next_.x, next_.y)
 
             if not next_cost or new_cost < next_cost then
-                map_set(path_so_far, next_.x, next_.y, new_cost)
+                hex_map_set(path_so_far, next_.x, next_.y, new_cost)
                 local priority = new_cost + heuristic(goal, next_)
                 table.insert(frontier, { hex = next_, priority = priority })
-                map_set(path, next_.x, next_.y, current)
+                hex_map_set(path, next_.x, next_.y, current)
             end
         end
     end

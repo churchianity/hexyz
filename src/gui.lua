@@ -4,19 +4,25 @@ function gui_numberfield(dimensions, opts)
 
 end
 
-
-function gui_textfield(position, dimensions, max, disallowed_keys)
+function gui_textfield(position, dimensions, max, disallowed_chars)
     local width, height = dimensions.x, dimensions.y
-    local disallowed_keys = disallowed_keys or {}
-    local max = max or 99
+    local disallowed_chars = disallowed_chars or {}
+    local max = max or 10
 
-    local padding = 2
-    local outer_rect = am.rect(-width/2, -height/2, width/2, height/2, COLORS.VERY_DARK_GRAY)
-    local inner_rect = am.rect(-width/2 + padding
-                             , -height/2 + padding
-                             , width/2 - padding
-                             , height/2 - padding
-                             , COLORS.PALE_SILVER)
+    local outer_rect = am.rect(
+        -width/2,
+        -height/2,
+        width/2,
+        height/2,
+        COLORS.VERY_DARK_GRAY
+    )
+    local inner_rect = am.rect(
+        -width/2 + 1,
+        -height/2 + 1,
+        width/2 - 2,
+        height/2 - 2,
+        COLORS.PALE_SILVER
+    )
 
     local group = am.group{
         outer_rect,
@@ -29,29 +35,90 @@ function gui_textfield(position, dimensions, max, disallowed_keys)
         local keys = win:keys_pressed()
         if #keys == 0 then return end
 
-        -- @HACK all characters and digits are represented by a single string in amulet
-        -- so we don't have to iterate over everything
-        -- pattern matching doesn't work because control characters are also just normal strings
+        local chars = {}
+        local shift = win:key_down("lshift") or win:key_down("rshift")
         for i,k in pairs(keys) do
-            if not disallowed_keys[k] then
-                if k:len() == 1 then
-                    if string.match(k, "%d") then
-                        self"text".text = self"text".text .. k
-
-                    elseif win:key_down("lshift") or win:key_down("rshift") then
-                        self"text".text = self"text".text .. k:upper()
-
+            if k:len() == 1 then -- @HACK alphabetical or digit characters
+                if string.match(k, "%a") then
+                    if shift then
+                        table.insert(chars, k:upper())
                     else
-                        self"text".text = self"text".text .. k
+                        table.insert(chars, k)
                     end
-                elseif k == "space" then
-                    self"text".text = self"text".text .. " "
+                elseif string.match(k, "%d") then
+                    if shift then
+                        if k == "1" then table.insert(chars, "!")
+                        elseif k == "2" then table.insert(chars, "@")
+                        elseif k == "3" then table.insert(chars, "#")
+                        elseif k == "4" then table.insert(chars, "$")
+                        elseif k == "5" then table.insert(chars, "%")
+                        elseif k == "6" then table.insert(chars, "^")
+                        elseif k == "7" then table.insert(chars, "&")
+                        elseif k == "8" then table.insert(chars, "*")
+                        elseif k == "9" then table.insert(chars, "(")
+                        elseif k == "0" then table.insert(chars, ")")
+                        end
+                    else
+                        table.insert(chars, k)
+                    end
+                end
+            -- begin non-alphabetical/digit
+            elseif k == "minus" then
+                if shift then table.insert(chars, "_")
+                else          table.insert(chars, "-") end
+            elseif k == "equals" then
+                if shift then table.insert(chars, "=")
+                else          table.insert(chars, "+") end
+            elseif k == "leftbracket" then
+                if shift then table.insert(chars, "{")
+                else          table.insert(chars, "[") end
+            elseif k == "rightbracket" then
+                if shift then table.insert(chars, "}")
+                else          table.insert(chars, "]") end
+            elseif k == "backslash" then
+                if shift then table.insert(chars, "|")
+                else          table.insert(chars, "\\") end
+            elseif k == "semicolon" then
+                if shift then table.insert(chars, ":")
+                else          table.insert(chars, ";") end
+            elseif k == "quote" then
+                if shift then table.insert(chars, "\"")
+                else          table.insert(chars, "'") end
+            elseif k == "backquote" then
+                if shift then table.insert(chars, "~")
+                else          table.insert(chars, "`") end
+            elseif k == "comma" then
+                if shift then table.insert(chars, "<")
+                else          table.insert(chars, ",") end
+            elseif k == "period" then
+                if shift then table.insert(chars, ">")
+                else          table.insert(chars, ".") end
+            elseif k == "slash" then
+                if shift then table.insert(chars, "?")
+                else          table.insert(chars, "/") end
 
-                elseif k == "backspace" then
-                    self"text".text = self"text".text:sub(1, self"text".text:len() - 1)
+            -- control characters
+            elseif k == "backspace" then
+                -- @NOTE this doesn't preserve the order of chars in the array so if
+                -- someone presses a the key "a" then the backspace key in the same frame, in that order
+                -- the backspace occurs first
+                self"text".text = self"text".text:sub(1, self"text".text:len() - 1)
 
-                elseif k == "enter" then
+            elseif k == "tab" then
+                -- @TODO
 
+            elseif k == "space" then
+                table.insert(chars, " ")
+
+            elseif k == "capslock" then
+                -- @OTOD
+            end
+        end
+
+        for _,c in pairs(chars) do
+            if not disallowed_chars[c] then
+                if self"text".text:len() <= max then
+                    self"text".text = self"text".text .. c
                 end
             end
         end

@@ -3,8 +3,8 @@
 -- distance from hex centerpoint to any vertex
 HEX_SIZE = 26
 
-HEX_PIXEL_WIDTH = hex_width(HEX_SIZE, ORIENTATION.FLAT)
-HEX_PIXEL_HEIGHT = hex_height(HEX_SIZE, ORIENTATION.FLAT)
+HEX_PIXEL_WIDTH = hex_width(HEX_SIZE, HEX_ORIENTATION.FLAT)
+HEX_PIXEL_HEIGHT = hex_height(HEX_SIZE, HEX_ORIENTATION.FLAT)
 HEX_PIXEL_DIMENSIONS = vec2(HEX_PIXEL_WIDTH, HEX_PIXEL_HEIGHT)
 
 do
@@ -80,7 +80,7 @@ function grid_heuristic(source, target)
 end
 
 function grid_cost(map, from, to)
-    local t1, t2 = map_get(map, from), map_get(map, to)
+    local t1, t2 = hex_map_get(map, from), hex_map_get(map, to)
 
     -- i have no fucking clue why, but adding +0.2 to the end of this fixes a bug where sometimes two (or more)
     -- equivalent paths are found and mobs backpedal trying to decide between them
@@ -97,13 +97,13 @@ end
 
 function grid_neighbours(map, hex)
     return table.filter(hex_neighbours(hex), function(_hex)
-        local tile = map_get(map, _hex)
+        local tile = hex_map_get(map, _hex)
         return tile and tile_is_medium_elevation(tile)
     end)
 end
 
 function generate_flow_field(map, start)
-    return dijkstra(map, start, nil, grid_cost, grid_neighbours)
+    return hex_dijkstra(map, start, nil, grid_cost, grid_neighbours)
 end
 
 function apply_flow_field(map, flow_field, world)
@@ -115,7 +115,7 @@ function apply_flow_field(map, flow_field, world)
     local overlay_group = am.group():tag"flow_field"
     for i,_ in pairs(map) do
         for j,f in pairs(map[i]) do
-            local flow = map_get(flow_field, i, j)
+            local flow = hex_map_get(flow_field, i, j)
 
             if flow then
                 map[i][j].priority = flow.priority
@@ -134,38 +134,12 @@ function apply_flow_field(map, flow_field, world)
     end
 end
 
--- some convenience functions for setting and retrieving values from a 2d sparse array
--- where the first index might return a nil value, causing the second second to crash the game
--- and where it's often the case that the indexer is a vec2
-function map_get(map, hex, y)
-    if y then return map[hex] and map[hex][y] end
-    return map[hex.x] and map[hex.x][hex.y]
-end
-
-function map_set(map, hex, y, v)
-    if v then
-        if map[hex] then
-            map[hex][y] = v
-        else
-            map[hex] = {}
-            map[hex][y] = v
-        end
-    else
-        if map[hex.x] then
-            map[hex.x][hex.y] = y
-        else
-            map[hex.x] = {}
-            map[hex.x][hex.y] = y
-        end
-    end
-end
-
 function building_tower_breaks_flow_field(tower_type, hex)
     local original_elevations = {}
     local all_impassable = true
-    local hexes = spiral_map(hex, get_tower_size(tower_type))
+    local hexes = hex_spiral_map(hex, get_tower_size(tower_type))
     for _,h in pairs(hexes) do
-        local tile = map_get(state.map, h)
+        local tile = hex_map_get(state.map, h)
 
         if all_impassable and mob_can_pass_through(nil, h) then
             all_impassable = false
@@ -182,41 +156,42 @@ function building_tower_breaks_flow_field(tower_type, hex)
     -- (besides return all the tile's elevations back to their original state)
     if all_impassable then
         for i,h in pairs(hexes) do
-            map_get(state.map, h).elevation = original_elevations[i]
+            hex_map_get(state.map, h).elevation = original_elevations[i]
         end
         return false
     end
 
     local flow_field = generate_flow_field(state.map, HEX_GRID_CENTER)
-    local result = not map_get(flow_field, 0, 0)
+    local result = not hex_map_get(flow_field, 0, 0)
 
     for i,h in pairs(hexes) do
-        map_get(state.map, h).elevation = original_elevations[i]
+        hex_map_get(state.map, h).elevation = original_elevations[i]
     end
 
     return result, flow_field
 end
 
-function make_hex_grid_scene(map)
-    local function color_at(elevation)
-        if elevation < -0.5 then -- lowest elevation
-            return COLORS.WATER{ a = (elevation + 1.4) / 2 + 0.2 }
+function map_elevation_color(elevation)
+    if elevation < -0.5 then -- lowest elevation
+        return COLORS.WATER{ a = (elevation + 1.4) / 2 + 0.2 }
 
-        elseif elevation < 0 then -- med-low elevation
-            return math.lerp(COLORS.DIRT, COLORS.GRASS, elevation + 0.5){ a = (elevation + 1.8) / 2 + 0.3 }
+    elseif elevation < 0 then -- med-low elevation
+        return math.lerp(COLORS.DIRT, COLORS.GRASS, elevation + 0.5){ a = (elevation + 1.8) / 2 + 0.3 }
 
-        elseif elevation < 0.5 then -- med-high elevation
-            return math.lerp(COLORS.DIRT, COLORS.GRASS, elevation + 0.5){ a = (elevation + 1.6) / 2 + 0.3 }
+    elseif elevation < 0.5 then -- med-high elevation
+        return math.lerp(COLORS.DIRT, COLORS.GRASS, elevation + 0.5){ a = (elevation + 1.6) / 2 + 0.3 }
 
-        elseif elevation < 1 then     -- high elevation
-            return COLORS.MOUNTAIN{ ra = elevation }
+    elseif elevation < 1 then     -- high elevation
+        return COLORS.MOUNTAIN{ ra = elevation }
 
-        else
-            -- @TODO probably fix... this only happens when loading a save, and the tile has an elevation that's
-            -- higher that anything here
-            return vec4(0.1)
-        end
+    else
+        -- @TODO probably fix... this only happens when loading a save, and the tile has an elevation that's
+        -- higher that anything here
+        return vec4(0.1)
     end
+end
+
+function make_hex_grid_scene(map)
     -- the world's appearance relies largely on a backdrop which can be scaled in
     -- tone to give the appearance of light or darkness
     -- @NOTE replace this with a shader program
@@ -239,12 +214,12 @@ function make_hex_grid_scene(map)
             local mask = vec4(0, 0, 0, math.max(((evenq.x - HEX_GRID_WIDTH/2) / HEX_GRID_WIDTH) ^ 2
                                              , ((-evenq.y - HEX_GRID_HEIGHT/2) / HEX_GRID_HEIGHT) ^ 2))
 
-            local color = color_at(tile.elevation) - mask
+            local color = map_elevation_color(tile.elevation) - mask
 
             local node = am.translate(hex_to_pixel(vec2(i, j), vec2(HEX_SIZE)))
                         ^ am.circle(vec2(0), HEX_SIZE, color, 6)
 
-            map_set(map, i, j, {
+            hex_map_set(map, i, j, {
                 elevation = tile.elevation,
                 node = node
             })
@@ -259,7 +234,12 @@ function make_hex_grid_scene(map)
 end
 
 function random_map(seed)
-    local map = rectangular_map(HEX_GRID_DIMENSIONS.x, HEX_GRID_DIMENSIONS.y, seed)
+    local map = hex_rectangular_map(
+        HEX_GRID_DIMENSIONS.x,
+        HEX_GRID_DIMENSIONS.y,
+        HEX_ORIENTATION.FLAT,
+        seed
+    )
     math.randomseed(map.seed)
 
     -- there are some things about the generated map we'd like to change...
@@ -286,7 +266,7 @@ function random_map(seed)
                 noise = noise * d^0.125 -- arbitrary, seems to work good
             end
 
-            map_set(map, i, j, {
+            hex_map_set(map, i, j, {
                 elevation = noise,
             })
         end

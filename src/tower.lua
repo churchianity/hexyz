@@ -131,9 +131,9 @@ function make_tower_node(tower_type)
 
     elseif tower_type == TOWER_TYPE.HOWITZER then
         return am.group{
-            am.circle(vec2(0), HEX_SIZE, COLORS.VERY_DARK_GRAY, 6),
+            am.circle(vec2(0), HEX_SIZE, COLORS.VERY_DARK_GRAY{a=0.8}, 6),
             am.rotate(state.time or 0) ^ am.group{
-                pack_texture_into_sprite(TEXTURES.CANNON1, HEX_PIXEL_HEIGHT, HEX_PIXEL_WIDTH*2) -- CHONK
+                pack_texture_into_sprite(TEXTURES.CANNON1, HEX_PIXEL_HEIGHT*2, HEX_PIXEL_WIDTH*3) -- CHONK
             }
         }
     elseif tower_type == TOWER_TYPE.LIGHTHOUSE then
@@ -276,11 +276,11 @@ function tower_type_is_buildable_on(hex, tile, tower_type)
     local has_mountain = false
     local has_ground = false
 
-    for _,h in pairs(spiral_map(hex, get_tower_size(tower_type))) do
+    for _,h in pairs(hex_spiral_map(hex, get_tower_size(tower_type))) do
         table.merge(blocking_towers, towers_on_hex(h))
         table.merge(blocking_mobs, mobs_on_hex(h))
 
-        local tile = map_get(state.map, h)
+        local tile = hex_map_get(state.map, h)
         -- this should always be true, unless it is possible to place a tower
         -- where part of the tower overflows the edge of the map
         if tile then
@@ -332,7 +332,7 @@ function tower_type_is_buildable_on(hex, tile, tower_type)
     elseif tower_type == TOWER_TYPE.LIGHTHOUSE then
         local has_water_neighbour = false
         for _,h in pairs(hex_neighbours(hex)) do
-            local tile = map_get(state.map, h)
+            local tile = hex_map_get(state.map, h)
 
             if tile and tile.elevation < -0.5 then
                 has_water_neighbour = true
@@ -442,7 +442,7 @@ function update_tower_lighthouse(tower, tower_index)
                 -- is within some angle range...? if the mob is heading directly away from the tower, then
                 -- the lighthouse shouldn't do much
 
-                local path, made_it = Astar(state.map, tower.hex, m.hex, grid_heuristic, grid_cost)
+                local path, made_it = hex_Astar(state.map, tower.hex, m.hex, grid_heuristic, grid_cost)
 
                 if made_it then
                     m.path = path
@@ -485,17 +485,20 @@ function make_and_register_tower(hex, tower_type)
     if tower.size == 0 then
         tower.hexes = { tower.hex }
     else
-        tower.hexes = spiral_map(tower.hex, tower.size)
+        tower.hexes = hex_spiral_map(tower.hex, tower.size)
     end
     tower.height = spec.height
 
     for _,h in pairs(tower.hexes) do
-        local tile = map_get(state.map, h.x, h.y)
+        local tile = hex_map_get(state.map, h.x, h.y)
         tile.elevation = tile.elevation + tower.height
     end
 
     if tower.type == TOWER_TYPE.HOWITZER then
         tower.props.z = tower.height
+
+    elseif tower.type == TOWER_TYPE.LIGHTHOUSE then
+        tower.perimeter = hex_ring_map(tower.hex, tower.range)
     end
 
     register_entity(state.towers, tower)

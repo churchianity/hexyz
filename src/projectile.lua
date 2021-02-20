@@ -85,7 +85,7 @@ local function update_projectile_shell(projectile, projectile_index)
     -- right now, it's just the hex we're on and all of its neighbours.
     -- this is done to avoid having to check every mob on screen, though maybe it's not necessary.
     local do_explode = false
-    local search_hexes = spiral_map(projectile.hex, 1)
+    local search_hexes = hex_spiral_map(projectile.hex, 1)
     local mobs = {}
     for _,hex in pairs(search_hexes) do
         for index,mob in pairs(mobs_on_hex(hex)) do
@@ -103,7 +103,7 @@ local function update_projectile_shell(projectile, projectile_index)
         end
     end
 
-    local tile = map_get(state.map, projectile.hex)
+    local tile = hex_map_get(state.map, projectile.hex)
     if tile and tile.elevation >= projectile.props.z then
         --do_explode = true
 
@@ -143,7 +143,7 @@ local function update_projectile_laser(projectile, projectile_index)
     -- get a list of hexes that could have something we could hit on them
     -- right now, it's just the hex we're on and all of its neighbours.
     -- this is done to avoid having to check every mob on screen, though maybe it's not necessary.
-    local search_hexes = spiral_map(projectile.hex, 1)
+    local search_hexes = hex_spiral_map(projectile.hex, 1)
     local hit_mob_count = 0
     local hit_mobs = {}
     for _,hex in pairs(search_hexes) do

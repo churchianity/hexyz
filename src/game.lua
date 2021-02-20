@@ -82,7 +82,7 @@ local function get_top_right_display_text(hex, evenq, centered_evenq, display_ty
         str = "SEED: " .. state.map.seed
 
     elseif display_type == TRDTS.TILE then
-        str = table.tostring(map_get(state.map, hex))
+        str = table.tostring(hex_map_get(state.map, hex))
     end
     return str
 end
@@ -247,7 +247,7 @@ local function game_action(scene)
     local evenq          = hex_to_evenq(hex)
     local centered_evenq = evenq{ y = -evenq.y } - vec2(math.floor(HEX_GRID_WIDTH/2)
                                                       , math.floor(HEX_GRID_HEIGHT/2))
-    local tile = map_get(state.map, hex)
+    local tile = hex_map_get(state.map, hex)
 
     local interactable = evenq_is_in_interactable_region(evenq{ y = -evenq.y })
     local buildable = tower_type_is_buildable_on(hex, tile, state.selected_tower_type)
@@ -416,7 +416,8 @@ local function make_game_toolbelt()
     local toolbelt = am.group{
         am.group():tag"tower_tooltip_text",
         am.rect(win.left, win.bottom, win.right, win.bottom + toolbelt_height, COLORS.TRANSPARENT)
-    }:tag"toolbelt"
+    }
+    :tag"toolbelt"
 
     local padding = 15
     local size = toolbelt_height - padding
@@ -430,7 +431,9 @@ local function make_game_toolbelt()
     local tower_select_square = (
         am.translate(vec2(size + padding, half_size) + offset)
         ^ am.rect(-size/2-3, -size/2-3, size/2+3, size/2+3, COLORS.SUNRAY)
-    ):tag"tower_select_square"
+    )
+    :tag"tower_select_square"
+
     tower_select_square.hidden = true
     toolbelt:append(tower_select_square)
 
@@ -503,7 +506,7 @@ end
 -- optionally, |action_f| is a function that operates on the group node every frame
 function make_hex_cursor(radius, color_f, action_f)
     local color = type(color_f) == "userdata" and color_f or nil
-    local map = spiral_map(vec2(0), radius)
+    local map = hex_spiral_map(vec2(0), radius)
     local group = am.group()
 
     for _,h in pairs(map) do
@@ -557,21 +560,14 @@ end
 function game_init(saved_state)
     if saved_state then
         state = game_deserialize(saved_state)
-
-        -- scene nodes aren't (can't be?) serialized, so we re-generate them if we're loading from a save
-
-
     else
         state = get_initial_game_state()
+        local home_tower = build_tower(HEX_GRID_CENTER, TOWER_TYPE.RADAR)
+        for _,h in pairs(home_tower.hexes) do
+            -- @HACK to make the center tile(s) passable even though there's a tower on it
+            hex_map_get(state.map, h).elevation = 0
+        end
     end
-
-    --[[
-    local home_tower = build_tower(HEX_GRID_CENTER, TOWER_TYPE.RADAR)
-    for _,h in pairs(home_tower.hexes) do
-        -- @HACK to make the center tile(s) passable even though there's a tower on it
-        map_get(state.map, h).elevation = 0
-    end
-    ]]
 
     win.scene:remove("game")
     win.scene:append(game_scene())

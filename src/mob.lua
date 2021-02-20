@@ -7,7 +7,7 @@ MOB_TYPE = {
     SPOODER = 2
 }
 
-MAX_MOB_SIZE = hex_height(HEX_SIZE, ORIENTATION.FLAT) / 2
+MAX_MOB_SIZE = hex_height(HEX_SIZE, HEX_ORIENTATION.FLAT) / 2
 MOB_SIZE = MAX_MOB_SIZE
 
 MOB_SPECS = {
@@ -63,7 +63,7 @@ end
 
 -- check if a the tile at |hex| is passable by |mob|
 function mob_can_pass_through(mob, hex)
-    local tile = map_get(state.map, hex)
+    local tile = hex_map_get(state.map, hex)
     return tile_is_medium_elevation(tile)
 end
 
@@ -158,7 +158,7 @@ local function resolve_frame_target_for_mob(mob, mob_index)
         local frame_target, tile = false, false
         if mob.path then
             -- we (should) have an explicitly stored target
-            local path_entry = map_get(mob.path, mob.hex)
+            local path_entry = hex_map_get(mob.path, mob.hex)
 
             if not path_entry then
                 -- we should be just about to reach the target, delete the path.
@@ -180,12 +180,12 @@ local function resolve_frame_target_for_mob(mob, mob_index)
 
             if #neighbours > 0 then
                 local first_neighbour = neighbours[1]
-                tile = map_get(state.map, first_neighbour)
+                tile = hex_map_get(state.map, first_neighbour)
                 local lowest_cost_hex = first_neighbour
                 local lowest_cost = tile.priority or 0
 
                 for _,n in pairs(neighbours) do
-                    tile = map_get(state.map, n)
+                    tile = hex_map_get(state.map, n)
 
                     if not tile.priority then
                         -- if there's no stored priority, that should mean it's the center tile
@@ -247,8 +247,8 @@ local function update_mob_beeper(mob, mob_index)
         -- or between when we last calculated this target and now
         -- check for that now
         if mob_can_pass_through(mob, mob.frame_target) then
-            local from = map_get(state.map, mob.hex)
-            local to = map_get(state.map, mob.frame_target)
+            local from = hex_map_get(state.map, mob.hex)
+            local to = hex_map_get(state.map, mob.frame_target)
             local rate = (4 * mob.speed - math.abs(to.elevation - from.elevation)) * am.delta_time
 
             mob.position = mob.position + math.normalize(hex_to_pixel(mob.frame_target, vec2(HEX_SIZE)) - mob.position) * rate
