@@ -18,6 +18,9 @@ end
 if not table.append then
 end
 
+if not table.filter then
+end
+
 
 -- wherever 'orientation' appears as an argument, use one of these two, or set a default just below
 HEX_ORIENTATION = {
@@ -389,7 +392,6 @@ function hex_hexagonal_map(radius, seed)
 end
 
 -- Returns Unordered Rectangular Map of |width| and |height| with Simplex Noise
--- @TODO - this doesn't work for pointy orientations
 function hex_rectangular_map(width, height, orientation, seed)
     local orientation = orientation or HEX_DEFAULT_ORIENTATION
     local seed = seed or math.random(width * height)
@@ -417,7 +419,14 @@ function hex_rectangular_map(width, height, orientation, seed)
             end
         end
     elseif orientation == HEX_ORIENTATION.POINTY then
-        error("don't use this, it's broken")
+        for i = 0, height - 1 do
+            local i_offset = math.floor(i/2)
+            for j = -i_offset, width - i_offset - 1 do
+                hex_map_set(map, j, i, 0)
+            end
+        end
+    else
+        error("bad orientation value")
     end
 
     return setmetatable(map, { __index = {

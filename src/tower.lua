@@ -131,9 +131,9 @@ function make_tower_node(tower_type)
 
     elseif tower_type == TOWER_TYPE.HOWITZER then
         return am.group{
-            am.circle(vec2(0), HEX_SIZE, COLORS.VERY_DARK_GRAY{a=0.8}, 6),
+            am.circle(vec2(0), HEX_SIZE, COLORS.VERY_DARK_GRAY, 6),
             am.rotate(state.time or 0) ^ am.group{
-                pack_texture_into_sprite(TEXTURES.CANNON1, HEX_PIXEL_HEIGHT*2, HEX_PIXEL_WIDTH*3) -- CHONK
+                pack_texture_into_sprite(TEXTURES.CANNON1, HEX_PIXEL_HEIGHT*1.5, HEX_PIXEL_WIDTH*2) -- CHONK
             }
         }
     elseif tower_type == TOWER_TYPE.LIGHTHOUSE then
@@ -163,7 +163,7 @@ function make_tower_node(tower_type)
             }
         }
     elseif tower_type == TOWER_TYPE.WALL then
-        return am.circle(vec2(0), HEX_SIZE, COLORS.VERY_DARK_GRAY, 6)
+        return am.circle(vec2(0), HEX_SIZE, COLORS.VERY_DARK_GRAY{a=0.75}, 6)
 
     elseif tower_type == TOWER_TYPE.MOAT then
         return am.circle(vec2(0), HEX_SIZE, COLORS.WATER{a=1}, 6)

@@ -10,6 +10,7 @@ COLORS = {
     BLACK               = vec4(0, 0, 0.05, 1),
     VERY_DARK_GRAY      = vec4(35/255, 35/255, 25/255, 1),
     TRUE_BLACK          = vec4(0, 0, 0, 1),
+    EIGENGRAU           = vec4(0, 0, 0.02, 1),
 
     -- non-standard ??? hues
     WATER               = vec4(0.12, 0.25, 0.3, 1),
@@ -20,6 +21,8 @@ COLORS = {
     -- hues
     CLARET              = vec4(139/255,  30/255,  63/255, 1),
     SUNRAY              = vec4(228/255, 179/255,  99/255, 1),
-    GREEN_YELLOW        = vec4(204/255, 255/255, 102/255, 1)
+    GREEN_YELLOW        = vec4(204/255, 255/255, 102/255, 1),
+    BLUE                = vec4(50/255, 50/255, 180/255, 1),
+    MAGENTA             = vec4(183/255, 0/255, 213/255, 1),
 }
 

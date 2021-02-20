@@ -49,26 +49,92 @@ end
 
 function make_main_scene_toolbelt()
     local options = {
+        false,
+        false,
+        false,
+        false,
         {
             label = "new game",
-            action = function(self) end
+            texture = TEXTURES.NEW_GAME_HEX,
+            action = function() end
         },
         {
             label = "load game",
-            action = function(self) game_init(am.load_state("save", "json")) end
+            texture = TEXTURES.LOAD_GAME_HEX,
+            action = function() game_init(am.load_state("save", "json")) end
         },
-        {
-            label = "map editor",
-            action = function(self) log("map editor not implemented") end
-        },
+        false,
         {
             label = "settings",
-            action = function(self) end
+            texture = TEXTURES.SETTINGS_HEX,
+            action = function() end
         },
+        {
+            label = "about",
+            texture = TEXTURES.ABOUT_HEX,
+            action = function() end
+        },
+        false,
+        false,
+        false,
+        {
+            label = "map editor",
+            texture = TEXTURES.MAP_EDITOR_HEX,
+            action = function() log("map editor not implemented") end
+        },
+        false
     }
-    --local map = hex_rectangular_map(10, 20, HEX_ORIENTATION.POINTY)
 
-    return group
+    local spacing = 160
+
+    -- calculate the dimensions of the whole grid
+    local grid_width = 10
+    local grid_height = 2
+    local hhs = hex_horizontal_spacing(spacing)
+    local hvs = hex_vertical_spacing(spacing)
+    local grid_pixel_width = grid_width * hhs
+    local grid_pixel_height = grid_height * hvs
+    local pixel_offset = vec2(-grid_pixel_width/2, win.bottom + hex_height(spacing)/2 + 20)
+
+    local map = hex_rectangular_map(grid_width, grid_height, HEX_ORIENTATION.POINTY)
+    local group = am.group()
+    local option_index = 1
+    for i,_ in pairs(map) do
+        for j,_ in pairs(map[i]) do
+            local hex = vec2(i, j)
+            local position = hex_to_pixel(hex, vec2(spacing), HEX_ORIENTATION.POINTY)
+            local option = options[option_index]
+            local texture = option and option.texture or TEXTURES.SHADED_HEX
+            local node = am.translate(position)
+                         ^ pack_texture_into_sprite(texture, texture.width, texture.height, COLORS.TRANSPARENT)
+
+            hex_map_set(map, i, j, {
+                node = node,
+                option = option
+            })
+            local tile = hex_map_get(map, i, j)
+
+            node:action(function(self)
+                local mouse = win:mouse_position()
+                local hex_ = pixel_to_hex(mouse - pixel_offset, vec2(spacing), HEX_ORIENTATION.POINTY)
+
+                if hex == hex_ and tile.option then
+                    tile.node"sprite".color = vec4(1)
+
+                    if win:mouse_pressed("left") then
+                        tile.option.action()
+                    end
+                else
+                    tile.node"sprite".color = COLORS.TRANSPARENT
+                end
+            end)
+
+            group:append(node)
+            option_index = option_index + 1
+        end
+    end
+
+    return am.translate(pixel_offset) ^ group
 end
 
 function main_scene()
@@ -91,7 +157,9 @@ function main_scene()
     end
     group:append(hex_backdrop)
 
-    group:append(am.translate(0, 200) ^ am.sprite("res/logo.png"))
+    local logo_height = 480
+    group:append(am.translate(0, win.top - 20 - logo_height/2) ^ am.sprite("res/logo.png"))
+
     group:append(make_main_scene_toolbelt())
 
     group:action(main_action)
@@ -100,6 +168,7 @@ function main_scene()
 end
 
 win.scene = am.group()
-game_init()
+win.scene = main_scene()
+--game_init()
 noglobals()
 
