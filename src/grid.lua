@@ -103,7 +103,7 @@ function grid_neighbours(map, hex)
 end
 
 function generate_flow_field(map, start)
-    return hex_dijkstra(map, start, nil, grid_cost, grid_neighbours)
+    return hex_dijkstra(map, start, nil, grid_neighbours, grid_cost)
 end
 
 function apply_flow_field(map, flow_field, world)

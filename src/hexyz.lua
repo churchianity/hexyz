@@ -451,7 +451,7 @@ end
 --  will have lots of other data which you may want your pathfinding algorithms to care about in some way,
 --  that these don't.
 --
-function hex_breadth_first(map, start)
+function hex_breadth_first(map, start, neighbour_f)
     local frontier = {}
     frontier[1] = start
 
@@ -461,12 +461,12 @@ function hex_breadth_first(map, start)
     while not (#frontier == 0) do
         local current = table.remove(frontier, 1)
 
-        for _,neighbour in pairs(map.neighbours(current)) do
-            local d = hex_map_get(distance, neighbour.x, neighbour.y)
+        for _,neighbour in pairs(neighbour_f(map, current)) do
+            local d = hex_map_get(distance, neighbour)
             if not d then
                 table.insert(frontier, neighbour)
-                local current_distance = hex_map_get(distance, current.x, current.y)
-                hex_map_set(distance, neighbour.x, neighbour.y, current_distance + 1)
+                local current_distance = hex_map_get(distance, current)
+                hex_map_set(distance, neighbour, current_distance + 1)
             end
         end
     end
@@ -474,7 +474,7 @@ function hex_breadth_first(map, start)
     return distance
 end
 
-function hex_dijkstra(map, start, goal, cost_f, neighbour_f)
+function hex_dijkstra(map, start, goal, neighbour_f, cost_f)
     local frontier = {}
     frontier[1] = { hex = start, priority = 0 }
 
@@ -517,7 +517,7 @@ end
 --  function (from, to)         -- from and to are vec2's
 --      return some numeric value
 --
-function hex_Astar(map, start, goal, cost_f, neighbour_f, heuristic)
+function hex_Astar(map, start, goal, neighbour_f, cost_f, heuristic)
     local path = {}
     hex_map_set(path, start, false)
 
@@ -537,14 +537,14 @@ function hex_Astar(map, start, goal, cost_f, neighbour_f, heuristic)
         end
 
         for _,next_ in pairs(neighbour_f(map, current.hex)) do
-            local new_cost = hex_map_get(path_so_far, current.hex.x, current.hex.y) + cost_f(map, current.hex, next_)
-            local next_cost = hex_map_get(path_so_far, next_.x, next_.y)
+            local new_cost = hex_map_get(path_so_far, current.hex) + cost_f(map, current.hex, next_)
+            local next_cost = hex_map_get(path_so_far, next_)
 
             if not next_cost or new_cost < next_cost then
-                hex_map_set(path_so_far, next_.x, next_.y, new_cost)
+                hex_map_set(path_so_far, next_, new_cost)
                 local priority = new_cost + heuristic(goal, next_)
                 table.insert(frontier, { hex = next_, priority = priority })
-                hex_map_set(path, next_.x, next_.y, current)
+                hex_map_set(path, next_, current)
             end
         end
     end
