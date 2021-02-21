@@ -44,6 +44,7 @@ require "src/projectile"
 require "src/tower"
 
 
+-- js style popup in the middle of the screen that dissapates
 function alert(message)
     win.scene:append(
         am.scale(3) ^ am.text(message)
@@ -93,8 +94,14 @@ function make_main_scene_toolbelt()
         {
             texture = TEXTURES.LOAD_GAME_HEX,
             action = function()
-                win.scene:remove"menu"
-                game_init(am.load_state("save", "json"))
+                local save = am.load_state("save", "json")
+
+                if save then
+                    win.scene:remove"menu"
+                    game_init(save)
+                else
+                    alert("no saved games")
+                end
             end
         },
 
