@@ -1,4 +1,35 @@
 
+-- @TODO
+-- music
+--      -- title theme
+--      -- game theme
+--
+-- settings menu
+--      -- music volume
+--      -- sfx volume
+--      -- resolution settings & fix grid size being based on resolution
+--
+-- save games
+--      -- allow saving by name
+--      -- allow loading by name
+--      -- encode/decode save game data (low priority)
+--
+-- map editor
+--      -- paint terrain elevation levels
+--      -- place tiles of set elevation
+--      -- place towers
+--      -- move home?
+--
+-- game
+--      -- is 1920x1080 the optimal default resolution?
+--      -- HEX_GRID_CENTER =/= HOME
+--      -- allow selecting of tiles, if tower is selected then allow sell/upgrade
+--      -- button/ui to open pause menu - make it obvious that 'esc' is the button
+--      -- play the game and tweak numbers
+--      -- new game menu allowing set seed
+--      -- gattling gun tower
+--      -- spooder mob
+--      -- make art, birds-eye-ify the redeye tower and lighthouse maybe?
 
 settings = am.load_state("settings", "json") or {
     fullscreen = false,
