@@ -23,7 +23,7 @@ local TRDTS = {
 }
 
 local function get_initial_game_state(seed)
-    local STARTING_MONEY = 100000
+    local STARTING_MONEY = 200
     -- 2014
     local map, world = random_map()
 
@@ -45,7 +45,8 @@ local function get_initial_game_state(seed)
         time_until_next_wave = 0,
         time_until_next_break = 0,
         spawning = false,
-        spawn_chance = 55,
+        spawn_chance = 0.01,
+        last_mob_spawn_time = 0,
 
         selected_tower_type = false,
         selected_toolbelt_button = false,
@@ -117,7 +118,7 @@ end
 local function game_pause()
     win.scene("game").paused = true
 
-    win.scene:append(main_scene(false):tag"pause_menu")
+    win.scene:append(main_scene(false))
 end
 
 local function game_deserialize(json_string)
@@ -213,8 +214,6 @@ local function game_action(scene)
     state.time = state.time + am.delta_time
     state.score = state.score + am.delta_time
 
-    state.spawn_chance = math.clamp(state.spawn_chance - math.floor(state.time / 100), 1, 25)
-
     if state.spawning then
         state.time_until_next_break = state.time_until_next_break - am.delta_time
 
@@ -230,6 +229,9 @@ local function game_action(scene)
 
         if state.time_until_next_wave <= 0 then
             state.time_until_next_wave = 0
+
+            -- calculate spawn chance for next wave
+            state.spawn_chance = (state.current_wave + 1)/200
 
             state.spawning = true
             state.time_until_next_break = get_wave_time(state.current_wave)

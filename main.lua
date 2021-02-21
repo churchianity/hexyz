@@ -65,12 +65,18 @@ function make_main_scene_toolbelt()
         false,
         {
             texture = TEXTURES.NEW_GAME_HEX,
-            action = function() game_init() end
+            action = function()
+                win.scene:remove"menu"
+                game_init()
+            end
         },
         false,
         {
             texture = TEXTURES.LOAD_GAME_HEX,
-            action = function() game_init(am.load_state("save", "json")) end
+            action = function()
+                win.scene:remove"menu"
+                game_init(am.load_state("save", "json"))
+            end
         },
         false,
         false,
@@ -191,9 +197,11 @@ function main_scene(do_backdrop)
 
     group:action(main_action)
 
-    return group
+    return group:tag"menu"
 end
 
-win.scene = main_scene(true)
+win.scene = am.group(
+    main_scene(true)
+)
 noglobals()
 

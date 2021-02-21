@@ -40,8 +40,8 @@ local function grow_mob_speed(mob_type, spec_speed, time)
     -- if it does, a small amount with a horizontal asymptote
     return spec_speed --* math.abs(math.log(time / 100))
 end
-local function grow_mob_bounty(mob_type, spec_speed, time)
-    return spec_speed * (time / 100 + 1)
+local function grow_mob_bounty(mob_type, spec_bounty, time)
+    return spec_bounty * (time / 100 + 1)
 end
 
 function mobs_on_hex(hex)
@@ -313,9 +313,25 @@ function mob_deserialize(json_string)
     return mob
 end
 
-function do_mob_spawning(spawn_chance)
+local function can_spawn_mob()
+    local MAX_SPAWN_RATE = 0.1
+    if not state.spawning or (state.time - state.last_mob_spawn_time) < MAX_SPAWN_RATE then
+        return false
+    end
+
+    if math.random() <= state.spawn_chance then
+        --log('yes %f', state.spawn_chance)
+        state.last_mob_spawn_time = state.time
+        return true
+    else
+        --log('no %f', state.spawn_chance)
+        return false
+    end
+end
+
+function do_mob_spawning()
     --if win:key_pressed"space" then
-    if state.spawning and math.random(spawn_chance) == 1 then
+    if can_spawn_mob() then
     --if #state.mobs < 1 then
         make_and_register_mob(MOB_TYPE.BEEPER)
     end
