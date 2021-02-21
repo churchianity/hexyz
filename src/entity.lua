@@ -55,12 +55,6 @@ function delete_entity(t, index)
     t[index] = false -- leave empty indexes so other entities can learn that this entity was deleted
 end
 
-function delete_all_entities()
-    delete_all_mobs()
-    delete_all_towers()
-    delete_all_projectiles()
-end
-
 function do_entity_updates()
     do_mob_updates()
     do_tower_updates()

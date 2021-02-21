@@ -236,12 +236,6 @@ function projectile_deserialize(json_string)
     return projectile
 end
 
-function delete_all_projectiles()
-    for projectile_index,projectile in pairs(state.projectiles) do
-        if projectile then delete_entity(state.projectiles, projectile_index) end
-    end
-end
-
 function do_projectile_updates()
     for projectile_index,projectile in pairs(state.projectiles) do
         if projectile and projectile.update then

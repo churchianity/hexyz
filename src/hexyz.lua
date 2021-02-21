@@ -44,7 +44,7 @@ local HEX_DEFAULT_ORIENTATION = HEX_ORIENTATION.FLAT
 
 -- whenever |size| for a hexagon appears as an argument, if it isn't provided, use this
 -- 'size' here is distance from the centerpoint to any vertex in pixel
-local HEX_DEFAULT_SIZE = vec2(20)
+local HEX_DEFAULT_SIZE = vec2(26)
 
 -- actual width (longest contained horizontal line) of the hexagon
 function hex_width(size, orientation)

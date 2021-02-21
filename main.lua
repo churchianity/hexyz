@@ -44,6 +44,16 @@ require "src/projectile"
 require "src/tower"
 
 
+function alert(message)
+    win.scene:append(
+        am.scale(3) ^ am.text(message)
+        :action(coroutine.create(function(self)
+            am.wait(am.tween(self, 1, { color = vec4(0) }))
+            win.scene:remove(self)
+        end))
+    )
+end
+
 function main_action(self)
     if win:key_pressed("escape") then
         if win.scene("game") then
@@ -59,6 +69,7 @@ function main_action(self)
 end
 
 function make_main_scene_toolbelt()
+    local include_save_option = game
     local options = {
         false,
         false,
@@ -71,6 +82,14 @@ function make_main_scene_toolbelt()
             end
         },
         false,
+        include_save_option and {
+            texture = TEXTURES.SAVE_GAME_HEX,
+            action = function()
+                game_save()
+                alert("succesfully saved!")
+            end
+        } or false,
+        false,
         {
             texture = TEXTURES.LOAD_GAME_HEX,
             action = function()
@@ -78,8 +97,7 @@ function make_main_scene_toolbelt()
                 game_init(am.load_state("save", "json"))
             end
         },
-        false,
-        false,
+
         false,
         {
             texture = TEXTURES.MAP_EDITOR_HEX,
@@ -109,6 +127,8 @@ function make_main_scene_toolbelt()
     local hvs = hex_vertical_spacing(spacing)
     local grid_pixel_width = grid_width * hhs
     local grid_pixel_height = grid_height * hvs
+    -- @TODO the vertical offset should be different depending on if this is the main menu or the pause menu
+    -- perhaps the map that makes the grid of hexes should be different as well
     local pixel_offset = vec2(-grid_pixel_width/2, win.bottom + hex_height(spacing)/2 + 20)
 
     local map = hex_rectangular_map(grid_width, grid_height, HEX_ORIENTATION.POINTY)
@@ -161,7 +181,7 @@ function make_main_scene_toolbelt()
     return am.translate(pixel_offset) ^ group
 end
 
-function main_scene(do_backdrop)
+function main_scene(do_backdrop, do_logo)
     local group = am.group()
 
     if do_backdrop then
@@ -173,7 +193,7 @@ function main_scene(do_backdrop)
                 color = color{a=color.a - 0.1}
 
                 local node = am.translate(hex_to_pixel(vec2(i, j), vec2(HEX_SIZE)))
-                            ^ am.circle(vec2(0), HEX_SIZE, vec4(0), 6)
+                             ^ am.circle(vec2(0), HEX_SIZE, vec4(0), 6)
 
                 node"circle":action(am.tween(0.6, { color = color }))
 
@@ -190,8 +210,12 @@ function main_scene(do_backdrop)
         ^ am.text(version, COLORS.WHITE, "right")
     )
 
-    local logo_height = 480
-    group:append(am.translate(0, win.top - 20 - logo_height/2) ^ am.sprite("res/logo.png"))
+    if do_logo then
+        group:append(
+            am.translate(0, win.top - 20 - TEXTURES.LOGO.height/2)
+            ^ pack_texture_into_sprite(TEXTURES.LOGO, TEXTURES.LOGO.width, TEXTURES.LOGO.height)
+        )
+    end
 
     group:append(make_main_scene_toolbelt())
 
@@ -201,7 +225,7 @@ function main_scene(do_backdrop)
 end
 
 win.scene = am.group(
-    main_scene(true)
+    main_scene(true, true)
 )
 noglobals()
 

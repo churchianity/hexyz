@@ -16,6 +16,7 @@ TEXTURES = {
     SHADED_HEX              = load_texture("res/shaded_hex.png"),
 
     NEW_GAME_HEX            = load_texture("res/newgamehex.png"),
+    SAVE_GAME_HEX           = load_texture("res/savegamehex.png"),
     LOAD_GAME_HEX           = load_texture("res/loadgamehex.png"),
     SETTINGS_HEX            = load_texture("res/settingshex.png"),
     MAP_EDITOR_HEX          = load_texture("res/mapeditorhex.png"),

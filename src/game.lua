@@ -1,10 +1,14 @@
 
 
+game = false -- flag to tell if there is a game running
 state = {}
 
-function game_end(saved_state)
-    delete_all_entities()
-    game_init(saved_state)
+function game_end()
+    state = {}
+    game = false
+
+    -- @TODO
+
 end
 
 function update_score(diff) state.score = state.score + diff end
@@ -45,7 +49,7 @@ local function get_initial_game_state(seed)
         time_until_next_wave = 0,
         time_until_next_break = 0,
         spawning = false,
-        spawn_chance = 0.01,
+        spawn_chance = 0.002,
         last_mob_spawn_time = 0,
 
         selected_tower_type = false,
@@ -88,16 +92,6 @@ local function get_top_right_display_text(hex, evenq, centered_evenq, display_ty
     return str
 end
 
-function alert(message)
-    win.scene:append(
-        am.scale(3) ^ am.text(message)
-        :action(coroutine.create(function(self)
-            am.wait(am.tween(self, 1, { color = vec4(0) }))
-            win.scene:remove(self)
-        end))
-    )
-end
-
 -- initialized later, as part of the init of the toolbelt
 local function select_tower_type(tower_type) end
 local function select_toolbelt_button(i) end
@@ -118,7 +112,7 @@ end
 local function game_pause()
     win.scene("game").paused = true
 
-    win.scene:append(main_scene(false))
+    win.scene:append(main_scene(false, false))
 end
 
 local function game_deserialize(json_string)
@@ -202,7 +196,7 @@ local function game_serialize()
     return am.to_json(serialized)
 end
 
-local function game_save()
+function game_save()
     am.save_state("save", game_serialize(), "json")
     log("succesfully saved!")
 end
@@ -302,10 +296,6 @@ local function game_action(scene)
     elseif win:key_pressed"f3" then
         game_save()
 
-    elseif win:key_pressed"f4" then
-        game_end(am.load_state("save", "json"))
-        return true
-
     elseif win:key_pressed"tab" then
         if win:key_down"lshift" then
             select_toolbelt_button((state.selected_toolbelt_button + table.count(TOWER_TYPE) - 2) % table.count(TOWER_TYPE) + 1)
@@ -381,7 +371,7 @@ local function make_game_toolbelt()
         return button
     end
 
-    local toolbelt_height = hex_height(HEX_SIZE) * 2
+    local toolbelt_height = win.height * 0.08
     local function get_tower_tooltip_text_node(tower_type)
         local name = get_tower_name(tower_type)
         local placement_rules = get_tower_placement_rules_text(tower_type)
@@ -392,7 +382,7 @@ local function make_game_toolbelt()
             return am.group():tag"tower_tooltip_text"
         end
 
-        local color = COLORS.PALE_SILVER
+        local color = COLORS.WHITE
         return (am.translate(win.left + 10, win.bottom + toolbelt_height + 20)
             ^ am.group{
                 am.translate(0, 60)
@@ -566,6 +556,7 @@ function game_init(saved_state)
         end
     end
 
+    game = true
     win.scene:remove("game")
     win.scene:append(game_scene())
 end

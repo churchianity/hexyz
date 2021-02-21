@@ -72,6 +72,11 @@ function mob_die(mob, mob_index)
     delete_entity(state.mobs, mob_index)
 end
 
+function mob_reach_center(mob, mob_index)
+    update_score(-(mob.health + mob.bounty))
+    delete_entity(state.mobs, mob_index)
+end
+
 local HEALTHBAR_WIDTH = HEX_PIXEL_WIDTH/2
 local HEALTHBAR_HEIGHT = HEALTHBAR_WIDTH/4
 function do_hit_mob(mob, damage, mob_index)
@@ -148,8 +153,7 @@ local function resolve_frame_target_for_mob(mob, mob_index)
     mob.hex = pixel_to_hex(mob.position, vec2(HEX_SIZE))
 
     if mob.hex == HEX_GRID_CENTER then
-        update_score(-mob.health)
-        mob_die(mob, mob_index)
+        mob_reach_center(mob, mob_index)
         return true
     end
 
@@ -320,26 +324,16 @@ local function can_spawn_mob()
     end
 
     if math.random() <= state.spawn_chance then
-        --log('yes %f', state.spawn_chance)
         state.last_mob_spawn_time = state.time
         return true
     else
-        --log('no %f', state.spawn_chance)
         return false
     end
 end
 
 function do_mob_spawning()
-    --if win:key_pressed"space" then
     if can_spawn_mob() then
-    --if #state.mobs < 1 then
         make_and_register_mob(MOB_TYPE.BEEPER)
-    end
-end
-
-function delete_all_mobs()
-    for mob_index,mob in pairs(state.mobs) do
-        if mob then delete_entity(state.mobs, mob_index) end
     end
 end
 

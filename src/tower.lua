@@ -511,12 +511,6 @@ function build_tower(hex, tower_type)
     return tower
 end
 
-function delete_all_towers()
-    for tower_index,tower in pairs(state.towers) do
-        if tower then delete_entity(state.towers, tower_index) end
-    end
-end
-
 function do_tower_updates()
     for tower_index,tower in pairs(state.towers) do
         if tower and tower.update then
