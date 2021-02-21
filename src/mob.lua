@@ -120,10 +120,6 @@ function make_mob_node(mob_type, mob)
     end
 end
 
-function get_mob_path(mob, map, start, goal)
-    return Astar(map, goal, start, grid_heuristic, grid_cost)
-end
-
 local function get_spawn_hex()
     -- ensure we spawn on an random tile along the map's edges
     local roll = math.random(HEX_GRID_WIDTH * 2 + HEX_GRID_HEIGHT * 2) - 1

@@ -441,7 +441,7 @@ function update_tower_lighthouse(tower, tower_index)
                 -- is within some angle range...? if the mob is heading directly away from the tower, then
                 -- the lighthouse shouldn't do much
 
-                local path, made_it = hex_Astar(state.map, tower.hex, m.hex, grid_heuristic, grid_cost)
+                local path, made_it = hex_Astar(state.map, tower.hex, m.hex, grid_neighbours, grid_cost, heuristic)
 
                 if made_it then
                     m.path = path

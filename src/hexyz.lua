@@ -517,7 +517,7 @@ end
 --  function (from, to)         -- from and to are vec2's
 --      return some numeric value
 --
-function hex_Astar(map, start, goal, heuristic, cost_f)
+function hex_Astar(map, start, goal, cost_f, neighbour_f, heuristic)
     local path = {}
     hex_map_set(path, start, false)
 
@@ -536,7 +536,7 @@ function hex_Astar(map, start, goal, heuristic, cost_f)
             break
         end
 
-        for _,next_ in pairs(map.neighbours(current.hex)) do
+        for _,next_ in pairs(neighbour_f(map, current.hex)) do
             local new_cost = hex_map_get(path_so_far, current.hex.x, current.hex.y) + cost_f(map, current.hex, next_)
             local next_cost = hex_map_get(path_so_far, next_.x, next_.y)
 
