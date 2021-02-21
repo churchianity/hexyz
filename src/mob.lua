@@ -33,15 +33,15 @@ function get_mob_spec(mob_type)
 end
 
 local function grow_mob_health(mob_type, spec_health, time)
-    return spec_health * (time / 100 + 1)
+    return spec_health + (state.current_wave - 1) * 3
 end
 local function grow_mob_speed(mob_type, spec_speed, time)
     -- @TODO maybe speed shouldn't grow with time at all.
     -- if it does, a small amount with a horizontal asymptote
-    return spec_speed --* math.abs(math.log(time / 100))
+    return spec_speed
 end
 local function grow_mob_bounty(mob_type, spec_bounty, time)
-    return spec_bounty * (time / 100 + 1)
+    return spec_bounty + (state.current_wave - 1) * 3
 end
 
 function mobs_on_hex(hex)

@@ -206,8 +206,8 @@ function main_scene(do_backdrop, do_logo)
     end
 
     group:append(
-        am.translate(win.right - 10, win.bottom + 20)
-        ^ am.text(version, COLORS.WHITE, "right")
+        am.translate(win.right - 10, win.bottom + 10)
+        ^ am.text(string.format("v%s, by %s", version, author), COLORS.WHITE, "right", "bottom")
     )
 
     if do_logo then

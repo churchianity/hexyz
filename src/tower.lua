@@ -66,8 +66,8 @@ TOWER_SPECS = {
     },
     [TOWER_TYPE.RADAR] = {
         name = "Radar",
-        placement_rules_text = "Place on any non-Water",
-        short_description = "Provides information about incoming waves.",
+        placement_rules_text = "n/a",
+        short_description = "Doesn't do anything right now :(",
         texture = TEXTURES.TOWER_RADAR,
         icon_texture = TEXTURES.TOWER_RADAR_ICON,
         cost = 20,
@@ -441,7 +441,7 @@ function update_tower_lighthouse(tower, tower_index)
                 -- is within some angle range...? if the mob is heading directly away from the tower, then
                 -- the lighthouse shouldn't do much
 
-                local path, made_it = hex_Astar(state.map, tower.hex, m.hex, grid_neighbours, grid_cost, heuristic)
+                local path, made_it = hex_Astar(state.map, tower.hex, m.hex, grid_neighbours, grid_cost, grid_heuristic)
 
                 if made_it then
                     m.path = path

@@ -10,13 +10,13 @@ PROJECTILE_TYPE = {
 local PROJECTILE_SPECS = {
     [PROJECTILE_TYPE.SHELL] = {
         velocity = 13,
-        damage = 15,
+        damage = 10,
         hitbox_radius = 20
     },
     [PROJECTILE_TYPE.LASER] = {
-        velocity = 25,
-        damage = 5,
-        hitbox_radius = 10
+        velocity = 35,
+        damage = 20,
+        hitbox_radius = 20
     },
 }
 

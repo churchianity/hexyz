@@ -1,7 +1,10 @@
 
 ## INTRODUCTION
 
-This is a tower defense game.
+This is a tower defense game. It's made using lua, and the amulet game engine made by Ian Maclarty.
+If you are interested in a library of code for dealing with hexagonal grids/geometry in your game, the file src/hexyz.lua may be of interest to you, as may be the resources below.
+
+
 
 
 ## RESOURCES

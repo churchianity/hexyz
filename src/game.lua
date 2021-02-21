@@ -28,7 +28,7 @@ local TRDTS = {
 
 local function get_initial_game_state(seed)
     local STARTING_MONEY = 200
-    -- 2014
+
     local map, world = random_map()
 
     return {
@@ -41,9 +41,9 @@ local function get_initial_game_state(seed)
         score = 0,              -- current game score
         money = STARTING_MONEY, -- current money
 
-        towers = {},
-        mobs = {},
-        projectiles = {},
+        towers = {},            -- list of tower entities
+        mobs = {},              -- list of mob entities
+        projectiles = {},       -- list of projectile entities
 
         current_wave = 1,
         time_until_next_wave = 0,
