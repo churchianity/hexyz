@@ -6,25 +6,23 @@ do
 
     -- the size of the grid should basically always be constant (i think),
     -- but different aspect ratios complicate this in an annoying way
-    HEX_GRID_WIDTH = 41 + padding
-    HEX_GRID_HEIGHT = 27 + padding
+    HEX_GRID_WIDTH = 33 + padding
+    HEX_GRID_HEIGHT = 23 + padding
 
     HEX_GRID_DIMENSIONS = vec2(HEX_GRID_WIDTH, HEX_GRID_HEIGHT)
 
     HEX_GRID_CENTER = evenq_to_hex(vec2(math.floor(HEX_GRID_WIDTH/2)
                                       , -math.floor(HEX_GRID_HEIGHT/2)))
-end
 
--- pixel distance from hex centerpoint to any vertex
--- given a grid width gx, and window width wx, what's the smallest size a hex can be to fill the whole screen?
--- wx / (gx * 3 / 2)
-HEX_SIZE = win.width / (41 * 3 / 2)
+    -- pixel distance from hex centerpoint to any vertex
+    -- given a grid width gx, and window width wx, what's the smallest size a hex can be to fill the whole screen?
+    -- wx / (gx * 3 / 2)
+    HEX_SIZE = win.width / ((HEX_GRID_WIDTH - padding) * 3 / 2)
 
-HEX_PIXEL_WIDTH = hex_width(HEX_SIZE, HEX_ORIENTATION.FLAT)
-HEX_PIXEL_HEIGHT = hex_height(HEX_SIZE, HEX_ORIENTATION.FLAT)
-HEX_PIXEL_DIMENSIONS = vec2(HEX_PIXEL_WIDTH, HEX_PIXEL_HEIGHT)
+    HEX_PIXEL_WIDTH = hex_width(HEX_SIZE, HEX_ORIENTATION.FLAT)
+    HEX_PIXEL_HEIGHT = hex_height(HEX_SIZE, HEX_ORIENTATION.FLAT)
+    HEX_PIXEL_DIMENSIONS = vec2(HEX_PIXEL_WIDTH, HEX_PIXEL_HEIGHT)
 
-do
     local hhs = hex_horizontal_spacing(HEX_SIZE)
     local hvs = hex_vertical_spacing(HEX_SIZE)
 
