@@ -3,14 +3,6 @@
 game = false -- flag to tell if there is a game running
 state = {}
 
-function game_end()
-    state = {}
-    game = false
-    -- @TODO
-end
-
-function update_score(diff) state.score = state.score + diff end
-function update_money(diff) state.money = state.money + diff end
 
 -- top right display types
 local TRDTS = {
@@ -25,9 +17,9 @@ local TRDTS = {
 }
 
 local function get_initial_game_state(seed)
-    local STARTING_MONEY = 200
+    local STARTING_MONEY = 50
 
-    local map, world = random_map()
+    local map, world = random_map(seed)
 
     return {
         map = map,              -- map of hex coords map[x][y] to a 'tile'
@@ -95,14 +87,14 @@ local function select_tower_type(tower_type) end
 local function select_toolbelt_button(i) end
 
 local function get_wave_time(current_wave)
-    return 90
+    return 45
 end
 
 local function get_break_time(current_wave)
-    return 15
+    return 20
 end
 
-function do_day_night_cycle()
+local function do_day_night_cycle()
     local tstep = (math.sin(state.time * am.delta_time) + 1) / 100
     --state.world"negative_mask".color = vec4(tstep){a=1}
 end
@@ -166,8 +158,12 @@ local function game_serialize()
     serialized.map = nil -- we re-generate the entire map from the seed on de-serialize
 
     -- in order to serialize the game state, we have to convert all relevant userdata into
-    -- something else. this practically only means vectors need to become arrays of floats.
-    -- this is dumb and if i forsaw this i would have probably used float arrays the whole time.
+    -- something else.
+    --
+    -- this practically means vectors need to become arrays of floats,
+    -- and the scene graph needs to be re-constituted at load time
+    --
+    -- this is dumb and if i forsaw this i would have probably used float arrays instead of vectors
 
     serialized.towers = {}
     for i,t in pairs(state.towers) do
@@ -192,11 +188,6 @@ local function game_serialize()
 
     -- @TODO b64 encode or otherwise scramble/compress
     return am.to_json(serialized)
-end
-
-function game_save()
-    am.save_state("save", game_serialize(), "json")
-    log("succesfully saved!")
 end
 
 local function game_action(scene)
@@ -226,7 +217,7 @@ local function game_action(scene)
             state.spawning = true
 
             -- calculate spawn chance for next wave
-            state.spawn_chance = math.log(state.current_wave) + 0.002
+            state.spawn_chance = math.log(state.current_wave)/2 + 0.002
 
             state.time_until_next_break = get_wave_time(state.current_wave)
         end
@@ -242,7 +233,6 @@ local function game_action(scene)
 
     local interactable = evenq_is_in_interactable_region(evenq{ y = -evenq.y })
     local buildable = tower_type_is_buildable_on(hex, tile, state.selected_tower_type)
-    local firable = false
 
     if win:mouse_pressed"left" then
         if interactable then
@@ -274,6 +264,7 @@ local function game_action(scene)
                 end
             elseif not state.selected_tower_type then
                 -- interactable tile, but no tower type selected
+                local towers = towers_on_hex(hex)
 
             end
         end
@@ -323,16 +314,23 @@ local function game_action(scene)
     do_mob_spawning(state.spawn_chance)
     do_day_night_cycle()
 
-    if interactable then
-        win.scene("cursor").hidden = false
-
-        if buildable then
-            win.scene("cursor_translate").position2d = rounded_mouse
-        else
-            win.scene("cursor").hidden = true
-        end
-    else
+    -- update the cursor
+    if not interactable then
         win.scene("cursor").hidden = true
+
+    else
+        if state.selected_tower_type then
+            if buildable then
+                win.scene("cursor").hidden = false
+
+            else
+                win.scene("cursor").hidden = true
+            end
+        else
+            -- if we don't have a tower selected, but the tile is interactable, then show the 'select' cursor
+            win.scene("cursor").hidden = false
+        end
+        win.scene("cursor_translate").position2d = rounded_mouse
     end
 
     win.scene("score").text = string.format("SCORE: %.2f", state.score)
@@ -343,8 +341,9 @@ end
 
 local function make_game_toolbelt()
     local function toolbelt_button(size, half_size, tower_texture, padding, i, offset, key_name)
-        local button = am.translate(vec2(size + padding, 0) * i + offset)
-            ^ am.group{
+        local button =
+            am.translate(vec2(size + padding, 0) * i + offset)
+            ^ am.group(
                 am.translate(0, half_size)
                 ^ pack_texture_into_sprite(TEXTURES.BUTTON1, size, size),
 
@@ -352,12 +351,12 @@ local function make_game_toolbelt()
                 ^ pack_texture_into_sprite(tower_texture, size, size),
 
                 am.translate(vec2(half_size))
-                ^ am.group{
+                ^ am.group(
                     pack_texture_into_sprite(TEXTURES.BUTTON1, half_size, half_size),
                     am.scale(2)
                     ^ am.text(key_name, COLORS.BLACK)
-                }
-            }
+                )
+            )
 
         local x1 = (size + padding) * i + offset.x - half_size
         local y1 = offset.y
@@ -366,8 +365,12 @@ local function make_game_toolbelt()
         local rect = { x1 = x1, y1 = y1, x2 = x2, y2 = y2 }
 
         button:action(function(self)
-            if win:mouse_pressed"left" and point_in_rect(win:mouse_position(), rect) then
-                select_toolbelt_button(i)
+            if point_in_rect(win:mouse_position(), rect) then
+                win.scene:replace("tower_tooltip_text", get_tower_tooltip_text_node(tower_type))
+
+                if win:mouse_pressed"left" then
+                    select_toolbelt_button(i)
+                end
             end
         end)
 
@@ -387,7 +390,8 @@ local function make_game_toolbelt()
 
         local color = COLORS.WHITE
         return (am.translate(win.left + 10, win.bottom + toolbelt_height + 20)
-            ^ am.group{
+            ^ am.scale(1)
+            ^ am.group(
                 am.translate(0, 60)
                 ^ am.text(name, color, "left"):tag"tower_name",
 
@@ -399,7 +403,7 @@ local function make_game_toolbelt()
 
                 am.translate(0, 0)
                 ^ am.text(string.format("cost: %d", cost), color, "left"):tag"tower_cost"
-            }
+            )
         )
         :tag"tower_tooltip_text"
     end
@@ -424,9 +428,6 @@ local function make_game_toolbelt()
 
     local keys = { '1', '2', '3', '4', 'q', 'w', 'e', 'r', 'a', 's', 'd', 'f' }
     --local keys = { '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=' }
-    local TOOLBELT_OPTION = {
-        SELECT = 11
-    }
     local toolbelt_options = {
         TOWER_TYPE.WALL,
         TOWER_TYPE.HOWITZER,
@@ -434,29 +435,11 @@ local function make_game_toolbelt()
         TOWER_TYPE.MOAT,
         TOWER_TYPE.RADAR,
         TOWER_TYPE.LIGHTHOUSE,
-
-        -- reserved for tower types
-        false,
-        false,
-        false,
-        false,
-
-        TOOLBELT_OPTION.SELECT,
-        false
     }
     local tower_type_count = table.count(TOWER_TYPE)
     local function get_toolbelt_icon_texture(i)
         if i <= tower_type_count then
             return get_tower_icon_texture(toolbelt_options[i])
-
-        else
-            local toolbelt_option = TOOLBELT_OPTION[i - tower_type_count]
-
-            if toolbelt_option then
-                if toolbelt_option == TOOLBELT_OPTION.SELECT then
-                    return TEXTURES.SELECT_BOX_ICON
-                end
-            end
         end
     end
     for i,v in pairs(toolbelt_options) do
@@ -472,6 +455,9 @@ local function make_game_toolbelt()
             )
         )
     end
+
+    local a = win.left + #toolbelt_options * (size + padding)
+    log(a)
 
     local settings_button_position = vec2(win.right - half_size - 20, win.bottom + half_size + padding/3)
     local settings_button_rect = {
@@ -517,9 +503,8 @@ local function make_game_toolbelt()
         else
             -- de-selecting currently selected tower if any
             toolbelt("tower_select_square").hidden = true
-            log('hi2')
 
-            win.scene:replace("cursor", make_hex_cursor(0, COLORS.TRANSPARENT))
+            win.scene:replace("cursor", make_hex_cursor(0, COLORS.TRANSPARENT):tag"cursor")
         end
     end
 
@@ -531,14 +516,89 @@ local function make_game_toolbelt()
 
         else
             select_tower_type(nil)
-
-            if i == 11 then
-                log('hi')
-            end
         end
     end
 
     return toolbelt
+end
+
+local function game_scene()
+    local score =
+        am.translate(win.left + 10, win.top - 20)
+        ^ am.text("", "left"):tag"score"
+
+    local money =
+        am.translate(win.left + 10, win.top - 40)
+        ^ am.text("", "left"):tag"money"
+
+    local wave_timer =
+        am.translate(0, win.top - 20)
+        ^ am.text(get_wave_timer_text()):tag"wave_timer"
+
+    local top_right_display =
+        am.translate(win.right - 10, win.top - 20)
+        ^ am.text("", "right", "top"):tag"top_right_display"
+
+    local bottom_right_display =
+        am.translate(win.right - 10, win.bottom + win.height * 0.07 + 20)
+        ^ am.text("", "right", "bottom"):tag"bottom_right_display"
+
+    local curtain = am.rect(win.left, win.bottom, win.right, win.top, COLORS.TRUE_BLACK)
+    curtain:action(coroutine.create(function()
+        am.wait(am.tween(curtain, 3, { color = vec4(0) }, am.ease.out(am.ease.hyperbola)))
+        win.scene:remove(curtain)
+        return true
+    end))
+
+    local scene = am.group(
+        am.scale(1):tag"world_scale" ^ state.world,
+        am.translate(HEX_GRID_CENTER):tag"cursor_translate" ^ make_hex_cursor(0, COLORS.TRANSPARENT):tag"cursor",
+        score,
+        money,
+        wave_timer,
+        top_right_display,
+        make_game_toolbelt(),
+        curtain
+    )
+    :tag"game"
+
+    scene:action(game_action)
+
+    return scene
+end
+
+function update_score(diff) state.score = state.score + diff end
+function update_money(diff) state.money = state.money + diff end
+
+function game_end()
+    state = {}
+    game = false
+    -- @TODO anything
+end
+
+function game_save()
+    am.save_state("save", game_serialize(), "json")
+    alert("succesfully saved!")
+end
+
+function game_init(saved_state)
+    if saved_state then
+        state = game_deserialize(saved_state)
+
+        -- @HACK fixes a bug where loading game state with a tower type selected, but you don't have a built tower cursor node, so hovering a buildable tile throws an error
+        select_tower_type(nil)
+    else
+        state = get_initial_game_state()
+        local home_tower = build_tower(HEX_GRID_CENTER, TOWER_TYPE.RADAR)
+        for _,h in pairs(home_tower.hexes) do
+            -- @HACK to make the center tile(s) passable even though there's a tower on it
+            hex_map_get(state.map, h).elevation = 0
+        end
+    end
+
+    game = true
+    win.scene:remove("game")
+    win.scene:append(game_scene())
 end
 
 -- this is a stupid name, it just returns a scene node group of hexagons in a hexagonal shape centered at 0,0, of size |radius|
@@ -558,59 +618,6 @@ function make_hex_cursor(radius, color_f, action_f)
         group:action(action_f)
     end
 
-    return group:tag"cursor"
-end
-
-function game_scene()
-    local score = am.translate(win.left + 10, win.top - 20)
-                  ^ am.text("", "left"):tag"score"
-
-    local money = am.translate(win.left + 10, win.top - 40)
-                  ^ am.text("", "left"):tag"money"
-
-    local wave_timer = am.translate(0, win.top - 20)
-                       ^ am.text(get_wave_timer_text()):tag"wave_timer"
-
-    local top_right_display = am.translate(win.right - 10, win.top - 20)
-                              ^ am.text("", "right", "top"):tag"top_right_display"
-
-    local curtain = am.rect(win.left, win.bottom, win.right, win.top, COLORS.TRUE_BLACK)
-    curtain:action(coroutine.create(function()
-        am.wait(am.tween(curtain, 3, { color = vec4(0) }, am.ease.out(am.ease.hyperbola)))
-        win.scene:remove(curtain)
-        return true
-    end))
-
-    local scene = am.group{
-        am.scale(1):tag"world_scale" ^ state.world,
-        am.translate(HEX_GRID_CENTER):tag"cursor_translate" ^ make_hex_cursor(0, COLORS.TRANSPARENT),
-        score,
-        money,
-        wave_timer,
-        top_right_display,
-        make_game_toolbelt(),
-        curtain,
-    }:tag"game"
-
-    scene:action(game_action)
-
-    return scene
-end
-
-function game_init(saved_state)
-    if saved_state then
-        state = game_deserialize(saved_state)
-    else
-        state = get_initial_game_state()
-        local home_tower = build_tower(HEX_GRID_CENTER, TOWER_TYPE.RADAR)
-        for _,h in pairs(home_tower.hexes) do
-            -- @HACK to make the center tile(s) passable even though there's a tower on it
-            hex_map_get(state.map, h).elevation = 0
-        end
-    end
-
-    game = true
-    win.scene:remove("game")
-    win.scene:append(game_scene())
+    return group
 end
 

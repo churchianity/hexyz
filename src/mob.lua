@@ -14,7 +14,7 @@ MOB_SPECS = {
     [MOB_TYPE.BEEPER] = {
         health = 30,
         speed = 8,
-        bounty = 15,
+        bounty = 5,
         hurtbox_radius = MOB_SIZE/2
     },
     [MOB_TYPE.SPOODER] = {

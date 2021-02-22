@@ -6,6 +6,7 @@ do
 
     -- the size of the grid should basically always be constant (i think),
     -- but different aspect ratios complicate this in an annoying way
+    -- grid width should be ~== height * 3 / 2
     HEX_GRID_WIDTH = 33 + padding
     HEX_GRID_HEIGHT = 23 + padding
 
@@ -215,6 +216,7 @@ function make_hex_grid_scene(map)
     end
 
     apply_flow_field(map, generate_flow_field(map, HEX_GRID_CENTER), world)
+
     return am.translate(WORLDSPACE_COORDINATE_OFFSET) ^ world
 end
 

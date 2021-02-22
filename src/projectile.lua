@@ -227,7 +227,7 @@ end
 
 function projectile_deserialize(json_string)
     local projectile = entity_basic_json_parse(json_string)
-    projectile.vector = vec2(projectile.vector[0], projectile.vector[1])
+    projectile.vector = vec2(projectile.vector[1], projectile.vector[2])
 
     projectile.update = get_projectile_update_function(projectile.type)
     projectile.node = am.translate(projectile.position)

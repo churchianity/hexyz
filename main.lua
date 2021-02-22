@@ -116,6 +116,8 @@ function main_action(self)
         else
             --win:close()
         end
+    elseif win:key_pressed("f4") then
+        win:close()
     end
     if self"hex_backdrop" then
         self"hex_backdrop""rotate".angle = math.wrapf(self"hex_backdrop""rotate".angle - 0.005 * am.delta_time, math.pi*2)
@@ -175,17 +177,14 @@ function make_main_scene_toolbelt()
         false
     }
 
-    local spacing = 150
-
     -- calculate the dimensions of the whole grid
+    local spacing = 150
     local grid_width = 6
     local grid_height = 2
     local hhs = hex_horizontal_spacing(spacing)
     local hvs = hex_vertical_spacing(spacing)
     local grid_pixel_width = grid_width * hhs
     local grid_pixel_height = grid_height * hvs
-    -- @TODO the vertical offset should be different depending on if this is the main menu or the pause menu
-    -- perhaps the map that makes the grid of hexes should be different as well
     local pixel_offset = vec2(-grid_pixel_width/2, win.bottom + hex_height(spacing)/2 + 20)
 
     local map = hex_rectangular_map(grid_width, grid_height, HEX_ORIENTATION.POINTY)
@@ -271,10 +270,27 @@ function main_scene(do_backdrop, do_logo)
     )
 
     if do_logo then
-        group:append(
-            am.translate(0, win.top - 20 - TEXTURES.LOGO.height/2)
+        local position = vec2(0, win.top - 20 - TEXTURES.LOGO.height/2)
+        local logo =
+            am.translate(position)
             ^ pack_texture_into_sprite(TEXTURES.LOGO, TEXTURES.LOGO.width, TEXTURES.LOGO.height)
-        )
+
+        local selected = false
+        logo:action(function(self)
+            local mouse = win:mouse_position()
+            if math.distance(mouse, position) < TEXTURES.LOGO.height/2 then
+                selected = true
+                self"sprite".color = vec4(1)
+                if win:mouse_pressed("left") then
+
+                end
+            else
+                selected = false
+                self"sprite".color = vec4(0.95)
+            end
+        end)
+
+        group:append(logo)
     end
 
     group:append(make_main_scene_toolbelt())

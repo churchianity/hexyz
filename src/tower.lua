@@ -35,7 +35,7 @@ TOWER_SPECS = {
         texture = TEXTURES.TOWER_HOWITZER,
         icon_texture = TEXTURES.TOWER_HOWITZER_ICON,
         cost = 20,
-        range = 10,
+        range = 6,
         fire_rate = 4,
         size = 0,
         height = 1,
@@ -47,7 +47,7 @@ TOWER_SPECS = {
         texture = TEXTURES.TOWER_REDEYE,
         icon_texture = TEXTURES.TOWER_REDEYE_ICON,
         cost = 20,
-        range = 12,
+        range = 8,
         fire_rate = 1,
         size = 0,
         height = 1,
@@ -83,7 +83,7 @@ TOWER_SPECS = {
         texture = TEXTURES.TOWER_LIGHTHOUSE,
         icon_texture = TEXTURES.TOWER_LIGHTHOUSE_ICON,
         cost = 20,
-        range = 8,
+        range = 7,
         fire_rate = 1,
         size = 0,
         height = 1,
@@ -220,7 +220,7 @@ end
 function tower_serialize(tower)
     local serialized = entity_basic_devectored_copy(tower)
 
-    for i,h in pairs(serialized.hexes) do
+    for i,h in pairs(tower.hexes) do
         serialized.hexes[i] = { h.x, h.y }
     end
 
