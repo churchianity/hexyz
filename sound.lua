@@ -22,7 +22,7 @@ SOUNDS = {
     RANDOM5         = 36680709,
 
     -- audio buffers
-    TRACK1 = am.track(am.load_audio("res/track1.ogg"), true, 1, 0.1)
+    MAIN_THEME = am.track(am.load_audio("res/maintheme.ogg"), true, 1, settings.music_volume)
 }
 
 -- play sound effect with variable pitch
@@ -33,5 +33,9 @@ end
 
 function play_sfx(sound)
     win.scene:action(am.play(sound, false, 1, settings.sfx_volume))
+end
+
+function play_track(track)
+    win.scene:action(am.play(track))
 end
 

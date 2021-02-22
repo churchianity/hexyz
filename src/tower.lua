@@ -264,10 +264,8 @@ function tower_on_hex(hex)
 end
 
 function tower_type_is_buildable_on(hex, tile, tower_type)
+    -- this function gets polled a lot, and sometimes with nil/false tower types
     if not tower_type then return false end
-
-    -- @TODO remove this shit
-    if hex == HEX_GRID_CENTER then return false end
 
     local blocking_towers = {}
     local blocking_mobs = {}

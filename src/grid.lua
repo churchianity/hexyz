@@ -1,37 +1,28 @@
 
 
--- distance from hex centerpoint to any vertex
-HEX_SIZE = 26
+do
+    -- add padding, because we terraform the very outer edge and it looks ugly, so hide it
+    local padding = 2
+
+    -- the size of the grid should basically always be constant (i think),
+    -- but different aspect ratios complicate this in an annoying way
+    HEX_GRID_WIDTH = 41 + padding
+    HEX_GRID_HEIGHT = 27 + padding
+
+    HEX_GRID_DIMENSIONS = vec2(HEX_GRID_WIDTH, HEX_GRID_HEIGHT)
+
+    HEX_GRID_CENTER = evenq_to_hex(vec2(math.floor(HEX_GRID_WIDTH/2)
+                                      , -math.floor(HEX_GRID_HEIGHT/2)))
+end
+
+-- pixel distance from hex centerpoint to any vertex
+-- given a grid width gx, and window width wx, what's the smallest size a hex can be to fill the whole screen?
+-- wx / (gx * 3 / 2)
+HEX_SIZE = win.width / (41 * 3 / 2)
 
 HEX_PIXEL_WIDTH = hex_width(HEX_SIZE, HEX_ORIENTATION.FLAT)
 HEX_PIXEL_HEIGHT = hex_height(HEX_SIZE, HEX_ORIENTATION.FLAT)
 HEX_PIXEL_DIMENSIONS = vec2(HEX_PIXEL_WIDTH, HEX_PIXEL_HEIGHT)
-
-do
-    -- add padding, because we terraform the very outer edge and it looks ugly, so hide it
-    local padding = 3
-
-    HEX_GRID_WIDTH = math.floor(win.width / (HEX_PIXEL_WIDTH + HEX_SIZE) * 2) + padding
-    HEX_GRID_HEIGHT = math.floor(win.height / HEX_PIXEL_HEIGHT) + padding
-
-    -- odd numbers are important because we want a 'true' center
-    if HEX_GRID_WIDTH % 2 == 0 then
-        HEX_GRID_WIDTH = HEX_GRID_WIDTH + 1
-    end
-    if HEX_GRID_HEIGHT % 2 == 0 then
-        HEX_GRID_HEIGHT = HEX_GRID_HEIGHT + 1
-    end
-
-    HEX_GRID_DIMENSIONS = vec2(HEX_GRID_WIDTH, HEX_GRID_HEIGHT)
-
-    -- leaving y == 0 makes this the center in hex/cube coordinates
-    -- assuming that our dimensions are correct (odd numbers)
-    HEX_GRID_CENTER = vec2(math.floor(HEX_GRID_WIDTH/2)
-                         , 0)
-end
-
-HEX_GRID_MINIMUM_ELEVATION = -1
-HEX_GRID_MAXIMUM_ELEVATION = 1
 
 do
     local hhs = hex_horizontal_spacing(HEX_SIZE)
@@ -63,13 +54,8 @@ function evenq_is_in_interactable_region(evenq)
     })
 end
 
-function is_water_elevation(elevation)
-    return elevation < -0.5
-end
-
-function is_mountain_elevation(elevation)
-    return elevation >= 0.5
-end
+function is_water_elevation(elevation) return elevation < -0.5 end
+function is_mountain_elevation(elevation) return elevation >= 0.5 end
 
 function tile_is_medium_elevation(tile)
     return tile.elevation >= -0.5 and tile.elevation < 0.5
@@ -79,6 +65,8 @@ function grid_heuristic(source, target)
     return math.distance(source, target)
 end
 
+HEX_GRID_MINIMUM_ELEVATION = -1
+HEX_GRID_MAXIMUM_ELEVATION = 1
 function grid_cost(map, from, to)
     local t1, t2 = hex_map_get(map, from), hex_map_get(map, to)
 
@@ -229,7 +217,6 @@ function make_hex_grid_scene(map)
     end
 
     apply_flow_field(map, generate_flow_field(map, HEX_GRID_CENTER), world)
-
     return am.translate(WORLDSPACE_COORDINATE_OFFSET) ^ world
 end
 

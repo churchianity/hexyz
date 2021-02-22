@@ -10,11 +10,13 @@ local function load_texture(filepath)
     end
 end
 
+
 TEXTURES = {
+    -- note that in amulet, if you prefix paths with './', they fail to be found in the exported data.pak
     LOGO                    = load_texture("res/logo.png"),
     GEM1                    = load_texture("res/gem1.png"),
-    SHADED_HEX              = load_texture("res/shaded_hex.png"),
 
+    SHADED_HEX              = load_texture("res/shaded_hex.png"),
     NEW_GAME_HEX            = load_texture("res/newgamehex.png"),
     SAVE_GAME_HEX           = load_texture("res/savegamehex.png"),
     LOAD_GAME_HEX           = load_texture("res/loadgamehex.png"),
@@ -22,12 +24,18 @@ TEXTURES = {
     MAP_EDITOR_HEX          = load_texture("res/mapeditorhex.png"),
     ABOUT_HEX               = load_texture("res/abouthex.png"),
     QUIT_HEX                = load_texture("res/quithex.png"),
+    UNPAUSE_HEX             = load_texture("res/unpausehex.png"),
+
+    CURTAIN                 = load_texture("res/curtain1.png"),
 
     -- gui stuff
     BUTTON1                 = load_texture("res/button1.png"),
     WIDER_BUTTON1           = load_texture("res/wider_button1.png"),
     TAB_ICON                = load_texture("res/tab_icon.png"),
     GUI_SLIDER              = load_texture("res/slider.png"),
+    GEAR                    = load_texture("res/gear.png"),
+
+    SELECT_BOX_ICON         = load_texture("res/select_box.png"),
 
     -- tower stuff
     TOWER_WALL              = load_texture("res/tower_wall.png"),

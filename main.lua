@@ -1,8 +1,6 @@
 
+
 -- @TODO
--- music
---      -- title theme
---      -- game theme
 --
 -- settings menu
 --      -- music volume
@@ -21,21 +19,39 @@
 --      -- move home?
 --
 -- game
---      -- is 1920x1080 the optimal default resolution?
 --      -- HEX_GRID_CENTER =/= HOME
 --      -- allow selecting of tiles, if tower is selected then allow sell/upgrade
 --      -- button/ui to open pause menu - make it obvious that 'esc' is the button
 --      -- play the game and tweak numbers
 --      -- new game menu allowing set seed
---      -- gattling gun tower
+--      -- gattling gun tower (fast fire rate)
 --      -- spooder mob
 --      -- make art, birds-eye-ify the redeye tower and lighthouse maybe?
 
+
+-- resolutions and aspect ratios seem like a huge mess
+-- for now, i think we should enforce 4:3
+local RESOLUTION_OPTIONS = {
+    -- 16:9
+    -- { width = 1776, height = 1000 },
+    -- { width = 1920, height = 1080 },
+    -- { width = 1600, height = 900 },
+
+    -- 4:3
+    { width = 1440, height = 1080 },
+    { width = 1400, height = 1050 }, -- seems like a good one
+    { width = 1280, height = 960 },
+    { width = 1152, height = 864 },
+    { width = 1024, height = 768 },
+    { width = 960, height = 720 },
+    { width = 832, height = 624 },
+    { width = 800, height = 600 },
+}
 settings = am.load_state("settings", "json") or {
     fullscreen = false,
-    window_width = 1920,
-    window_height = 1080,
-    music_volume = 0.1,
+    window_width = 1400,
+    window_height = 1050,
+    music_volume = 0.2,
     sfx_volume = 0.1,
 }
 
@@ -51,9 +67,11 @@ do
         height    = settings.window_height,
         title     = "hexyz",
         mode      = settings.fullscreen and "fullscreen" or "windowed",
+        resizable = true,
         highdpi   = true,
         letterbox = true,
         resizable = true, -- user should probably set their resolution instead of resizing the window, but hey.
+        show_cursor = true,
     }
 end
 
@@ -75,22 +93,26 @@ require "src/projectile"
 require "src/tower"
 
 
--- js style popup in the middle of the screen that dissapates
-function alert(message)
+-- text popup in the middle of the screen that dissapates, call from anywhere
+function alert(message, color)
     win.scene:append(
-        am.scale(3) ^ am.text(message)
+        am.scale(3) ^ am.text(message, color or COLORS.WHITE)
         :action(coroutine.create(function(self)
-            am.wait(am.tween(self, 1, { color = vec4(0) }))
+            am.wait(am.tween(self, 1, { color = vec4(0) }, am.ease_out))
             win.scene:remove(self)
         end))
     )
 end
 
+function unpause(root_node)
+    win.scene("game").paused = false
+    win.scene:remove(root_node)
+end
+
 function main_action(self)
     if win:key_pressed("escape") then
-        if win.scene("game") then
-            win.scene("game").paused = false
-            win.scene:remove(self)
+        if game then
+            unpause(self)
         else
             --win:close()
         end
@@ -102,9 +124,8 @@ end
 
 function make_main_scene_toolbelt()
     local include_save_option = game
+    local include_unpause_option = game
     local options = {
-        false,
-        false,
         false,
         {
             texture = TEXTURES.NEW_GAME_HEX,
@@ -128,38 +149,36 @@ function make_main_scene_toolbelt()
                 local save = am.load_state("save", "json")
 
                 if save then
-                    win.scene:remove"menu"
+                    win.scene:remove("menu")
                     game_init(save)
                 else
                     alert("no saved games")
                 end
             end
         },
-
-        false,
         {
             texture = TEXTURES.MAP_EDITOR_HEX,
             action = function() alert("not yet :)") end
         },
+        include_unpause_option and {
+            texture = TEXTURES.UNPAUSE_HEX,
+            action = function() unpause(win.scene("menu")) end
+        } or false,
         {
             texture = TEXTURES.SETTINGS_HEX,
             action = function() alert("not yet :)") end
         },
         {
-            texture = TEXTURES.ABOUT_HEX,
-            action = function() alert("not yet :)") end
-        },
-        false,
-        {
             texture = TEXTURES.QUIT_HEX,
             action = function() win:close() end
-        }
+        },
+        false
     }
 
-    local spacing = 160
+    local spacing = 150
 
     -- calculate the dimensions of the whole grid
-    local grid_width = 8
+    local grid_width = 6
     local grid_height = 2
     local hhs = hex_horizontal_spacing(spacing)
     local hvs = hex_vertical_spacing(spacing)
@@ -240,9 +259,12 @@ function main_scene(do_backdrop, do_logo)
         end
         group:append(hex_backdrop)
     else
-        group:append(am.rect(win.left, win.bottom, win.right, win.top, COLORS.TRANSPARENT))
+        group:append(
+            pack_texture_into_sprite(TEXTURES.CURTAIN, win.width, win.height)
+        )
     end
 
+    -- @TODO add a hyperlink to an 'about' page or something
     group:append(
         am.translate(win.right - 10, win.bottom + 10)
         ^ am.text(string.format("v%s, by %s", version, author), COLORS.WHITE, "right", "bottom")
@@ -265,5 +287,7 @@ end
 win.scene = am.group(
     main_scene(true, true)
 )
+play_track(SOUNDS.MAIN_THEME)
+
 noglobals()
 

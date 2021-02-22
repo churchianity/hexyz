@@ -9,18 +9,16 @@
 -- and some utility functions not present in your standard lua, like:
 --  table.append
 
+
 if not math.round then
     math.round = function(n) return math.floor(n + 0.5) end
 else
-    error("clobbering a math.round function, oopsie!")
+    error("clobbering 'math.round', oopsie!")
 end
 
-if not table.append then
-end
-
-if not table.filter then
-end
-
+-- @TODO
+if not table.append then end
+if not table.filter then end
 
 -- wherever 'orientation' appears as an argument, use one of these two, or set a default just below
 HEX_ORIENTATION = {
@@ -234,6 +232,10 @@ end
 
 --============================================================================
 -- MAPS & STORAGE
+
+-- maps that use their indices as the hex coordinates (parallelogram, hexagonal, rectangular, triangular),
+-- fail to serialize ideally because they use negative indices, which json doesn't support
+
 
 -- Returns Ordered Ring-Shaped Map of |radius| from |center|
 function hex_ring_map(center, radius)
