@@ -47,9 +47,7 @@ end
 
 -- |t| is the source table, probably state.mobs, state.towers, or state.projectiles
 function delete_entity(t, index)
-    if not t then
-        error("splat!")
-    end
+    if not t then error("splat!") end
 
     state.world:remove(t[index].node)
     t[index] = false -- leave empty indexes so other entities can learn that this entity was deleted

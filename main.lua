@@ -1,15 +1,15 @@
 
 
--- @TODO
---
+-- @TODO @TODO @TODO @TODO @TODO
 -- settings menu
 --      -- music volume
 --      -- sfx volume
 --      -- resolution settings & fix grid size being based on resolution
 --
--- save games
+-- serialization
 --      -- allow saving by name
 --      -- allow loading by name
+--      -- investigate saving as lua instead, and having as a consequence a less janky map serialization
 --      -- encode/decode save game data (low priority)
 --
 -- map editor

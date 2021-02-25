@@ -190,6 +190,10 @@ local function game_serialize()
     return am.to_json(serialized)
 end
 
+local function deselect_tile()
+    win.scene:remove("tile_select_box")
+end
+
 local function game_action(scene)
     if state.score < 0 then game_end() return true end
 
@@ -235,6 +239,8 @@ local function game_action(scene)
     local buildable = tower_type_is_buildable_on(hex, tile, state.selected_tower_type)
 
     if win:mouse_pressed"left" then
+        deselect_tile()
+
         if interactable then
             if buildable then
                 local broken, flow_field = building_tower_breaks_flow_field(state.selected_tower_type, hex)
@@ -262,10 +268,22 @@ local function game_action(scene)
                         apply_flow_field(state.map, flow_field, state.world)
                     end
                 end
-            elseif not state.selected_tower_type then
+            else
                 -- interactable tile, but no tower type selected
+                -- depending on what's under the cursor, we can show some information.
                 local towers = towers_on_hex(hex)
+                local tcount = table.count(towers)
 
+                if tcount > 0 then
+                    play_sfx(SOUNDS.SELECT1)
+                    win.scene:remove("tile_select_box")
+                    win.scene:append((
+                            am.translate(rounded_mouse)
+                            ^ pack_texture_into_sprite(TEXTURES.SELECT_BOX, HEX_SIZE*2, HEX_SIZE*2, COLORS.SUNRAY)
+                        )
+                        :tag"tile_select_box"
+                    )
+                end
             end
         end
     end
@@ -336,24 +354,23 @@ local function game_action(scene)
     win.scene("score").text = string.format("SCORE: %.2f", state.score)
     win.scene("money").text = string.format("MONEY: $%d", state.money)
     win.scene("wave_timer").text = get_wave_timer_text()
-    win.scene("send_now_button").hidden = state.spawning
     win.scene("top_right_display").text = get_top_right_display_text(hex, evenq, centered_evenq, state.selected_top_right_display_type)
 end
 
 local function make_game_toolbelt()
     local toolbelt_height = win.height * 0.07
+    local tower_tooltip_text_position = vec2(win.left + 10, win.bottom + toolbelt_height + 20)
+    local keys = { '1', '2', '3', '4', 'q', 'w', 'e', 'r', 'a', 's', 'd', 'f' }
+    --local keys = { '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=' }
+
     local function get_tower_tooltip_text_node(tower_type)
         local name = get_tower_name(tower_type)
         local placement_rules = get_tower_placement_rules_text(tower_type)
         local short_desc = get_tower_short_description(tower_type)
         local cost = get_tower_cost(tower_type)
 
-        if not (name or placement_rules or short_desc or cost) then
-            return am.group():tag"tower_tooltip_text"
-        end
-
         local color = COLORS.WHITE
-        return (am.translate(win.left + 10, win.bottom + toolbelt_height + 20)
+        return (am.translate(tower_tooltip_text_position)
             ^ am.scale(1)
             ^ am.group(
                 am.translate(0, 40)
@@ -368,7 +385,14 @@ local function make_game_toolbelt()
         )
         :tag"tower_tooltip_text"
     end
-    local function toolbelt_button(size, half_size, tower_texture, padding, i, offset, key_name)
+
+    local padding = 12
+    local offset = vec2(win.left, win.bottom + padding/3)
+    local size = toolbelt_height - padding
+    local half_size = size/2
+
+    local function toolbelt_button(i)
+        local texture = get_tower_icon_texture(i)
         local button =
             am.translate(vec2(size + padding, 0) * i + offset)
             ^ am.group(
@@ -376,13 +400,13 @@ local function make_game_toolbelt()
                 ^ pack_texture_into_sprite(TEXTURES.BUTTON1, size, size),
 
                 am.translate(0, half_size)
-                ^ pack_texture_into_sprite(tower_texture, size, size),
+                ^ pack_texture_into_sprite(texture, size, size),
 
                 am.translate(vec2(half_size))
                 ^ am.group(
                     pack_texture_into_sprite(TEXTURES.BUTTON1, half_size, half_size),
                     am.scale(2)
-                    ^ am.text(key_name, COLORS.BLACK)
+                    ^ am.text(keys[i], COLORS.BLACK)
                 )
             )
 
@@ -392,24 +416,7 @@ local function make_game_toolbelt()
         local y2 = offset.y + size
         local rect = { x1 = x1, y1 = y1, x2 = x2, y2 = y2 }
 
-        button:action(function(self)
-            if point_in_rect(win:mouse_position(), rect) then
-                -- @TODO make hover on tower show you the tooltip
-                win.scene:replace("tower_tooltip_text", get_tower_tooltip_text_node(i))
-
-                if win:mouse_pressed"left" then
-                    select_toolbelt_button(i)
-                end
-            else
-                if state.selected_tower_type then
-                    win.scene:replace("tower_tooltip_text", get_tower_tooltip_text_node(state.selected_tower_type))
-                else
-                    --win.scene:replace("tower_tooltip_text", am.group():tag"tower_tooltip_text")
-                end
-            end
-        end)
-
-        return button
+        return button, rect
     end
 
     local toolbelt = am.group(
@@ -418,21 +425,16 @@ local function make_game_toolbelt()
     )
     :tag"toolbelt"
 
-    local padding = 12
-    local size = toolbelt_height - padding
-    local half_size = size/2
-    local offset = vec2(win.left, win.bottom + padding/3)
-
     local tower_select_square = (
         am.translate(vec2(size + padding, half_size) + offset)
         ^ am.rect(-size/2-3, -size/2-3, size/2+3, size/2+3, COLORS.SUNRAY)
     )
-    :tag"tower_select_square"
+    :tag"toolbelt_select_square"
     tower_select_square.hidden = true
     toolbelt:append(tower_select_square)
 
-    local keys = { '1', '2', '3', '4', 'q', 'w', 'e', 'r', 'a', 's', 'd', 'f' }
-    --local keys = { '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=' }
+    -- it's important these are in the same order as integers assigned to the enum
+    -- TOWER_TYPE, and none are missing.
     local toolbelt_options = {
         TOWER_TYPE.WALL,
         TOWER_TYPE.HOWITZER,
@@ -441,28 +443,38 @@ local function make_game_toolbelt()
         TOWER_TYPE.RADAR,
         TOWER_TYPE.LIGHTHOUSE,
     }
-    local tower_type_count = table.count(TOWER_TYPE)
-    local function get_toolbelt_icon_texture(i)
-        if i <= tower_type_count then
-            return get_tower_icon_texture(toolbelt_options[i])
-        end
-    end
+    local toolbelt_buttons = {}
     for i,v in pairs(toolbelt_options) do
-        toolbelt:append(
-            toolbelt_button(
-                size,
-                half_size,
-                get_toolbelt_icon_texture(i),
-                padding,
-                i,
-                offset,
-                keys[i]
-            )
-        )
+        local button, rect = toolbelt_button(i)
+        table.insert(toolbelt_buttons, { node = button, rect = rect })
+        toolbelt:append(button)
     end
 
-    --local a = win.left + #toolbelt_options * (size + padding)
+    toolbelt:action(function(self)
+        local mouse = win:mouse_position()
 
+        if mouse.y <= (win.bottom + toolbelt_height) then
+            for i,b in pairs(toolbelt_buttons) do
+                if point_in_rect(mouse, b.rect) then
+                    win.scene:replace("tower_tooltip_text", get_tower_tooltip_text_node(i))
+
+                    if win:mouse_pressed("left") then
+                        select_toolbelt_button(i)
+                    end
+
+                    break
+                end
+            end
+        else
+            if state.selected_tower_type then
+                win.scene:replace("tower_tooltip_text", get_tower_tooltip_text_node(state.selected_tower_type))
+            else
+                win.scene:replace("tower_tooltip_text", am.group():tag"tower_tooltip_text")
+            end
+        end
+    end)
+
+    -- make the 'escape/pause/settings' button in the lower right
     local settings_button_position = vec2(win.right - half_size - 20, win.bottom + half_size + padding/3)
     local settings_button_rect = {
         x1 = settings_button_position.x - size/2,
@@ -470,8 +482,6 @@ local function make_game_toolbelt()
         x2 = settings_button_position.x + size/2,
         y2 = settings_button_position.y + size/2
     }
-
-    -- make the 'escape/pause/settings' button in the lower right
     toolbelt:append(
         am.translate(settings_button_position)
         ^ am.group(
@@ -491,22 +501,28 @@ local function make_game_toolbelt()
         state.selected_tower_type = tower_type
 
         if get_tower_spec(tower_type) then
-            win.scene:replace("tower_tooltip_text", get_tower_tooltip_text_node(tower_type))
+            win.scene:replace(
+                "toolbelt_tooltip_text",
+                get_tower_tooltip_text_node(tower_type)
+            )
 
             local new_position = vec2((size + padding) * tower_type, size/2) + offset
-            if toolbelt("tower_select_square").hidden then
-                toolbelt("tower_select_square").position2d = new_position
-                toolbelt("tower_select_square").hidden = false
+            if toolbelt("toolbelt_select_square").hidden then
+                toolbelt("toolbelt_select_square").position2d = new_position
+                toolbelt("toolbelt_select_square").hidden = false
+
             else
-                toolbelt("tower_select_square"):action(am.tween(0.1, { position2d = new_position }))
+                toolbelt("toolbelt_select_square"):action(am.tween(0.1, { position2d = new_position }))
             end
 
             win.scene:replace("cursor", get_tower_cursor(tower_type):tag"cursor")
 
             play_sfx(SOUNDS.SELECT1)
         else
+            deselect_tile()
+
             -- de-selecting currently selected tower if any
-            toolbelt("tower_select_square").hidden = true
+            toolbelt("toolbelt_select_square").hidden = true
 
             win.scene:replace("cursor", make_hex_cursor(0, COLORS.TRANSPARENT):tag"cursor")
         end
@@ -515,9 +531,8 @@ local function make_game_toolbelt()
     select_toolbelt_button = function(i)
         state.selected_toolbelt_button = i
 
-        if i <= tower_type_count then
+        if get_tower_spec(i) then
             select_tower_type(i)
-
         else
             select_tower_type(nil)
         end
@@ -559,14 +574,25 @@ local function game_scene()
 
                 if win:mouse_pressed("left") then
                     if state.spawning then
+                        -- in this case, we don't exactly just send the next wave, we turn the current wave into the next
+                        -- wave, and add the amount of time it would have lasted to the amount of remaining time in the
+                        -- current wave
+                        state.current_wave = state.current_wave + 1
 
+                        -- calculate spawn chance for next wave
+                        state.spawn_chance = math.log(state.current_wave)/2 + 0.002
+
+                        state.time_until_next_break = state.time_until_next_break + get_break_time(state.current_wave)
+
+                        play_sfx(SOUNDS.EXPLOSION4)
                     else
-                        play_sfx(SOUNDS.PUSH1)
                         state.time_until_next_wave = 0
+
+                        play_sfx(SOUNDS.EXPLOSION4)
                     end
                 end
             else
-                self.color = vec4(1)
+                self.color = COLORS.WHITE
             end
         end)
 
@@ -621,7 +647,8 @@ function game_init(saved_state)
     if saved_state then
         state = game_deserialize(saved_state)
 
-        -- @HACK fixes a bug where loading game state with a tower type selected, but you don't have a built tower cursor node, so hovering a buildable tile throws an error
+        -- @HACK fixes a bug where loading game state with a tower type selected,
+        -- but you don't have a built tower cursor node, so hovering a buildable tile throws an error
         select_tower_type(nil)
     else
         state = get_initial_game_state()

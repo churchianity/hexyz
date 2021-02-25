@@ -221,7 +221,7 @@ local function update_mob_spooder(mob, mob_index)
         if mob_can_pass_through(mob, mob.frame_target) then
             local from = hex_map_get(state.map, mob.hex)
             local to = hex_map_get(state.map, mob.frame_target)
-            local rate = (math.abs(from.elevation - to.elevation) * mob.speed) + 0.0001 * am.delta_time
+            local rate = math.abs(from.elevation - to.elevation) + 0.01 * mob.speed * am.delta_time
 
             mob.position = mob.position + math.normalize(hex_to_pixel(mob.frame_target, vec2(HEX_SIZE)) - mob.position) * rate
             mob.node.position2d = mob.position

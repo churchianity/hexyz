@@ -35,7 +35,7 @@ TEXTURES = {
     GUI_SLIDER              = load_texture("res/slider.png"),
     GEAR                    = load_texture("res/gear.png"),
 
-    SELECT_BOX_ICON         = load_texture("res/select_box.png"),
+    SELECT_BOX              = load_texture("res/select_box.png"),
 
     -- tower stuff
     TOWER_WALL              = load_texture("res/tower_wall.png"),
