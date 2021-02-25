@@ -36,7 +36,7 @@ local function get_initial_game_state(seed)
         projectiles = {},       -- list of projectile entities
 
         current_wave = 1,
-        time_until_next_wave = 0,
+        time_until_next_wave = 15,
         time_until_next_break = 0,
         spawning = false,
         spawn_chance = 0,
@@ -334,12 +334,40 @@ local function game_action(scene)
     end
 
     win.scene("score").text = string.format("SCORE: %.2f", state.score)
-    win.scene("money").text = string.format("MONEY: %d", state.money)
+    win.scene("money").text = string.format("MONEY: $%d", state.money)
     win.scene("wave_timer").text = get_wave_timer_text()
+    win.scene("send_now_button").hidden = state.spawning
     win.scene("top_right_display").text = get_top_right_display_text(hex, evenq, centered_evenq, state.selected_top_right_display_type)
 end
 
 local function make_game_toolbelt()
+    local toolbelt_height = win.height * 0.07
+    local function get_tower_tooltip_text_node(tower_type)
+        local name = get_tower_name(tower_type)
+        local placement_rules = get_tower_placement_rules_text(tower_type)
+        local short_desc = get_tower_short_description(tower_type)
+        local cost = get_tower_cost(tower_type)
+
+        if not (name or placement_rules or short_desc or cost) then
+            return am.group():tag"tower_tooltip_text"
+        end
+
+        local color = COLORS.WHITE
+        return (am.translate(win.left + 10, win.bottom + toolbelt_height + 20)
+            ^ am.scale(1)
+            ^ am.group(
+                am.translate(0, 40)
+                ^ am.text(string.format("%s - %s", name, short_desc), color, "left"):tag"tower_name",
+
+                am.translate(0, 20)
+                ^ am.text(placement_rules, color, "left"):tag"tower_placement_rules",
+
+                am.translate(0, 0)
+                ^ am.text(string.format("$%d", cost), color, "left"):tag"tower_cost"
+            )
+        )
+        :tag"tower_tooltip_text"
+    end
     local function toolbelt_button(size, half_size, tower_texture, padding, i, offset, key_name)
         local button =
             am.translate(vec2(size + padding, 0) * i + offset)
@@ -366,10 +394,17 @@ local function make_game_toolbelt()
 
         button:action(function(self)
             if point_in_rect(win:mouse_position(), rect) then
-                win.scene:replace("tower_tooltip_text", get_tower_tooltip_text_node(tower_type))
+                -- @TODO make hover on tower show you the tooltip
+                win.scene:replace("tower_tooltip_text", get_tower_tooltip_text_node(i))
 
                 if win:mouse_pressed"left" then
                     select_toolbelt_button(i)
+                end
+            else
+                if state.selected_tower_type then
+                    win.scene:replace("tower_tooltip_text", get_tower_tooltip_text_node(state.selected_tower_type))
+                else
+                    --win.scene:replace("tower_tooltip_text", am.group():tag"tower_tooltip_text")
                 end
             end
         end)
@@ -377,36 +412,6 @@ local function make_game_toolbelt()
         return button
     end
 
-    local toolbelt_height = win.height * 0.07
-    local function get_tower_tooltip_text_node(tower_type)
-        local name = get_tower_name(tower_type)
-        local placement_rules = get_tower_placement_rules_text(tower_type)
-        local short_desc = get_tower_short_description(tower_type)
-        local cost = get_tower_cost(tower_type)
-
-        if not (name or placement_rules or short_desc or cost) then
-            return am.group():tag"tower_tooltip_text"
-        end
-
-        local color = COLORS.WHITE
-        return (am.translate(win.left + 10, win.bottom + toolbelt_height + 20)
-            ^ am.scale(1)
-            ^ am.group(
-                am.translate(0, 60)
-                ^ am.text(name, color, "left"):tag"tower_name",
-
-                am.translate(0, 40)
-                ^ am.text(placement_rules, color, "left"):tag"tower_placement_rules",
-
-                am.translate(0, 20)
-                ^ am.text(short_desc, color, "left"):tag"tower_short_description",
-
-                am.translate(0, 0)
-                ^ am.text(string.format("cost: %d", cost), color, "left"):tag"tower_cost"
-            )
-        )
-        :tag"tower_tooltip_text"
-    end
     local toolbelt = am.group(
         am.group():tag"tower_tooltip_text",
         am.rect(win.left, win.bottom, win.right, win.bottom + toolbelt_height, COLORS.TRANSPARENT)
@@ -456,8 +461,7 @@ local function make_game_toolbelt()
         )
     end
 
-    local a = win.left + #toolbelt_options * (size + padding)
-    log(a)
+    --local a = win.left + #toolbelt_options * (size + padding)
 
     local settings_button_position = vec2(win.right - half_size - 20, win.bottom + half_size + padding/3)
     local settings_button_rect = {
@@ -472,7 +476,7 @@ local function make_game_toolbelt()
         am.translate(settings_button_position)
         ^ am.group(
             pack_texture_into_sprite(TEXTURES.BUTTON1, size, size),
-            pack_texture_into_sprite(TEXTURES.GEAR, size-padding, size-padding)
+            pack_texture_into_sprite(TEXTURES.GEAR, size - padding, size - padding)
         )
         :action(function(self)
             if point_in_rect(win:mouse_position(), settings_button_rect) then
@@ -524,19 +528,50 @@ end
 
 local function game_scene()
     local score =
-        am.translate(win.left + 10, win.top - 20)
-        ^ am.text("", "left"):tag"score"
+        am.translate(win.left + 10, win.top - 15)
+        ^ am.text("", "left", "top"):tag"score"
 
     local money =
-        am.translate(win.left + 10, win.top - 40)
-        ^ am.text("", "left"):tag"money"
+        am.translate(win.left + 10, win.top - 35)
+        ^ am.text("", "left", "top"):tag"money"
 
     local wave_timer =
         am.translate(0, win.top - 20)
         ^ am.text(get_wave_timer_text()):tag"wave_timer"
 
+    local send_now_button_position = vec2(0, win.top - 40)
+    local send_now_button_dimensions = vec2(200, 20)
+    local send_now_button_rect = {
+        x1 = -send_now_button_dimensions.x/2 + send_now_button_position.x,
+        y1 = -send_now_button_dimensions.y/2 + send_now_button_position.y,
+        x2 = send_now_button_dimensions.x/2 + send_now_button_position.x,
+        y2 = send_now_button_dimensions.y/2 + send_now_button_position.y
+    }
+    local send_now_button =
+        am.translate(send_now_button_position)
+        ^ am.text("> SEND NOW <")
+        :tag"send_now_button"
+        :action(function(self)
+            local mouse = win:mouse_position()
+
+            if point_in_rect(mouse, send_now_button_rect) then
+                self.color = COLORS.SUNRAY
+
+                if win:mouse_pressed("left") then
+                    if state.spawning then
+
+                    else
+                        play_sfx(SOUNDS.PUSH1)
+                        state.time_until_next_wave = 0
+                    end
+                end
+            else
+                self.color = vec4(1)
+            end
+        end)
+
     local top_right_display =
-        am.translate(win.right - 10, win.top - 20)
+        am.translate(win.right - 10, win.top - 15)
         ^ am.text("", "right", "top"):tag"top_right_display"
 
     local bottom_right_display =
@@ -556,6 +591,7 @@ local function game_scene()
         score,
         money,
         wave_timer,
+        send_now_button,
         top_right_display,
         make_game_toolbelt(),
         curtain

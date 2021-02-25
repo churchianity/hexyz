@@ -43,13 +43,13 @@ WORLDSPACE_COORDINATE_OFFSET = -HEX_GRID_PIXEL_DIMENSIONS/2
 
 -- the outer edges of the map are not interactable
 -- the interactable region is defined with this function and constant
-HEX_GRID_INTERACTABLE_REGION_MARGIN = 3
+HEX_GRID_INTERACTABLE_REGION_MARGIN = vec2(3, 4)
 function evenq_is_in_interactable_region(evenq)
     return point_in_rect(evenq, {
-        x1 =                   HEX_GRID_INTERACTABLE_REGION_MARGIN,
-        x2 = HEX_GRID_WIDTH  - HEX_GRID_INTERACTABLE_REGION_MARGIN,
-        y1 =                   HEX_GRID_INTERACTABLE_REGION_MARGIN,
-        y2 = HEX_GRID_HEIGHT - HEX_GRID_INTERACTABLE_REGION_MARGIN
+        x1 =                   HEX_GRID_INTERACTABLE_REGION_MARGIN.x,
+        x2 = HEX_GRID_WIDTH  - HEX_GRID_INTERACTABLE_REGION_MARGIN.x,
+        y1 =                   HEX_GRID_INTERACTABLE_REGION_MARGIN.y,
+        y2 = HEX_GRID_HEIGHT - HEX_GRID_INTERACTABLE_REGION_MARGIN.y
     })
 end
 

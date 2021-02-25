@@ -33,7 +33,7 @@ function get_mob_spec(mob_type)
 end
 
 local function grow_mob_health(mob_type, spec_health, time)
-    return spec_health + (state.current_wave - 1) * 3
+    return spec_health + math.pow(state.current_wave - 1, 2)
 end
 local function grow_mob_speed(mob_type, spec_speed, time)
     -- @TODO maybe speed shouldn't grow with time at all.
@@ -41,7 +41,7 @@ local function grow_mob_speed(mob_type, spec_speed, time)
     return spec_speed
 end
 local function grow_mob_bounty(mob_type, spec_bounty, time)
-    return spec_bounty + (state.current_wave - 1) * 3
+    return spec_bounty + math.pow(state.current_wave - 1, 2)
 end
 
 function mobs_on_hex(hex)
@@ -219,9 +219,9 @@ local function update_mob_spooder(mob, mob_index)
         -- or between when we last calculated this target and now
         -- check for that now
         if mob_can_pass_through(mob, mob.frame_target) then
-            local from = state.map.get(mob.hex.x, mob.hex.y)
-            local to = state.map.get(mob.frame_target.x, mob.frame_target.y)
-            local rate = (math.abs(from.elevation - to.elevation) * 100) * mob.speed * am.delta_time
+            local from = hex_map_get(state.map, mob.hex)
+            local to = hex_map_get(state.map, mob.frame_target)
+            local rate = (math.abs(from.elevation - to.elevation) * mob.speed) + 0.0001 * am.delta_time
 
             mob.position = mob.position + math.normalize(hex_to_pixel(mob.frame_target, vec2(HEX_SIZE)) - mob.position) * rate
             mob.node.position2d = mob.position
@@ -329,7 +329,11 @@ end
 
 function do_mob_spawning()
     if can_spawn_mob() then
-        make_and_register_mob(MOB_TYPE.BEEPER)
+        if state.current_wave % 2 == 0 then
+            make_and_register_mob(MOB_TYPE.SPOODER)
+        else
+            make_and_register_mob(MOB_TYPE.BEEPER)
+        end
     end
 end
 

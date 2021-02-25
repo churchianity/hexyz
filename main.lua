@@ -29,7 +29,7 @@
 --      -- make art, birds-eye-ify the redeye tower and lighthouse maybe?
 
 
--- resolutions and aspect ratios seem like a huge mess
+-- aspect ratios seem like a huge mess
 -- for now, i think we should enforce 4:3
 local RESOLUTION_OPTIONS = {
     -- 16:9
@@ -47,6 +47,7 @@ local RESOLUTION_OPTIONS = {
     { width = 832, height = 624 },
     { width = 800, height = 600 },
 }
+
 settings = am.load_state("settings", "json") or {
     fullscreen = false,
     window_width = 1400,
@@ -69,8 +70,8 @@ do
         mode      = settings.fullscreen and "fullscreen" or "windowed",
         resizable = true,
         highdpi   = true,
-        letterbox = true,
         resizable = true, -- user should probably set their resolution instead of resizing the window, but hey.
+        letterbox = true,
         show_cursor = true,
     }
 end
