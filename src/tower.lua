@@ -434,7 +434,7 @@ function update_tower_lighthouse(tower, tower_index)
         local mobs = mobs_on_hex(h)
 
         for _,m in pairs(mobs) do
-            if not m.path then
+            if not m.path and not m.seen_lighthouse then
                 -- @TODO only attract the mob if its frame target (direction vector)
                 -- is within some angle range...? if the mob is heading directly away from the tower, then
                 -- the lighthouse shouldn't do much
@@ -443,6 +443,7 @@ function update_tower_lighthouse(tower, tower_index)
 
                 if made_it then
                     m.path = path
+                    m.seen_lighthouse = true
 
                     --[[
                     local area = spiral_map(tower.hex, tower.range)

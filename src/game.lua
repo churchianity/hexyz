@@ -108,6 +108,12 @@ end
 local function game_deserialize(json_string)
     -- @TODO decode from some compressed format or whatever
     local new_state = am.parse_json(json_string)
+
+    if new_state.version ~= version then
+        log("loading old save data.")
+        return nil
+    end
+
     new_state.map, new_state.world = random_map(new_state.seed)
     new_state.seed = nil
 
@@ -221,7 +227,8 @@ local function game_action(scene)
             state.spawning = true
 
             -- calculate spawn chance for next wave
-            state.spawn_chance = math.log(state.current_wave)/2 + 0.002
+            state.spawn_chance = math.log(state.current_wave)/100 + 0.002
+            log(state.spawn_chance)
 
             state.time_until_next_break = get_wave_time(state.current_wave)
         end
@@ -580,7 +587,7 @@ local function game_scene()
                         state.current_wave = state.current_wave + 1
 
                         -- calculate spawn chance for next wave
-                        state.spawn_chance = math.log(state.current_wave)/2 + 0.002
+                        state.spawn_chance = math.log(state.current_wave)/100 + 0.002
 
                         state.time_until_next_break = state.time_until_next_break + get_break_time(state.current_wave)
 
@@ -624,7 +631,8 @@ local function game_scene()
     )
     :tag"game"
 
-    scene:action(game_action)
+    -- dangling actions run before the main action
+    scene:late_action(game_action)
 
     return scene
 end
@@ -646,6 +654,12 @@ end
 function game_init(saved_state)
     if saved_state then
         state = game_deserialize(saved_state)
+
+        if not state then
+            -- failed to load a save
+            win.scene:append(main_scene(true, true))
+            return
+        end
 
         -- @HACK fixes a bug where loading game state with a tower type selected,
         -- but you don't have a built tower cursor node, so hovering a buildable tile throws an error
