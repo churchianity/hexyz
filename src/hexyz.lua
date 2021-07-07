@@ -1,5 +1,4 @@
 
-
 -- this is a single file with no dependencies which is meant to perform a bunch of mathy stuff
 -- related to hexagons, grids of them, and pathfinding on them
 --

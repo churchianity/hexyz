@@ -1,5 +1,4 @@
 
-
 state.projectiles = {}
 
 PROJECTILE_TYPE = {

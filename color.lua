@@ -1,5 +1,4 @@
 
-
 COLORS = {
     TRANSPARENT         = vec4(0.6),
     TRANSPARENT1        = vec4(0.4),

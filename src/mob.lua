@@ -1,5 +1,4 @@
 
-
 state.mobs = {}
 
 MOB_TYPE = {

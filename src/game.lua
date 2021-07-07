@@ -1,8 +1,6 @@
 
-
 game = false -- flag to tell if there is a game running
 state = {}
-
 
 -- top right display types
 local TRDTS = {
@@ -228,7 +226,6 @@ local function game_action(scene)
 
             -- calculate spawn chance for next wave
             state.spawn_chance = math.log(state.current_wave)/100 + 0.002
-            log(state.spawn_chance)
 
             state.time_until_next_break = get_wave_time(state.current_wave)
         end

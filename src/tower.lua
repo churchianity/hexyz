@@ -1,5 +1,4 @@
 
-
 state.towers = {}
 
 TOWER_TYPE = {

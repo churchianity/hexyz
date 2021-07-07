@@ -1,5 +1,4 @@
 
-
 SOUNDS = {
     -- sfxr_synth seeds
     EXPLOSION1      = 49179102, -- this slowed sounds metal as fuck

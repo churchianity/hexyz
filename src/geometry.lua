@@ -1,5 +1,4 @@
 
-
 function circles_intersect(center1, center2, radius1, radius2)
     local c1, c2, r1, r2 = center1, center2, radius1, radius2
     local d = math.distance(center1, center2)
