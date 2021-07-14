@@ -17,7 +17,8 @@ local TRDTS = {
 local function get_initial_game_state(seed)
     local STARTING_MONEY = 50
 
-    local map, world = random_map(seed)
+    local map = random_map(seed)
+    local world = make_hex_grid_scene(map)
 
     return {
         map = map,              -- map of hex coords map[x][y] to a 'tile'
@@ -104,7 +105,6 @@ local function game_pause()
 end
 
 local function game_deserialize(json_string)
-    -- @TODO decode from some compressed format or whatever
     local new_state = am.parse_json(json_string)
 
     if new_state.version ~= version then
@@ -112,7 +112,8 @@ local function game_deserialize(json_string)
         return nil
     end
 
-    new_state.map, new_state.world = random_map(new_state.seed)
+    new_state.map = random_map(new_state.seed)
+    new_state.world = make_hex_grid_scene(new_state.map)
     new_state.seed = nil
 
     for i,t in pairs(new_state.towers) do
@@ -190,7 +191,6 @@ local function game_serialize()
         end
     end
 
-    -- @TODO b64 encode or otherwise scramble/compress
     return am.to_json(serialized)
 end
 
@@ -640,7 +640,6 @@ function update_money(diff) state.money = state.money + diff end
 function game_end()
     state = {}
     game = false
-    -- @TODO anything
 end
 
 function game_save()

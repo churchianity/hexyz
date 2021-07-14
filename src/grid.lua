@@ -172,8 +172,8 @@ function map_elevation_color(elevation)
 
     else
         -- @TODO probably fix... this only happens when loading a save, and the tile has an elevation that's
-        -- higher that anything here
-        return vec4(0.1)
+        -- higher that anything here. it isn't really of any consequence though
+        return vec4(0)
     end
 end
 
@@ -258,6 +258,6 @@ function random_map(seed)
         end
     end
 
-    return map, make_hex_grid_scene(map)
+    return map
 end
 

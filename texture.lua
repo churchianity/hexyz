@@ -65,7 +65,7 @@ function pack_texture_into_sprite(texture, width, height, color)
         y1 = 0, y2 = height, height = height
     }
 
-    if color then sprite.color end
+    if color then sprite.color = color end
 
     return sprite
 end

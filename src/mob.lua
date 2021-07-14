@@ -7,7 +7,7 @@ MOB_TYPE = {
 MAX_MOB_SIZE = hex_height(HEX_SIZE, HEX_ORIENTATION.FLAT) / 2
 MOB_SIZE = MAX_MOB_SIZE
 
-MOB_SPECS = {
+local MOB_SPECS = {
     [MOB_TYPE.BEEPER] = {
         health = 30,
         speed = 8,
@@ -33,9 +33,7 @@ local function grow_mob_health(mob_type, spec_health, time)
     return spec_health + math.pow(state.current_wave - 1, 2)
 end
 local function grow_mob_speed(mob_type, spec_speed, time)
-    -- @TODO maybe speed shouldn't grow with time at all.
-    -- if it does, a small amount with a horizontal asymptote
-    return spec_speed
+    return spec_speed + math.log(state.current_wave + 1)
 end
 local function grow_mob_bounty(mob_type, spec_bounty, time)
     return spec_bounty + math.pow(state.current_wave - 1, 2)

@@ -12,7 +12,7 @@ TOWER_TYPE = {
     LIGHTHOUSE = 6
 }
 
-TOWER_SPECS = {
+local TOWER_SPECS = {
     [TOWER_TYPE.WALL] = {
         name = "Wall",
         placement_rules_text = "Place on Ground",
@@ -31,7 +31,7 @@ TOWER_SPECS = {
         short_description = "Fires area of effect artillery.",
         texture = TEXTURES.TOWER_HOWITZER,
         icon_texture = TEXTURES.TOWER_HOWITZER_ICON,
-        cost = 20,
+        cost = 30,
         range = 6,
         fire_rate = 4,
         size = 0,
@@ -79,7 +79,7 @@ TOWER_SPECS = {
         short_description = "Attracts nearby mobs; temporarily redirects their path",
         texture = TEXTURES.TOWER_LIGHTHOUSE,
         icon_texture = TEXTURES.TOWER_LIGHTHOUSE_ICON,
-        cost = 20,
+        cost = 70,
         range = 7,
         fire_rate = 1,
         size = 0,
