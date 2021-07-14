@@ -172,9 +172,9 @@ local function update_projectile_laser(projectile, projectile_index)
         end
     end
 
-    -- hit the mob, delete ourselves, affect the world
+    -- hit the mob, affect the world
     do_hit_mob(closest_mob, projectile.damage, closest_mob_index)
-    delete_entity(state.projectiles, projectile_index)
+    -- delete_entity(state.projectiles, projectile_index) -- laser doesn't delete itself on mob hit
     vplay_sfx(SOUNDS.HIT1, 0.5)
 end
 

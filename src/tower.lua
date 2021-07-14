@@ -1,27 +1,39 @@
 
 TOWER_TYPE = {
     WALL       = 1,
-    HOWITZER   = 2,
-    --         = 3,
-    REDEYE     = 3,
+    GATTLER    = 2,
+    HOWITZER   = 3,
+    REDEYE     = 4,
     --         = 5,
-    MOAT       = 4,
+    MOAT       = 5,
     --         = 7,
-    RADAR      = 5,
+    RADAR      = 6,
     --         = 9,
-    LIGHTHOUSE = 6
+    LIGHTHOUSE = 7
 }
 
 local TOWER_SPECS = {
     [TOWER_TYPE.WALL] = {
         name = "Wall",
         placement_rules_text = "Place on Ground",
-        short_description = "Restricts movement",
+        short_description = "Restricts movement, similar to a mountain.",
         texture = TEXTURES.TOWER_WALL,
         icon_texture = TEXTURES.TOWER_WALL_ICON,
         cost = 10,
         range = 0,
         fire_rate = 2,
+        size = 0,
+        height = 1,
+    },
+    [TOWER_TYPE.GATTLER] = {
+        name = "Gattler",
+        placement_rules_text = "Place on Ground",
+        short_description = "Short-range, fast-fire rate single-target tower.",
+        texture = TEXTURES.TOWER_GATTLER,
+        icon_texture = TEXTURES.TOWER_GATTLER_ICON,
+        cost = 20,
+        range = 4,
+        fire_rate = 10,
         size = 0,
         height = 1,
     },
@@ -31,7 +43,7 @@ local TOWER_SPECS = {
         short_description = "Fires area of effect artillery.",
         texture = TEXTURES.TOWER_HOWITZER,
         icon_texture = TEXTURES.TOWER_HOWITZER_ICON,
-        cost = 30,
+        cost = 50,
         range = 6,
         fire_rate = 4,
         size = 0,
@@ -40,10 +52,10 @@ local TOWER_SPECS = {
     [TOWER_TYPE.REDEYE] = {
         name = "Redeye",
         placement_rules_text = "Place on Mountains",
-        short_description = "Long-range, single-target laser tower",
+        short_description = "Long-range, penetrating laser tower",
         texture = TEXTURES.TOWER_REDEYE,
         icon_texture = TEXTURES.TOWER_REDEYE_ICON,
-        cost = 20,
+        cost = 140,
         range = 9,
         fire_rate = 1,
         size = 0,
@@ -67,7 +79,7 @@ local TOWER_SPECS = {
         short_description = "Doesn't do anything right now :(",
         texture = TEXTURES.TOWER_RADAR,
         icon_texture = TEXTURES.TOWER_RADAR_ICON,
-        cost = 20,
+        cost = 100,
         range = 0,
         fire_rate = 1,
         size = 0,
@@ -79,7 +91,7 @@ local TOWER_SPECS = {
         short_description = "Attracts nearby mobs; temporarily redirects their path",
         texture = TEXTURES.TOWER_LIGHTHOUSE,
         icon_texture = TEXTURES.TOWER_LIGHTHOUSE_ICON,
-        cost = 70,
+        cost = 150,
         range = 7,
         fire_rate = 1,
         size = 0,
@@ -124,6 +136,9 @@ end
 
 function make_tower_node(tower_type)
     if tower_type == TOWER_TYPE.REDEYE then
+        return make_tower_sprite(tower_type)
+
+    elseif tower_type == TOWER_TYPE.GATTLER then
         return make_tower_sprite(tower_type)
 
     elseif tower_type == TOWER_TYPE.HOWITZER then
@@ -490,6 +505,9 @@ function make_and_register_tower(hex, tower_type)
     end
 
     if tower.type == TOWER_TYPE.HOWITZER then
+        tower.props.z = tower.height
+
+    elseif tower.type == TOWER_TYPE.GATTLER then
         tower.props.z = tower.height
 
     elseif tower.type == TOWER_TYPE.LIGHTHOUSE then

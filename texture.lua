@@ -38,6 +38,8 @@ TEXTURES = {
     -- tower stuff
     TOWER_WALL              = load_texture("res/tower_wall.png"),
     TOWER_WALL_ICON         = load_texture("res/tower_wall_icon.png"),
+    TOWER_GATTLER           = load_texture("res/tower_gattler.png"),
+    TOWER_GATTLER_ICON      = load_texture("res/tower_gattler_icon.png"),
     TOWER_HOWITZER          = load_texture("res/tower_howitzer.png"),
     CANNON1                 = load_texture("res/cannon1.png"),
     TOWER_HOWITZER_ICON     = load_texture("res/tower_howitzer_icon.png"),

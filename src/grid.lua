@@ -1,7 +1,7 @@
 
 do
     -- add padding, because we terraform the very outer edge and it looks ugly, so hide it
-    local padding = 2
+    local padding = 3
 
     -- the size of the grid should basically always be constant (i think),
     -- but different aspect ratios complicate this in an annoying way
@@ -12,7 +12,7 @@ do
     HEX_GRID_DIMENSIONS = vec2(HEX_GRID_WIDTH, HEX_GRID_HEIGHT)
 
     HEX_GRID_CENTER = evenq_to_hex(vec2(math.floor(HEX_GRID_WIDTH/2)
-                                      , -math.floor(HEX_GRID_HEIGHT/2)))
+                                     , -math.floor(HEX_GRID_HEIGHT/2)))
 
     -- pixel distance from hex centerpoint to any vertex
     -- given a grid width gx, and window width wx, what's the smallest size a hex can be to fill the whole screen?
@@ -72,13 +72,12 @@ function grid_cost(map, from, to)
     -- equivalent paths are found and mobs backpedal trying to decide between them
     -- (seed 2014 at time of writing has this at the bottom)
     local elevation_epsilon = HEX_GRID_MAXIMUM_ELEVATION - HEX_GRID_MINIMUM_ELEVATION + 0.2
-    local elevation_cost = math.abs(math.abs(t1.elevation)^0.5
-                                  - math.abs(t2.elevation)^0.5)
+    local elevation_cost = 2 + math.abs(t1.elevation)^0.5 - math.abs(t2.elevation)^0.5
 
     local epsilon = elevation_epsilon
     local cost = elevation_cost
 
-    return 1
+    return cost
 end
 
 function grid_neighbours(map, hex)

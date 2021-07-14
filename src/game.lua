@@ -225,7 +225,7 @@ local function game_action(scene)
             state.spawning = true
 
             -- calculate spawn chance for next wave
-            state.spawn_chance = math.log(state.current_wave)/100 + 0.002
+            state.spawn_chance = math.log(state.current_wave)/90 + 0.002
 
             state.time_until_next_break = get_wave_time(state.current_wave)
         end
@@ -441,6 +441,7 @@ local function make_game_toolbelt()
     -- TOWER_TYPE, and none are missing.
     local toolbelt_options = {
         TOWER_TYPE.WALL,
+        TOWER_TYPE.GATTLER,
         TOWER_TYPE.HOWITZER,
         TOWER_TYPE.REDEYE,
         TOWER_TYPE.MOAT,

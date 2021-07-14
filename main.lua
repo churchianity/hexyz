@@ -9,7 +9,6 @@
 --      -- allow saving by name
 --      -- allow loading by name
 --      -- investigate saving as lua instead, and having as a consequence a less janky map serialization
---      -- encode/decode save game data (low priority)
 --
 -- map editor
 --      -- paint terrain elevation levels
@@ -262,7 +261,6 @@ function main_scene(do_backdrop, do_logo)
         )
     end
 
-    -- @TODO add a hyperlink to an 'about' page or something
     group:append(
         am.translate(win.right - 10, win.bottom + 10)
         ^ am.text(string.format("v%s, by %s", version, author), COLORS.WHITE, "right", "bottom")
@@ -281,7 +279,7 @@ function main_scene(do_backdrop, do_logo)
                 selected = true
                 self"sprite".color = vec4(1)
                 if win:mouse_pressed("left") then
-
+                    vplay_sfx(math.random(1000000000))
                 end
             else
                 selected = false
