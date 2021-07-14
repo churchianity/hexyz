@@ -1,6 +1,4 @@
 
-state.mobs = {}
-
 MOB_TYPE = {
     BEEPER = 1,
     SPOODER = 2

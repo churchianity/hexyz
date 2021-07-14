@@ -1,6 +1,4 @@
 
-state.towers = {}
-
 TOWER_TYPE = {
     WALL       = 1,
     HOWITZER   = 2,

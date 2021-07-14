@@ -1,6 +1,4 @@
 
-state.projectiles = {}
-
 PROJECTILE_TYPE = {
     SHELL = 1,
     LASER = 2,

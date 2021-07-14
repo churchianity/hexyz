@@ -69,7 +69,7 @@ do
         mode      = settings.fullscreen and "fullscreen" or "windowed",
         resizable = true,
         highdpi   = true,
-        resizable = true, -- user should probably set their resolution instead of resizing the window, but hey.
+        --resizable = true, -- user should probably set their resolution instead of resizing the window, but hey.
         letterbox = true,
         show_cursor = true,
     }
@@ -91,7 +91,6 @@ require "src/grid"
 require "src/mob"
 require "src/projectile"
 require "src/tower"
-
 
 -- text popup in the middle of the screen that dissapates, call from anywhere
 function alert(message, color)

@@ -9,7 +9,6 @@ local function load_texture(filepath)
     end
 end
 
-
 TEXTURES = {
     -- note that in amulet, if you prefix paths with './', they fail to be found in the exported data.pak
     LOGO                    = load_texture("res/logo.png"),
@@ -46,7 +45,7 @@ TEXTURES = {
     TOWER_REDEYE_ICON       = load_texture("res/tower_redeye_icon.png"),
     TOWER_MOAT              = load_texture("res/tower_moat.png"),
     TOWER_MOAT_ICON         = load_texture("res/tower_moat_icon.png"),
-    TOWER_RADAR             = load_texture("res/tower_radar.png"),
+    TOWER_RADAR             = load_texture("res/tower_radar4.png"),
     TOWER_RADAR_ICON        = load_texture("res/tower_radar_icon.png"),
     TOWER_LIGHTHOUSE        = load_texture("res/tower_lighthouse.png"),
     TOWER_LIGHTHOUSE_ICON   = load_texture("res/tower_lighthouse_icon.png"),
@@ -66,7 +65,8 @@ function pack_texture_into_sprite(texture, width, height, color)
         y1 = 0, y2 = height, height = height
     }
 
-    sprite.color = color or vec4(1)
+    if color then sprite.color end
+
     return sprite
 end
 

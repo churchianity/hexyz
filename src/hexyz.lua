@@ -9,11 +9,7 @@
 --  table.append
 
 
-if not math.round then
-    math.round = function(n) return math.floor(n + 0.5) end
-else
-    error("clobbering 'math.round', oopsie!")
-end
+
 
 -- @TODO
 if not table.append then end
@@ -126,12 +122,13 @@ function hex_neighbours(hex)
     return neighbours
 end
 
+local function round(n) return math.floor(n + 0.5) end
+
 -- Returns a vec2 Which is the Nearest |x, y| to Float Trio |x, y, z|
--- assumes you have a working math.round function (should be guarded at top of this file)
 local function hex_round(x, y, z)
-    local rx = math.round(x)
-    local ry = math.round(y)
-    local rz = math.round(z) or math.round(-x - y)
+    local rx = round(x)
+    local ry = round(y)
+    local rz = round(z) or round(-x - y)
 
     local xdelta = math.abs(rx - x)
     local ydelta = math.abs(ry - y)
