@@ -7,6 +7,7 @@ local function load_texture(filepath)
         return texture
     else
         fail_count = fail_count + 1
+        log(filepath)
         return am.texture2d("res/bagel.jpg")
     end
 end
@@ -34,7 +35,6 @@ TEXTURES = {
     -- gui stuff
     BUTTON1                 = load_texture("res/button1.png"),
     WIDER_BUTTON1           = load_texture("res/wider_button1.png"),
-    TAB_ICON                = load_texture("res/tab_icon.png"),
     GEAR                    = load_texture("res/gear.png"),
 
     SELECT_BOX              = load_texture("res/select_box.png"),
@@ -50,16 +50,14 @@ TEXTURES = {
     TOWER_REDEYE_ICON       = load_texture("res/tower_redeye_icon.png"),
     TOWER_MOAT              = load_texture("res/tower_moat.png"),
     TOWER_MOAT_ICON         = load_texture("res/tower_moat_icon.png"),
-    TOWER_RADAR             = load_texture("res/tower_radar4.png"),
+    TOWER_RADAR             = load_texture("res/tower_radar.png"),
     TOWER_RADAR_ICON        = load_texture("res/tower_radar_icon.png"),
     TOWER_LIGHTHOUSE        = load_texture("res/tower_lighthouse.png"),
     TOWER_LIGHTHOUSE_ICON   = load_texture("res/tower_lighthouse_icon.png"),
 
-    HEX_FLOWER              = load_texture("res/thing.png"),
-
     -- mob stuff
-    MOB_BEEPER          = load_texture("res/mob_beeper.png"),
-    MOB_SPOODER         = load_texture("res/mob_spooder.png"),
+    MOB_BEEPER              = load_texture("res/mob_beeper.png"),
+    MOB_SPOODER             = load_texture("res/mob_spooder.png"),
 }
 
 function pack_texture_into_sprite(texture, width, height, color)
