@@ -481,6 +481,7 @@ function tower_type_is_buildable_on(hex, tile, tower_type)
     local mobs_blocking = table.count(blocking_mobs) ~= 0
     local blocked = mobs_blocking or towers_blocking
 
+    -- @TODO i think the howitzer and gattler should not be placeable next to other towers other than the wall and moat, and perhaps not next to mountains either
     if tower_type == TOWER_TYPE.GATTLER then
         return not (blocked or has_water or has_mountain)
 
