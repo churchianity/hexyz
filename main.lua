@@ -52,6 +52,7 @@ settings = am.load_state("settings", "json") or {
     window_height = 1050,
     music_volume = 0.2,
     sfx_volume = 0.1,
+    sound_on = true
 }
 
 math.randomseed(os.time())
@@ -235,6 +236,22 @@ function make_main_scene_toolbelt()
     return am.translate(pixel_offset) ^ group
 end
 
+function make_sound_toggle_node(on)
+    local sprite
+    if on then
+        sprite = pack_texture_into_sprite(TEXTURES.SOUND_ON1, 40, 30)
+    else
+        sprite = pack_texture_into_sprite(TEXTURES.SOUND_OFF, 40, 30)
+    end
+
+    return (am.translate(win.right - 30, win.top - 60) ^ sprite)
+end
+
+function toggle_mute()
+    settings.sound_on = not settings.sound_on
+    win.scene:replace("sound-on-off-icon", make_sound_toggle_node(settings.sound_on))
+end
+
 function main_scene(do_backdrop, do_logo)
     local group = am.group()
 
@@ -268,8 +285,7 @@ function main_scene(do_backdrop, do_logo)
     )
 
     group:append(
-        am.translate(win.right - 30, win.top - 60)
-        ^ pack_texture_into_sprite(TEXTURES.SOUND_ON1, 40, 30)
+        make_sound_toggle_node(settings.sound_on)
     )
 
     if do_logo then

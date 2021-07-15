@@ -1,7 +1,8 @@
 
 do
     -- add padding, because we terraform the very outer edge and it looks ugly, so hide it
-    local padding = 3
+    -- should be an even number to preserve a 'true' center
+    local padding = 4
 
     -- the size of the grid should basically always be constant (i think),
     -- but different aspect ratios complicate this in an annoying way
@@ -26,10 +27,10 @@ do
     local hhs = hex_horizontal_spacing(HEX_SIZE)
     local hvs = hex_vertical_spacing(HEX_SIZE)
 
+    -- number of 'spacings' on the grid == number of cells - 1
     HEX_GRID_PIXEL_WIDTH = (HEX_GRID_WIDTH - 1) * hhs
     HEX_GRID_PIXEL_HEIGHT = (HEX_GRID_HEIGHT - 1) * hvs
 
-    -- number of 'spacings' on the grid == number of cells - 1
     HEX_GRID_PIXEL_DIMENSIONS = vec2(HEX_GRID_PIXEL_WIDTH
                                    , HEX_GRID_PIXEL_HEIGHT)
 end
@@ -212,6 +213,11 @@ function make_hex_grid_scene(map)
             world:append(node)
         end
     end
+
+    -- add the magenta diamond that represents 'home'
+    world:append(
+        am.circle(hex_to_pixel(HEX_GRID_CENTER, vec2(HEX_SIZE)), HEX_SIZE/2, COLORS.MAGENTA, 4)
+    )
 
     apply_flow_field(map, generate_flow_field(map, HEX_GRID_CENTER), world)
 

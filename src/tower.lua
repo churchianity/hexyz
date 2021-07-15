@@ -221,121 +221,6 @@ do
     end
 end
 
-function tower_serialize(tower)
-    local serialized = entity_basic_devectored_copy(tower)
-
-    for i,h in pairs(tower.hexes) do
-        serialized.hexes[i] = { h.x, h.y }
-    end
-
-    return am.to_json(serialized)
-end
-
-function tower_deserialize(json_string)
-    local tower = entity_basic_json_parse(json_string)
-
-    for i,h in pairs(tower.hexes) do
-        tower.hexes[i] = vec2(tower.hexes[i][1], tower.hexes[i][2])
-    end
-
-    tower.update = get_tower_update_function(tower.type)
-    tower.node = am.translate(tower.position) ^ make_tower_node(tower.type)
-
-    return tower
-end
-
-function towers_on_hex(hex)
-    local t = {}
-    for tower_index,tower in pairs(state.towers) do
-        if tower then
-            for _,h in pairs(tower.hexes) do
-                if h == hex then
-                    table.insert(t, tower_index, tower)
-                    break
-                end
-            end
-        end
-    end
-    return t
-end
-
-function tower_on_hex(hex)
-    return table.find(state.towers, function(tower)
-        for _,h in pairs(tower.hexes) do
-            if h == hex then return true end
-        end
-    end)
-end
-
-function tower_type_is_buildable_on(hex, tile, tower_type)
-    -- this function gets polled a lot, and sometimes with nil/false tower types
-    if not tower_type then return false end
-
-    local blocking_towers = {}
-    local blocking_mobs = {}
-    local has_water = false
-    local has_mountain = false
-    local has_ground = false
-
-    for _,h in pairs(hex_spiral_map(hex, get_tower_size(tower_type))) do
-        table.merge(blocking_towers, towers_on_hex(h))
-        table.merge(blocking_mobs, mobs_on_hex(h))
-
-        local tile = hex_map_get(state.map, h)
-        -- this should always be true, unless it is possible to place a tower
-        -- where part of the tower overflows the edge of the map
-        if tile then
-            if is_water_elevation(tile.elevation) then
-                has_water = true
-
-            elseif is_mountain_elevation(tile.elevation) then
-                has_mountain = true
-
-            else
-                has_ground = true
-            end
-        end
-    end
-
-    local towers_blocking = table.count(blocking_towers) ~= 0
-    local mobs_blocking = table.count(blocking_mobs) ~= 0
-    local blocked = mobs_blocking or towers_blocking
-
-    if tower_type == TOWER_TYPE.GATTLER then
-        return not (blocked or has_water or has_mountain)
-
-    elseif tower_type == TOWER_TYPE.HOWITZER then
-        return not (blocked or has_water or has_mountain)
-
-    elseif tower_type == TOWER_TYPE.REDEYE then
-        return not blocked
-               and not has_water
-               and not has_ground
-               and has_mountain
-
-    elseif tower_type == TOWER_TYPE.LIGHTHOUSE then
-        local has_water_neighbour = false
-        for _,h in pairs(hex_neighbours(hex)) do
-            local tile = hex_map_get(state.map, h)
-
-            if tile and tile.elevation < -0.5 then
-                has_water_neighbour = true
-                break
-            end
-        end
-        return not blocked
-           and not has_mountain
-           and not has_water
-           and has_water_neighbour
-
-    elseif tower_type == TOWER_TYPE.WALL then
-        return not blocked and tile_is_medium_elevation(tile)
-
-    elseif tower_type == TOWER_TYPE.MOAT then
-        return not blocked and tile_is_medium_elevation(tile)
-    end
-end
-
 local function update_tower_redeye(tower, tower_index)
     if not tower.target_index then
         for index,mob in pairs(state.mobs) do
@@ -515,6 +400,122 @@ local function get_tower_update_function(tower_type)
         return update_tower_lighthouse
     end
 end
+
+function tower_serialize(tower)
+    local serialized = entity_basic_devectored_copy(tower)
+
+    for i,h in pairs(tower.hexes) do
+        serialized.hexes[i] = { h.x, h.y }
+    end
+
+    return am.to_json(serialized)
+end
+
+function tower_deserialize(json_string)
+    local tower = entity_basic_json_parse(json_string)
+
+    for i,h in pairs(tower.hexes) do
+        tower.hexes[i] = vec2(tower.hexes[i][1], tower.hexes[i][2])
+    end
+
+    tower.update = get_tower_update_function(tower.type)
+    tower.node = am.translate(tower.position) ^ make_tower_node(tower.type)
+
+    return tower
+end
+
+function towers_on_hex(hex)
+    local t = {}
+    for tower_index,tower in pairs(state.towers) do
+        if tower then
+            for _,h in pairs(tower.hexes) do
+                if h == hex then
+                    table.insert(t, tower_index, tower)
+                    break
+                end
+            end
+        end
+    end
+    return t
+end
+
+function tower_on_hex(hex)
+    return table.find(state.towers, function(tower)
+        for _,h in pairs(tower.hexes) do
+            if h == hex then return true end
+        end
+    end)
+end
+
+function tower_type_is_buildable_on(hex, tile, tower_type)
+    -- this function gets polled a lot, and sometimes with nil/false tower types
+    if not tower_type then return false end
+
+    local blocking_towers = {}
+    local blocking_mobs = {}
+    local has_water = false
+    local has_mountain = false
+    local has_ground = false
+
+    for _,h in pairs(hex_spiral_map(hex, get_tower_size(tower_type))) do
+        table.merge(blocking_towers, towers_on_hex(h))
+        table.merge(blocking_mobs, mobs_on_hex(h))
+
+        local tile = hex_map_get(state.map, h)
+        -- this should always be true, unless it is possible to place a tower
+        -- where part of the tower overflows the edge of the map
+        if tile then
+            if is_water_elevation(tile.elevation) then
+                has_water = true
+
+            elseif is_mountain_elevation(tile.elevation) then
+                has_mountain = true
+
+            else
+                has_ground = true
+            end
+        end
+    end
+
+    local towers_blocking = table.count(blocking_towers) ~= 0
+    local mobs_blocking = table.count(blocking_mobs) ~= 0
+    local blocked = mobs_blocking or towers_blocking
+
+    if tower_type == TOWER_TYPE.GATTLER then
+        return not (blocked or has_water or has_mountain)
+
+    elseif tower_type == TOWER_TYPE.HOWITZER then
+        return not (blocked or has_water or has_mountain)
+
+    elseif tower_type == TOWER_TYPE.REDEYE then
+        return not blocked
+               and not has_water
+               and not has_ground
+               and has_mountain
+
+    elseif tower_type == TOWER_TYPE.LIGHTHOUSE then
+        local has_water_neighbour = false
+        for _,h in pairs(hex_neighbours(hex)) do
+            local tile = hex_map_get(state.map, h)
+
+            if tile and tile.elevation < -0.5 then
+                has_water_neighbour = true
+                break
+            end
+        end
+        return not blocked
+           and not has_mountain
+           and not has_water
+           and has_water_neighbour
+
+    elseif tower_type == TOWER_TYPE.WALL then
+        return not blocked and tile_is_medium_elevation(tile)
+
+    elseif tower_type == TOWER_TYPE.MOAT then
+        return not blocked and tile_is_medium_elevation(tile)
+    end
+end
+
 
 function make_and_register_tower(hex, tower_type)
     local tower = make_basic_entity(

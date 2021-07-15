@@ -76,6 +76,6 @@ function pack_texture_into_sprite(texture, width, height, color)
 end
 
 if fail_count > 0 then
-    log("failed to load %d textures", fail_count)
+    log("failed to load %d texture(s)", fail_count)
 end
 
