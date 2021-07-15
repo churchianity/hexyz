@@ -1,10 +1,12 @@
 
+local fail_count = 0
 local function load_texture(filepath)
     local status, texture = pcall(am.texture2d, filepath)
 
     if status then
         return texture
     else
+        fail_count = fail_count + 1
         return am.texture2d("res/bagel.jpg")
     end
 end
@@ -26,11 +28,13 @@ TEXTURES = {
 
     CURTAIN                 = load_texture("res/curtain1.png"),
 
+    SOUND_ON1               = load_texture("res/sound-on.png"),
+    SOUND_OFF               = load_texture("res/sound-off.png"),
+
     -- gui stuff
     BUTTON1                 = load_texture("res/button1.png"),
     WIDER_BUTTON1           = load_texture("res/wider_button1.png"),
     TAB_ICON                = load_texture("res/tab_icon.png"),
-    GUI_SLIDER              = load_texture("res/slider.png"),
     GEAR                    = load_texture("res/gear.png"),
 
     SELECT_BOX              = load_texture("res/select_box.png"),
@@ -41,7 +45,6 @@ TEXTURES = {
     TOWER_GATTLER           = load_texture("res/tower_gattler.png"),
     TOWER_GATTLER_ICON      = load_texture("res/tower_gattler_icon.png"),
     TOWER_HOWITZER          = load_texture("res/tower_howitzer.png"),
-    CANNON1                 = load_texture("res/cannon1.png"),
     TOWER_HOWITZER_ICON     = load_texture("res/tower_howitzer_icon.png"),
     TOWER_REDEYE            = load_texture("res/tower_redeye.png"),
     TOWER_REDEYE_ICON       = load_texture("res/tower_redeye_icon.png"),
@@ -70,5 +73,9 @@ function pack_texture_into_sprite(texture, width, height, color)
     if color then sprite.color = color end
 
     return sprite
+end
+
+if fail_count > 0 then
+    log("failed to load %d textures", fail_count)
 end
 

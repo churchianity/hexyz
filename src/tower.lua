@@ -33,14 +33,14 @@ local TOWER_SPECS = {
         icon_texture = TEXTURES.TOWER_GATTLER_ICON,
         cost = 20,
         range = 4,
-        fire_rate = 10,
+        fire_rate = 0.5,
         size = 0,
         height = 1,
     },
     [TOWER_TYPE.HOWITZER] = {
         name = "Howitzer",
         placement_rules_text = "Place on non-Water, non-Mountain",
-        short_description = "Fires area of effect artillery.",
+        short_description = "Medium-range, medium fire-rate area of effect artillery tower.",
         texture = TEXTURES.TOWER_HOWITZER,
         icon_texture = TEXTURES.TOWER_HOWITZER_ICON,
         cost = 50,
@@ -52,19 +52,19 @@ local TOWER_SPECS = {
     [TOWER_TYPE.REDEYE] = {
         name = "Redeye",
         placement_rules_text = "Place on Mountains",
-        short_description = "Long-range, penetrating laser tower",
+        short_description = "Long-range, penetrating high-velocity laser tower.",
         texture = TEXTURES.TOWER_REDEYE,
         icon_texture = TEXTURES.TOWER_REDEYE_ICON,
         cost = 140,
         range = 9,
-        fire_rate = 1,
+        fire_rate = 3,
         size = 0,
         height = 1,
     },
     [TOWER_TYPE.MOAT] = {
         name = "Moat",
         placement_rules_text = "Place on Ground",
-        short_description = "Restricts movement",
+        short_description = "Restricts movement, similar to water.",
         texture = TEXTURES.TOWER_MOAT,
         icon_texture = TEXTURES.TOWER_MOAT_ICON,
         cost = 10,
@@ -139,13 +139,17 @@ function make_tower_node(tower_type)
         return make_tower_sprite(tower_type)
 
     elseif tower_type == TOWER_TYPE.GATTLER then
-        return make_tower_sprite(tower_type)
+        return am.group{
+                am.circle(vec2(0), HEX_SIZE - 4, COLORS.VERY_DARK_GRAY, 5),
+                am.rotate(state.time or 0)
+                ^ pack_texture_into_sprite(TEXTURES.TOWER_HOWITZER, HEX_PIXEL_HEIGHT*1.5, HEX_PIXEL_WIDTH*2, COLORS.GREEN_YELLOW)
+           }
 
     elseif tower_type == TOWER_TYPE.HOWITZER then
         return am.group{
-            am.circle(vec2(0), HEX_SIZE, COLORS.VERY_DARK_GRAY, 6),
+            am.circle(vec2(0), HEX_SIZE - 4, COLORS.VERY_DARK_GRAY, 6),
             am.rotate(state.time or 0) ^ am.group{
-                pack_texture_into_sprite(TEXTURES.CANNON1, HEX_PIXEL_HEIGHT*1.5, HEX_PIXEL_WIDTH*2) -- CHONK
+                pack_texture_into_sprite(TEXTURES.TOWER_HOWITZER, HEX_PIXEL_HEIGHT*1.5, HEX_PIXEL_WIDTH*2) -- CHONK
             }
         }
     elseif tower_type == TOWER_TYPE.LIGHTHOUSE then
@@ -214,18 +218,6 @@ do
 
     function get_tower_cursor(tower_type)
         return tower_cursors[tower_type]
-    end
-end
-
-local function get_tower_update_function(tower_type)
-    if tower_type == TOWER_TYPE.REDEYE then
-        return update_tower_redeye
-
-    elseif tower_type == TOWER_TYPE.HOWITZER then
-        return update_tower_howitzer
-
-    elseif tower_type == TOWER_TYPE.LIGHTHOUSE then
-        return update_tower_lighthouse
     end
 end
 
@@ -309,30 +301,13 @@ function tower_type_is_buildable_on(hex, tile, tower_type)
     local mobs_blocking = table.count(blocking_mobs) ~= 0
     local blocked = mobs_blocking or towers_blocking
 
-    if tower_type == TOWER_TYPE.HOWITZER then
-        if not mobs_blocking and towers_blocking then
-            -- you can build howitzers on top of walls.
-            blocked = false
-            for _,tower in pairs(blocking_towers) do
-                if tower.type ~= TOWER_TYPE.WALL then
-                    blocked = true
-                    break
-                end
-            end
-        end
+    if tower_type == TOWER_TYPE.GATTLER then
+        return not (blocked or has_water or has_mountain)
+
+    elseif tower_type == TOWER_TYPE.HOWITZER then
         return not (blocked or has_water or has_mountain)
 
     elseif tower_type == TOWER_TYPE.REDEYE then
-        if not mobs_blocking and towers_blocking then
-            -- you can build redeyes on top of walls
-            blocked = false
-            for _,tower in pairs(blocking_towers) do
-                if tower.type ~= TOWER_TYPE.WALL then
-                    blocked = true
-                    break
-                end
-            end
-        end
         return not blocked
                and not has_water
                and not has_ground
@@ -361,7 +336,7 @@ function tower_type_is_buildable_on(hex, tile, tower_type)
     end
 end
 
-function update_tower_redeye(tower, tower_index)
+local function update_tower_redeye(tower, tower_index)
     if not tower.target_index then
         for index,mob in pairs(state.mobs) do
             if mob then
@@ -391,7 +366,53 @@ function update_tower_redeye(tower, tower_index)
     end
 end
 
-function update_tower_howitzer(tower, tower_index)
+local function update_tower_gattler(tower, tower_index)
+    if not tower.target_index then
+        -- we should try and acquire a target
+        for index,mob in pairs(state.mobs) do
+            if mob then
+                local d = math.distance(mob.hex, tower.hex)
+                if d <= tower.range then
+                    tower.target_index = index
+                    break
+                end
+            end
+        end
+
+        -- passive animation
+        tower.node("rotate").angle = math.wrapf(tower.node("rotate").angle + 0.1 * am.delta_time, math.pi*2)
+    else
+        -- should have a target, so we should try and shoot it
+        if not state.mobs[tower.target_index] then
+            -- the target we have was invalidated
+            tower.target_index = false
+
+        else
+            -- the target we have is valid
+            local mob = state.mobs[tower.target_index]
+            local vector = math.normalize(mob.position - tower.position)
+
+            if (state.time - tower.last_shot_time) > tower.fire_rate then
+                local projectile = make_and_register_projectile(
+                    tower.hex,
+                    PROJECTILE_TYPE.BULLET,
+                    vector
+                )
+
+                tower.last_shot_time = state.time
+                play_sfx(SOUNDS.HIT1)
+            end
+
+            -- point the cannon at the dude
+            local theta = math.rad(90) - math.atan((tower.position.y - mob.position.y)/(tower.position.x - mob.position.x))
+            local diff = tower.node("rotate").angle - theta
+
+            tower.node("rotate").angle = -theta + math.pi/2
+        end
+    end
+end
+
+local function update_tower_howitzer(tower, tower_index)
     if not tower.target_index then
         -- we don't have a target
         for index,mob in pairs(state.mobs) do
@@ -403,6 +424,8 @@ function update_tower_howitzer(tower, tower_index)
                 end
             end
         end
+
+        -- passive animation
         tower.node("rotate").angle = math.wrapf(tower.node("rotate").angle + 0.1 * am.delta_time, math.pi*2)
     else
         -- we should have a target
@@ -432,6 +455,7 @@ function update_tower_howitzer(tower, tower_index)
                 play_sfx(SOUNDS.EXPLOSION2)
             end
 
+            -- point the cannon at the dude
             local theta = math.rad(90) - math.atan((tower.position.y - mob.position.y)/(tower.position.x - mob.position.x))
             local diff = tower.node("rotate").angle - theta
 
@@ -440,7 +464,7 @@ function update_tower_howitzer(tower, tower_index)
     end
 end
 
-function update_tower_lighthouse(tower, tower_index)
+local function update_tower_lighthouse(tower, tower_index)
     -- check if there's a mob on a hex in our perimeter
     for _,h in pairs(tower.perimeter) do
         local mobs = mobs_on_hex(h)
@@ -455,7 +479,7 @@ function update_tower_lighthouse(tower, tower_index)
 
                 if made_it then
                     m.path = path
-                    m.seen_lighthouse = true
+                    m.seen_lighthouse = true -- right now mobs don't care about lighthouses if they've already seen one.
 
                     --[[
                     local area = spiral_map(tower.hex, tower.range)
@@ -474,6 +498,21 @@ function update_tower_lighthouse(tower, tower_index)
                 end
             end
         end
+    end
+end
+
+local function get_tower_update_function(tower_type)
+    if tower_type == TOWER_TYPE.REDEYE then
+        return update_tower_redeye
+
+    elseif tower_type == TOWER_TYPE.GATTLER then
+        return update_tower_gattler
+
+    elseif tower_type == TOWER_TYPE.HOWITZER then
+        return update_tower_howitzer
+
+    elseif tower_type == TOWER_TYPE.LIGHTHOUSE then
+        return update_tower_lighthouse
     end
 end
 

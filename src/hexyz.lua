@@ -8,9 +8,6 @@
 -- and some utility functions not present in your standard lua, like:
 --  table.append
 
-
-
-
 -- @TODO
 if not table.append then end
 if not table.filter then end

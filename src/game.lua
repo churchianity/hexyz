@@ -408,9 +408,9 @@ local function make_game_toolbelt()
 
                 am.translate(vec2(half_size))
                 ^ am.group(
-                    pack_texture_into_sprite(TEXTURES.BUTTON1, half_size, half_size),
+                    pack_texture_into_sprite(TEXTURES.BUTTON1, half_size, half_size, vec4(0.4, 0.4, 0.4, 1)),
                     am.scale(2)
-                    ^ am.text(keys[i], COLORS.BLACK)
+                    ^ am.text(keys[i], COLORS.WHITE)
                 )
             )
 
@@ -663,11 +663,6 @@ function game_init(saved_state)
         select_tower_type(nil)
     else
         state = get_initial_game_state()
-        local home_tower = build_tower(HEX_GRID_CENTER, TOWER_TYPE.RADAR)
-        for _,h in pairs(home_tower.hexes) do
-            -- @HACK to make the center tile(s) passable even though there's a tower on it
-            hex_map_get(state.map, h).elevation = 0
-        end
     end
 
     game = true

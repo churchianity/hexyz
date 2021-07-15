@@ -156,7 +156,7 @@ function make_main_scene_toolbelt()
                 end
             end
         },
-        {
+        false and {
             texture = TEXTURES.MAP_EDITOR_HEX,
             action = function() alert("not yet :)") end
         },
@@ -164,7 +164,7 @@ function make_main_scene_toolbelt()
             texture = TEXTURES.UNPAUSE_HEX,
             action = function() unpause(win.scene("menu")) end
         } or false,
-        {
+        false and {
             texture = TEXTURES.SETTINGS_HEX,
             action = function() alert("not yet :)") end
         },
@@ -261,9 +261,15 @@ function main_scene(do_backdrop, do_logo)
         )
     end
 
+    -- version/author info
     group:append(
         am.translate(win.right - 10, win.bottom + 10)
         ^ am.text(string.format("v%s, by %s", version, author), COLORS.WHITE, "right", "bottom")
+    )
+
+    group:append(
+        am.translate(win.right - 30, win.top - 60)
+        ^ pack_texture_into_sprite(TEXTURES.SOUND_ON1, 40, 30)
     )
 
     if do_logo then

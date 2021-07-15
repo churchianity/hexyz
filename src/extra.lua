@@ -1,5 +1,4 @@
 
-
 -- @TODO make it work with functions that return multiple values
 -- right now it discards returned values beyond the first
 function fprofile(f, ...)

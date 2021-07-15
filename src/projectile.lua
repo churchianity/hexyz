@@ -2,6 +2,7 @@
 PROJECTILE_TYPE = {
     SHELL = 1,
     LASER = 2,
+    BULLET = 3,
 }
 
 local PROJECTILE_SPECS = {
@@ -15,6 +16,11 @@ local PROJECTILE_SPECS = {
         damage = 20,
         hitbox_radius = 20
     },
+    [PROJECTILE_TYPE.BULLET] = {
+        velocity = 25,
+        damage = 5,
+        hitbox_radius = 10
+    }
 }
 
 function get_projectile_velocity(projectile_type)
@@ -174,13 +180,68 @@ local function update_projectile_laser(projectile, projectile_index)
 
     -- hit the mob, affect the world
     do_hit_mob(closest_mob, projectile.damage, closest_mob_index)
-    -- delete_entity(state.projectiles, projectile_index) -- laser doesn't delete itself on mob hit
+    vplay_sfx(SOUNDS.HIT1, 0.5)
+end
+
+local function update_projectile_bullet(projectile, projectile_index)
+    projectile.position = projectile.position + projectile.vector * projectile.velocity
+
+    if not point_in_rect(projectile.position + WORLDSPACE_COORDINATE_OFFSET, {
+        x1 = win.left,
+        y1 = win.bottom,
+        x2 = win.right,
+        y2 = win.top
+    }) then
+        delete_entity(state.projectiles, projectile_index)
+        return true
+    end
+
+    projectile.node.position2d = projectile.position
+    projectile.hex = pixel_to_hex(projectile.position, vec2(HEX_SIZE))
+
+    local search_hexes = hex_spiral_map(projectile.hex, 1)
+    local hit_mob_count = 0
+    local hit_mobs = {}
+    for _,hex in pairs(search_hexes) do
+
+        -- check if there's a mob on the hex
+        for mob_index,mob in pairs(mobs_on_hex(hex)) do
+            if mob and circles_intersect(mob.position
+                                       , projectile.position
+                                       , mob.hurtbox_radius
+                                       , projectile.hitbox_radius) then
+                table.insert(hit_mobs, mob_index, mob)
+                hit_mob_count = hit_mob_count + 1
+            end
+        end
+    end
+
+    -- we didn't hit anyone
+    if hit_mob_count == 0 then return end
+
+    -- we could have hit multiple, (optionally) find the closest
+    local closest_mob_index, closest_mob = next(hit_mobs, nil)
+    local closest_d = math.distance(closest_mob.position, projectile.position)
+    for _mob_index,mob in pairs(hit_mobs) do
+        local d = math.distance(mob.position, projectile.position)
+        if d < closest_d then
+            closest_mob_index = _mob_index
+            closest_mob = mob
+            closest_d = d
+        end
+    end
+
+    -- hit the mob, affect the world
+    do_hit_mob(closest_mob, projectile.damage, closest_mob_index)
     vplay_sfx(SOUNDS.HIT1, 0.5)
 end
 
 function make_projectile_node(projectile_type, vector)
     if projectile_type == PROJECTILE_TYPE.LASER then
         return am.line(vector, vector*get_projectile_hitbox_radius(projectile_type), 3, COLORS.CLARET)
+
+    elseif projectile_type == PROJECTILE_TYPE.BULLET then
+        return am.circle(vec2(0), 2, COLORS.VERY_DARK_GRAY)
 
     elseif projectile_type == PROJECTILE_TYPE.SHELL then
         return am.circle(vec2(0), 3, COLORS.VERY_DARK_GRAY)
@@ -190,6 +251,9 @@ end
 function get_projectile_update_function(projectile_type)
     if projectile_type == PROJECTILE_TYPE.LASER then
         return update_projectile_laser
+
+    elseif projectile_type == PROJECTILE_TYPE.BULLET then
+        return update_projectile_bullet
 
     elseif projectile_type == PROJECTILE_TYPE.SHELL then
         return update_projectile_shell
