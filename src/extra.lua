@@ -3,7 +3,7 @@ function fprofile(f, ...)
     local t1 = am.current_time()
     local result = { f(...) }
     log("%f", am.current_time() - t1)
-    return result
+    return unpack(result)
 end
 
 function math.wrapf(float, range)

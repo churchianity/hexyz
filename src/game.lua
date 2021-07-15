@@ -3,6 +3,7 @@ game = false -- flag to tell if there is a game running
 state = {}
 
 -- top right display types
+-- f1 toggles what is displayed in the top right of the screen
 local TRDTS = {
     NOTHING        = 0,
     CENTERED_EVENQ = 1,
@@ -95,7 +96,7 @@ end
 
 local function do_day_night_cycle()
     local tstep = (math.sin(state.time * am.delta_time) + 1) / 100
-    --state.world"negative_mask".color = vec4(tstep){a=1}
+    state.world"negative_mask".color = vec4(tstep){a=1}
 end
 
 local function game_pause()
@@ -262,7 +263,7 @@ local function game_action(scene)
                     node.color = COLORS.CLARET
                     node:action(am.tween(0.1, { color = COLORS.TRANSPARENT }))
                     play_sfx(SOUNDS.BIRD2)
-                    alert("not enough $$$$")
+                    alert("not enough money")
 
                 else
                     update_money(-cost)
