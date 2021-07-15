@@ -1,43 +1,42 @@
 
--- @TODO @TODO @TODO @TODO @TODO
+math.randomseed(os.time())
+math.random()
+math.random()
+math.random()
+math.random()
+
+-- @TODO
 -- settings menu
---      -- music volume
---      -- sfx volume
---      -- resolution settings & fix grid size being based on resolution
---
+--      -- make the volume icon clickable
+--      -- music volume slider or number input box
+--      -- sfx volume slider or number input box
+--      -- allow different resolution options, as long as you are 4:3
+
 -- serialization
 --      -- allow saving by name
 --      -- allow loading by name
---      -- investigate saving as lua instead, and having as a consequence a less janky map serialization
---
--- map editor
+--      -- investigate saving as lua instead, and having as a consequence a less janky map serialization - we don't care about exploitability
+
+-- sound
+--      -- fix the non-seamless loop in the soundtrack
+--      -- more trax
+
+-- game
+--      -- allow selecting of tiles, if tower is selected then allow sell/upgrade
+--      -- new game menu allowing set seed
+--      -- make art, birds-eye-ify the redeye tower and lighthouse maybe?
+
+-- map editor?
 --      -- paint terrain elevation levels
 --      -- place tiles of set elevation
 --      -- place towers
 --      -- move home?
---
--- game
---      -- HEX_GRID_CENTER =/= HOME
---      -- allow selecting of tiles, if tower is selected then allow sell/upgrade
---      -- button/ui to open pause menu - make it obvious that 'esc' is the button
---      -- play the game and tweak numbers
---      -- new game menu allowing set seed
---      -- gattling gun tower (fast fire rate)
---      -- spooder mob
---      -- make art, birds-eye-ify the redeye tower and lighthouse maybe?
-
 
 -- aspect ratios seem like a huge mess
 -- for now, i think we should enforce 4:3
 local RESOLUTION_OPTIONS = {
-    -- 16:9
-    -- { width = 1776, height = 1000 },
-    -- { width = 1920, height = 1080 },
-    -- { width = 1600, height = 900 },
-
-    -- 4:3
     { width = 1440, height = 1080 },
-    { width = 1400, height = 1050 }, -- seems like a good one
+    { width = 1400, height = 1050 }, -- seems like a good default one
     { width = 1280, height = 960 },
     { width = 1152, height = 864 },
     { width = 1024, height = 768 },
@@ -45,21 +44,16 @@ local RESOLUTION_OPTIONS = {
     { width = 832, height = 624 },
     { width = 800, height = 600 },
 }
+local DEFAULT_RESOLUTION = RESOLUTION_OPTIONS[2]
 
 settings = am.load_state("settings", "json") or {
     fullscreen = false,
-    window_width = 1400,
-    window_height = 1050,
+    window_width = DEFAULT_RESOLUTION.width,
+    window_height = DEFAULT_RESOLUTION.height,
     music_volume = 0.2,
     sfx_volume = 0.1,
     sound_on = true
 }
-
-math.randomseed(os.time())
-math.random()
-math.random()
-math.random()
-math.random()
 
 do
     win = am.window{
@@ -67,9 +61,8 @@ do
         height    = settings.window_height,
         title     = "hexyz",
         mode      = settings.fullscreen and "fullscreen" or "windowed",
-        resizable = true,
+        resizable = false,
         highdpi   = true,
-        --resizable = true, -- user should probably set their resolution instead of resizing the window, but hey.
         letterbox = true,
         show_cursor = true,
     }
@@ -155,9 +148,11 @@ function main_action(self)
         end
     elseif win:key_pressed("f4") then
         win:close()
+
     elseif win:key_pressed("m") then
         toggle_mute()
     end
+
     if self"hex_backdrop" then
         self"hex_backdrop""rotate".angle = math.wrapf(self"hex_backdrop""rotate".angle - 0.005 * am.delta_time, math.pi*2)
     end
