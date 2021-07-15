@@ -1,3 +1,4 @@
 build/
+*.aseprite
 .DS_Store
 log.txt
