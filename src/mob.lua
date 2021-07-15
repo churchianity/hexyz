@@ -36,7 +36,7 @@ local function grow_mob_speed(mob_type, spec_speed, time)
     return spec_speed + math.log(state.current_wave + 1)
 end
 local function grow_mob_bounty(mob_type, spec_bounty, time)
-    return spec_bounty + math.pow(state.current_wave - 1, 2)
+    return spec_bounty + (state.current_wave - 1) * 2
 end
 
 function mobs_on_hex(hex)

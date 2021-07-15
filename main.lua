@@ -92,6 +92,44 @@ require "src/mob"
 require "src/projectile"
 require "src/tower"
 
+
+local sound_toggle_node_tag = "sound-on-off-icon"
+local function make_sound_toggle_node(on)
+    local sprite
+    if on then
+        sprite = pack_texture_into_sprite(TEXTURES.SOUND_ON1, 40, 30)
+    else
+        sprite = pack_texture_into_sprite(TEXTURES.SOUND_OFF, 40, 30)
+    end
+
+    return (am.translate(win.right - 30, win.top - 60) ^ sprite)
+    :tag(sound_toggle_node_tag)
+    :action(function()
+
+    end)
+end
+
+local cached_music_volume = 0.2
+local cached_sfx_volume = 0.1
+local function toggle_mute()
+    settings.sound_on = not settings.sound_on
+
+    if settings.sound_on then
+        settings.music_volume = cached_music_volume
+        settings.sfx_volume = cached_sfx_volume
+    else
+        cached_music_volume = settings.music_volume
+        cached_sfx_volume = settings.sfx_volume
+
+        settings.music_volume = 0
+        settings.sfx_volume = 0
+    end
+
+    update_music_volume(settings.music_volume)
+
+    win.scene:replace(sound_toggle_node_tag, make_sound_toggle_node(settings.sound_on))
+end
+
 -- text popup in the middle of the screen that dissapates, call from anywhere
 function alert(message, color)
     win.scene:append(
@@ -117,6 +155,8 @@ function main_action(self)
         end
     elseif win:key_pressed("f4") then
         win:close()
+    elseif win:key_pressed("m") then
+        toggle_mute()
     end
     if self"hex_backdrop" then
         self"hex_backdrop""rotate".angle = math.wrapf(self"hex_backdrop""rotate".angle - 0.005 * am.delta_time, math.pi*2)
@@ -236,21 +276,6 @@ function make_main_scene_toolbelt()
     return am.translate(pixel_offset) ^ group
 end
 
-function make_sound_toggle_node(on)
-    local sprite
-    if on then
-        sprite = pack_texture_into_sprite(TEXTURES.SOUND_ON1, 40, 30)
-    else
-        sprite = pack_texture_into_sprite(TEXTURES.SOUND_OFF, 40, 30)
-    end
-
-    return (am.translate(win.right - 30, win.top - 60) ^ sprite)
-end
-
-function toggle_mute()
-    settings.sound_on = not settings.sound_on
-    win.scene:replace("sound-on-off-icon", make_sound_toggle_node(settings.sound_on))
-end
 
 function main_scene(do_backdrop, do_logo)
     local group = am.group()

@@ -18,7 +18,7 @@ local PROJECTILE_SPECS = {
     },
     [PROJECTILE_TYPE.BULLET] = {
         velocity = 25,
-        damage = 5,
+        damage = 4,
         hitbox_radius = 10
     }
 }
