@@ -1,11 +1,7 @@
-
-math.randomseed(os.time())
-math.random()
-math.random()
-math.random()
-math.random()
-
 -- @TODO
+-- main
+--      -- scale menu hexes to window size, right now they look bad on smaller resolutions
+
 -- settings menu
 --      -- make the volume icon clickable
 --      -- music volume slider or number input box
@@ -32,6 +28,13 @@ math.random()
 --      -- place towers
 --      -- move home?
 
+-- lua's random number generator doesn't really produce random looking values if you don't seed it and discard a few calls first
+math.randomseed(os.time())
+math.random()
+math.random()
+math.random()
+math.random()
+
 -- aspect ratios seem like a huge mess
 -- for now, i think we should enforce 4:3
 local RESOLUTION_OPTIONS = {
@@ -55,18 +58,16 @@ settings = am.load_state("settings", "json") or {
     sound_on = true
 }
 
-do
-    win = am.window{
-        width     = settings.window_width,
-        height    = settings.window_height,
-        title     = "hexyz",
-        mode      = settings.fullscreen and "fullscreen" or "windowed",
-        resizable = false,
-        highdpi   = true,
-        letterbox = true,
-        show_cursor = true,
-    }
-end
+win = am.window{
+    width     = settings.window_width,
+    height    = settings.window_height,
+    title     = "hexyz",
+    mode      = settings.fullscreen and "fullscreen" or "windowed",
+    resizable = false,
+    highdpi   = true,
+    letterbox = true,
+    show_cursor = true,
+}
 
 -- asset interfaces and/or trivial code
 require "conf"
@@ -74,6 +75,7 @@ require "color"
 require "sound"
 require "texture"
 
+--
 require "src/entity"
 require "src/extra"
 require "src/geometry"
