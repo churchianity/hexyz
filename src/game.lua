@@ -108,8 +108,8 @@ local function game_deserialize(json_string)
     local new_state = am.parse_json(json_string)
 
     if new_state.version ~= version then
-        log("loading old save data.")
-        return nil
+        log("loading incompatible old save data. starting a fresh game instead.")
+        return get_initial_game_state()
     end
 
     new_state.map = random_map(new_state.seed)

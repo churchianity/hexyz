@@ -216,7 +216,8 @@ function make_hex_grid_scene(map)
 
     -- add the magenta diamond that represents 'home'
     world:append(
-        am.circle(hex_to_pixel(HEX_GRID_CENTER, vec2(HEX_SIZE)), HEX_SIZE/2, COLORS.MAGENTA, 4)
+        am.translate(hex_to_pixel(HEX_GRID_CENTER, vec2(HEX_SIZE)))
+        ^ pack_texture_into_sprite(TEXTURES.GEM1, HEX_SIZE, HEX_SIZE*1.1)
     )
 
     apply_flow_field(map, generate_flow_field(map, HEX_GRID_CENTER), world)
