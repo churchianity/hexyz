@@ -16,7 +16,7 @@ local TRDTS = {
 }
 
 local function get_initial_game_state(seed)
-    local STARTING_MONEY = 50
+    local STARTING_MONEY = 75
 
     local map = random_map(seed)
     local world = make_hex_grid_scene(map)
@@ -90,13 +90,15 @@ local function get_wave_time(current_wave)
     return 45
 end
 
+local BASE_BREAK_TIME = 20
 local function get_break_time(current_wave)
-    return 20
+    return BASE_BREAK_TIME - math.min(BASE_BREAK_TIME, BASE_BREAK_TIME / (1 / math.log(state.current_wave + 1)))
 end
 
 local function do_day_night_cycle()
-    local tstep = (math.sin(state.time * am.delta_time) + 1) / 100
-    state.world"negative_mask".color = vec4(tstep){a=1}
+    --
+    --local tstep = (math.sin(state.time * am.delta_time) + 1) / 100
+    --state.world"negative_mask".color = vec4(tstep){a=1}
 end
 
 local function game_pause()
@@ -226,7 +228,7 @@ local function game_action(scene)
             state.spawning = true
 
             -- calculate spawn chance for next wave
-            state.spawn_chance = math.log(state.current_wave)/90 + 0.002
+            state.spawn_chance = math.log(state.current_wave)/80 + 0.002
 
             state.time_until_next_break = get_wave_time(state.current_wave)
         end

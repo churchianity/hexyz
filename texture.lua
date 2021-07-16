@@ -58,6 +58,10 @@ TEXTURES = {
     -- mob stuff
     MOB_BEEPER              = load_texture("res/mob_beeper.png"),
     MOB_SPOODER             = load_texture("res/mob_spooder.png"),
+    MOB_VELKOOZ             = load_texture("res/mob_velkooz.png"),
+    MOB_VELKOOZ1            = load_texture("res/mob_velkooz1.png"),
+    MOB_VELKOOZ2            = load_texture("res/mob_velkooz2.png"),
+    MOB_VELKOOZ3            = load_texture("res/mob_velkooz3.png"),
 }
 
 function pack_texture_into_sprite(texture, width, height, color)

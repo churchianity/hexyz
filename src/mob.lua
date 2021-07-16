@@ -1,7 +1,8 @@
 
 MOB_TYPE = {
     BEEPER = 1,
-    SPOODER = 2
+    SPOODER = 2,
+    VELKOOZ = 3,
 }
 
 MAX_MOB_SIZE = hex_height(HEX_SIZE, HEX_ORIENTATION.FLAT) / 2
@@ -10,16 +11,22 @@ MOB_SIZE = MAX_MOB_SIZE
 local MOB_SPECS = {
     [MOB_TYPE.BEEPER] = {
         health = 30,
-        speed = 8,
+        speed = 6,
         bounty = 5,
         hurtbox_radius = MOB_SIZE/2
     },
     [MOB_TYPE.SPOODER] = {
-        health = 20,
+        health = 15,
         speed = 10,
         bounty = 5,
         hurtbox_radius = MOB_SIZE/2
-    }
+    },
+    [MOB_TYPE.VELKOOZ] = {
+        health = 10,
+        speed = 20,
+        bounty = 40,
+        hurtbox_radius = MOB_SIZE/2 - 2
+    },
 }
 
 function get_mob_health(mob_type)
@@ -109,6 +116,13 @@ function make_mob_node(mob_type, mob)
         return am.group{
             am.rotate(0)
             ^ pack_texture_into_sprite(TEXTURES.MOB_SPOODER, MOB_SIZE, MOB_SIZE),
+            am.translate(0, -10)
+            ^ healthbar
+        }
+    elseif mob_type == MOB_TYPE.VELKOOZ then
+        return am.group{
+            am.rotate(0)
+            ^ pack_texture_into_sprite(TEXTURES.MOB_VELKOOZ, MOB_SIZE*2, MOB_SIZE*2):tag"velk_sprite",
             am.translate(0, -10)
             ^ healthbar
         }
@@ -205,6 +219,45 @@ local function resolve_frame_target_for_mob(mob, mob_index)
     end
 end
 
+local function update_mob_velkooz(mob, mob_index)
+    resolve_frame_target_for_mob(mob, mob_index)
+
+    if mob.frame_target then
+        if mob_can_pass_through(mob, mob.frame_target) then
+            local from = hex_map_get(state.map, mob.hex)
+            local to = hex_map_get(state.map, mob.frame_target)
+            local rate = mob.speed * am.delta_time
+
+            mob.position = mob.position + math.normalize(hex_to_pixel(mob.frame_target, vec2(HEX_SIZE)) - mob.position) * rate
+            mob.node.position2d = mob.position
+
+        else
+            mob.frame_target = false
+        end
+    else
+        --log('no targetssdsdsdsdsd')
+    end
+
+    local theta = math.rad(90) - math.atan((HEX_GRID_CENTER.y - mob.position.y)/(HEX_GRID_CENTER.x - mob.position.x))
+    local diff = mob.node("rotate").angle - theta
+
+    mob.node("rotate").angle = -theta + math.pi/2
+
+    local roll = math.floor((state.time - mob.TOB) * 10) % 4
+    if roll == 0 then
+        mob.node"velk_sprite".source = "res/mob_velkooz0.png"
+
+    elseif roll == 1 then
+        mob.node"velk_sprite".source = "res/mob_velkooz1.png"
+
+    elseif roll == 2 then
+        mob.node"velk_sprite".source = "res/mob_velkooz2.png"
+
+    elseif roll == 3 then
+        mob.node"velk_sprite".source = "res/mob_velkooz3.png"
+    end
+end
+
 local function update_mob_spooder(mob, mob_index)
     resolve_frame_target_for_mob(mob, mob_index)
 
@@ -270,6 +323,9 @@ local function get_mob_update_function(mob_type)
 
     elseif mob_type == MOB_TYPE.SPOODER then
         return update_mob_spooder
+
+    elseif mob_type == MOB_TYPE.VELKOOZ then
+        return update_mob_velkooz
     end
 end
 
@@ -288,6 +344,15 @@ local function make_and_register_mob(mob_type)
     mob.bounty = grow_mob_bounty(mob_type, spec.bounty, state.time)
     mob.hurtbox_radius = spec.hurtbox_radius
     mob.healthbar = mob.node:child(1):child(2):child(1) -- lmao
+
+    if mob.type == MOB_TYPE.VELKOOZ then
+        mob.states = {
+            pack_texture_into_sprite(TEXTURES.VELKOOZ, MOB_SIZE, MOB_SIZE):tag"velk_sprite",
+            pack_texture_into_sprite(TEXTURES.VELKOOZ1, MOB_SIZE, MOB_SIZE):tag"velk_sprite",
+            pack_texture_into_sprite(TEXTURES.VELKOOZ2, MOB_SIZE, MOB_SIZE):tag"velk_sprite",
+            pack_texture_into_sprite(TEXTURES.VELKOOZ3, MOB_SIZE, MOB_SIZE):tag"velk_sprite",
+        }
+    end
 
     register_entity(state.mobs, mob)
     return mob
@@ -325,10 +390,11 @@ end
 
 function do_mob_spawning()
     if can_spawn_mob() then
+        make_and_register_mob(MOB_TYPE.VELKOOZ)
         if state.current_wave % 2 == 0 then
-            make_and_register_mob(MOB_TYPE.SPOODER)
+            --make_and_register_mob(MOB_TYPE.SPOODER)
         else
-            make_and_register_mob(MOB_TYPE.BEEPER)
+            --make_and_register_mob(MOB_TYPE.BEEPER)
         end
     end
 end

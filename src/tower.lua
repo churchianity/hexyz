@@ -39,7 +39,7 @@ local TOWER_SPECS = {
     },
     [TOWER_TYPE.HOWITZER] = {
         name = "Howitzer",
-        placement_rules_text = "Place on non-Water, non-Mountain",
+        placement_rules_text = "Place on Ground, with a 1 space gap between other towers and mountains - walls/moats don't count.",
         short_description = "Medium-range, medium fire-rate area of effect artillery tower.",
         texture = TEXTURES.TOWER_HOWITZER,
         icon_texture = TEXTURES.TOWER_HOWITZER_ICON,
@@ -51,11 +51,11 @@ local TOWER_SPECS = {
     },
     [TOWER_TYPE.REDEYE] = {
         name = "Redeye",
-        placement_rules_text = "Place on Mountains",
+        placement_rules_text = "Place on Mountains.",
         short_description = "Long-range, penetrating high-velocity laser tower.",
         texture = TEXTURES.TOWER_REDEYE,
         icon_texture = TEXTURES.TOWER_REDEYE_ICON,
-        cost = 140,
+        cost = 75,
         range = 9,
         fire_rate = 3,
         size = 0,
@@ -451,6 +451,9 @@ function tower_type_is_buildable_on(hex, tile, tower_type)
     -- this function gets polled a lot, and sometimes with nil/false tower types
     if not tower_type then return false end
 
+    -- you can't build anything in the center
+    if hex == HEX_GRID_CENTER then return false end
+
     local blocking_towers = {}
     local blocking_mobs = {}
     local has_water = false
@@ -481,17 +484,50 @@ function tower_type_is_buildable_on(hex, tile, tower_type)
     local mobs_blocking = table.count(blocking_mobs) ~= 0
     local blocked = mobs_blocking or towers_blocking
 
-    -- @TODO i think the howitzer and gattler should not be placeable next to other towers other than the wall and moat, and perhaps not next to mountains either
     if tower_type == TOWER_TYPE.GATTLER then
+        local has_mountain_neighbour = false
+        local has_non_wall_non_moat_tower_neighbour = false
+        for _,h in pairs(hex_neighbours(hex)) do
+            local tile = hex_map_get(state.map, h)
+
+            if tile and tile.elevation >=  0.5 then
+                has_mountain_neighbour = true
+                break
+            end
+        end
         return not (blocked or has_water or has_mountain)
 
     elseif tower_type == TOWER_TYPE.HOWITZER then
-        return not (blocked or has_water or has_mountain)
+        local has_mountain_neighbour = false
+        local has_non_wall_non_moat_tower_neighbour = false
+        for _,h in pairs(hex_neighbours(hex)) do
+            local towers = towers_on_hex(h)
+            local wall_on_hex = false
+            has_non_wall_non_moat_tower_neighbour = table.find(towers, function(tower)
+                if tower.type == TOWER_TYPE.WALL then
+                    wall_on_hex = true
+                    return false
+
+                elseif tower.type == TOWER_TYPE.MOAT then
+                    return false
+                end
+
+                return true
+            end)
+            if has_non_wall_non_moat_tower_neighbour then
+                break
+            end
+
+            local tile = hex_map_get(state.map, h)
+            if not wall_on_hex and tile and tile.elevation >= 0.5 then
+                has_mountain_neighbour = true
+                break
+            end
+        end
+        return not (blocked or has_water or has_mountain or has_mountain_neighbour or has_non_wall_non_moat_tower_neighbour)
 
     elseif tower_type == TOWER_TYPE.REDEYE then
         return not blocked
-               and not has_water
-               and not has_ground
                and has_mountain
 
     elseif tower_type == TOWER_TYPE.LIGHTHOUSE then

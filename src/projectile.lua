@@ -13,7 +13,7 @@ local PROJECTILE_SPECS = {
     },
     [PROJECTILE_TYPE.LASER] = {
         velocity = 35,
-        damage = 20,
+        damage = 14,
         hitbox_radius = 20
     },
     [PROJECTILE_TYPE.BULLET] = {
