@@ -25,7 +25,7 @@ local MOB_SPECS = {
         health = 10,
         speed = 20,
         bounty = 40,
-        hurtbox_radius = MOB_SIZE/2 - 2
+        hurtbox_radius = MOB_SIZE
     },
 }
 
@@ -107,7 +107,7 @@ function make_mob_node(mob_type, mob)
 
     if mob_type == MOB_TYPE.BEEPER then
         return am.group{
-            am.rotate(am.current_time()) -- state.time is not garunteed to be set when deserializing
+            am.rotate(mob.TOB)
             ^ pack_texture_into_sprite(TEXTURES.MOB_BEEPER, MOB_SIZE, MOB_SIZE),
             am.translate(0, -10)
             ^ healthbar
@@ -122,7 +122,7 @@ function make_mob_node(mob_type, mob)
     elseif mob_type == MOB_TYPE.VELKOOZ then
         return am.group{
             am.rotate(0)
-            ^ pack_texture_into_sprite(TEXTURES.MOB_VELKOOZ, MOB_SIZE*2, MOB_SIZE*2):tag"velk_sprite",
+            ^ pack_texture_into_sprite(TEXTURES.MOB_VELKOOZ, MOB_SIZE*4, MOB_SIZE*4):tag"velk_sprite",
             am.translate(0, -10)
             ^ healthbar
         }
@@ -390,11 +390,10 @@ end
 
 function do_mob_spawning()
     if can_spawn_mob() then
-        make_and_register_mob(MOB_TYPE.VELKOOZ)
         if state.current_wave % 2 == 0 then
-            --make_and_register_mob(MOB_TYPE.SPOODER)
+            make_and_register_mob(MOB_TYPE.SPOODER)
         else
-            --make_and_register_mob(MOB_TYPE.BEEPER)
+            make_and_register_mob(MOB_TYPE.BEEPER)
         end
     end
 end

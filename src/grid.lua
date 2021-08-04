@@ -38,7 +38,7 @@ end
 -- amulet puts 0,0 in the middle of the screen
 -- transform coordinates by this to pretend 0,0 is elsewhere
 -- note this is isn't necessary when adding stuff to the worldspace in general,
--- because the whole worldspace is translated by this constant
+-- because the worldspace parent node should be translated by this constant
 WORLDSPACE_COORDINATE_OFFSET = -HEX_GRID_PIXEL_DIMENSIONS/2
 
 -- the outer edges of the map are not interactable
@@ -69,9 +69,6 @@ HEX_GRID_MAXIMUM_ELEVATION = 1
 function grid_cost(map, from, to)
     local t1, t2 = hex_map_get(map, from), hex_map_get(map, to)
 
-    -- i have no fucking clue why, but adding +0.2 to the end of this fixes a bug where sometimes two (or more)
-    -- equivalent paths are found and mobs backpedal trying to decide between them
-    -- (seed 2014 at time of writing has this at the bottom)
     local elevation_epsilon = HEX_GRID_MAXIMUM_ELEVATION - HEX_GRID_MINIMUM_ELEVATION + 0.2
     local elevation_cost = 2 + math.abs(t1.elevation)^0.5 - math.abs(t2.elevation)^0.5
 
@@ -171,7 +168,7 @@ function map_elevation_color(elevation)
         return COLORS.MOUNTAIN{ ra = elevation }
 
     else
-        -- @TODO probably fix... this only happens when loading a save, and the tile has an elevation that's
+        -- this only happens when loading a save, and the tile has an elevation that's
         -- higher that anything here. it isn't really of any consequence though
         return vec4(0)
     end

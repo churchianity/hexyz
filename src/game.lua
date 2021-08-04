@@ -96,7 +96,8 @@ local function get_break_time(current_wave)
 end
 
 local function do_day_night_cycle()
-    --
+    -- this is a bad idea, atleast with the current bad rendering strategy of not using a single draw call
+    -- i get flickering as the light level increases
     --local tstep = (math.sin(state.time * am.delta_time) + 1) / 100
     --state.world"negative_mask".color = vec4(tstep){a=1}
 end
