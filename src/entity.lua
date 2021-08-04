@@ -17,7 +17,7 @@ entity structure:
 function make_basic_entity(hex, update, position)
     local entity = {}
 
-    entity.TOB = state.time
+    entity.TOB = game_state.time
 
     -- usually you'll provide a hex and not a position, and the entity will spawn in the center
     -- of the hex. if you want an entity to exist not at the center of a hex, you can provide a
@@ -41,14 +41,14 @@ end
 
 function register_entity(t, entity)
     table.insert(t, entity)
-    state.world:append(entity.node)
+    game_state.world:append(entity.node)
 end
 
--- |t| is the source table, probably state.mobs, state.towers, or state.projectiles
+-- |t| is the source table, probably game_state.mobs, game_state.towers, or game_state.projectiles
 function delete_entity(t, index)
     if not t then error("splat!") end
 
-    state.world:remove(t[index].node)
+    game_state.world:remove(t[index].node)
     t[index] = false -- leave empty indexes so other entities can learn that this entity was deleted
 end
 

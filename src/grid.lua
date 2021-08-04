@@ -122,7 +122,7 @@ function building_tower_breaks_flow_field(tower_type, hex)
     local all_impassable = true
     local hexes = hex_spiral_map(hex, get_tower_size(tower_type))
     for _,h in pairs(hexes) do
-        local tile = hex_map_get(state.map, h)
+        local tile = hex_map_get(game_state.map, h)
 
         if all_impassable and mob_can_pass_through(nil, h) then
             all_impassable = false
@@ -136,19 +136,19 @@ function building_tower_breaks_flow_field(tower_type, hex)
 
     -- if no mobs can pass over any of the tiles we're building on
     -- there is no need to regenerate the flow field, or do anything more
-    -- (besides return all the tile's elevations back to their original state)
+    -- (besides return all the tile's elevations back to their original game_state)
     if all_impassable then
         for i,h in pairs(hexes) do
-            hex_map_get(state.map, h).elevation = original_elevations[i]
+            hex_map_get(game_state.map, h).elevation = original_elevations[i]
         end
         return false
     end
 
-    local flow_field = generate_flow_field(state.map, HEX_GRID_CENTER)
+    local flow_field = generate_flow_field(game_state.map, HEX_GRID_CENTER)
     local result = not hex_map_get(flow_field, 0, 0)
 
     for i,h in pairs(hexes) do
-        hex_map_get(state.map, h).elevation = original_elevations[i]
+        hex_map_get(game_state.map, h).elevation = original_elevations[i]
     end
 
     return result, flow_field

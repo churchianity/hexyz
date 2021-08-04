@@ -37,18 +37,18 @@ function get_mob_spec(mob_type)
 end
 
 local function grow_mob_health(mob_type, spec_health, time)
-    return spec_health + math.pow(state.current_wave - 1, 2)
+    return spec_health + math.pow(game_state.current_wave - 1, 2)
 end
 local function grow_mob_speed(mob_type, spec_speed, time)
-    return spec_speed + math.log(state.current_wave + 1)
+    return spec_speed + math.log(game_state.current_wave + 1)
 end
 local function grow_mob_bounty(mob_type, spec_bounty, time)
-    return spec_bounty + (state.current_wave - 1) * 2
+    return spec_bounty + (game_state.current_wave - 1) * 2
 end
 
 function mobs_on_hex(hex)
     local t = {}
-    for mob_index,mob in pairs(state.mobs) do
+    for mob_index,mob in pairs(game_state.mobs) do
         if mob and mob.hex == hex then
             table.insert(t, mob_index, mob)
         end
@@ -58,25 +58,25 @@ end
 
 function mob_on_hex(hex)
     -- table.find returns i,v in the table
-    return table.find(state.mobs, function(mob)
+    return table.find(game_state.mobs, function(mob)
         return mob and mob.hex == hex
     end)
 end
 
 -- check if a the tile at |hex| is passable by |mob|
 function mob_can_pass_through(mob, hex)
-    local tile = hex_map_get(state.map, hex)
+    local tile = hex_map_get(game_state.map, hex)
     return tile_is_medium_elevation(tile)
 end
 
 function mob_die(mob, mob_index)
     vplay_sfx(SOUNDS.EXPLOSION1)
-    delete_entity(state.mobs, mob_index)
+    delete_entity(game_state.mobs, mob_index)
 end
 
 function mob_reach_center(mob, mob_index)
     update_score(-(mob.health + mob.bounty))
-    delete_entity(state.mobs, mob_index)
+    delete_entity(game_state.mobs, mob_index)
 end
 
 local HEALTHBAR_WIDTH = HEX_PIXEL_WIDTH/2
@@ -89,7 +89,7 @@ function do_hit_mob(mob, damage, mob_index)
         mob_die(mob, mob_index)
     else
         mob.healthbar:action(coroutine.create(function(self)
-            local x2 = -HEALTHBAR_WIDTH/2 + mob.health/grow_mob_health(mob.type, get_mob_health(mob.type), state.time) * HEALTHBAR_WIDTH/2
+            local x2 = -HEALTHBAR_WIDTH/2 + mob.health/grow_mob_health(mob.type, get_mob_health(mob.type), game_state.time) * HEALTHBAR_WIDTH/2
             self:child(2).x2 = x2
             self.hidden = false
             am.wait(am.delay(0.8))
@@ -185,16 +185,16 @@ local function resolve_frame_target_for_mob(mob, mob_index)
             end
         else
             -- use the map's flow field - gotta find the the best neighbour
-            local neighbours = grid_neighbours(state.map, mob.hex)
+            local neighbours = grid_neighbours(game_state.map, mob.hex)
 
             if #neighbours > 0 then
                 local first_neighbour = neighbours[1]
-                tile = hex_map_get(state.map, first_neighbour)
+                tile = hex_map_get(game_state.map, first_neighbour)
                 local lowest_cost_hex = first_neighbour
                 local lowest_cost = tile.priority or 0
 
                 for _,n in pairs(neighbours) do
-                    tile = hex_map_get(state.map, n)
+                    tile = hex_map_get(game_state.map, n)
 
                     if not tile.priority then
                         -- if there's no stored priority, that should mean it's the center tile
@@ -224,8 +224,8 @@ local function update_mob_velkooz(mob, mob_index)
 
     if mob.frame_target then
         if mob_can_pass_through(mob, mob.frame_target) then
-            local from = hex_map_get(state.map, mob.hex)
-            local to = hex_map_get(state.map, mob.frame_target)
+            local from = hex_map_get(game_state.map, mob.hex)
+            local to = hex_map_get(game_state.map, mob.frame_target)
             local rate = mob.speed * am.delta_time
 
             mob.position = mob.position + math.normalize(hex_to_pixel(mob.frame_target, vec2(HEX_SIZE)) - mob.position) * rate
@@ -243,7 +243,7 @@ local function update_mob_velkooz(mob, mob_index)
 
     mob.node("rotate").angle = -theta + math.pi/2
 
-    local roll = math.floor((state.time - mob.TOB) * 10) % 4
+    local roll = math.floor((game_state.time - mob.TOB) * 10) % 4
     if roll == 0 then
         mob.node"velk_sprite".source = "res/mob_velkooz0.png"
 
@@ -267,8 +267,8 @@ local function update_mob_spooder(mob, mob_index)
         -- or between when we last calculated this target and now
         -- check for that now
         if mob_can_pass_through(mob, mob.frame_target) then
-            local from = hex_map_get(state.map, mob.hex)
-            local to = hex_map_get(state.map, mob.frame_target)
+            local from = hex_map_get(game_state.map, mob.hex)
+            local to = hex_map_get(game_state.map, mob.frame_target)
             local spider_speed = ((math.simplex(mob.hex) + 1.5) * 1.5) ^ 2
             local rate = (spider_speed * mob.speed - math.abs(to.elevation - from.elevation)) * am.delta_time
 
@@ -296,8 +296,8 @@ local function update_mob_beeper(mob, mob_index)
         -- or between when we last calculated this target and now
         -- check for that now
         if mob_can_pass_through(mob, mob.frame_target) then
-            local from = hex_map_get(state.map, mob.hex)
-            local to = hex_map_get(state.map, mob.frame_target)
+            local from = hex_map_get(game_state.map, mob.hex)
+            local to = hex_map_get(game_state.map, mob.frame_target)
             local rate = (4 * mob.speed - math.abs(to.elevation - from.elevation)) * am.delta_time
 
             mob.position = mob.position + math.normalize(hex_to_pixel(mob.frame_target, vec2(HEX_SIZE)) - mob.position) * rate
@@ -339,14 +339,14 @@ local function make_and_register_mob(mob_type)
     mob.node = am.translate(mob.position) ^ make_mob_node(mob_type, mob)
 
     local spec = get_mob_spec(mob_type)
-    mob.health = grow_mob_health(mob_type, spec.health, state.time)
-    mob.speed = grow_mob_speed(mob_type, spec.speed, state.time)
-    mob.bounty = grow_mob_bounty(mob_type, spec.bounty, state.time)
+    mob.health = grow_mob_health(mob_type, spec.health, game_state.time)
+    mob.speed = grow_mob_speed(mob_type, spec.speed, game_state.time)
+    mob.bounty = grow_mob_bounty(mob_type, spec.bounty, game_state.time)
     mob.hurtbox_radius = spec.hurtbox_radius
     mob.healthbar = mob.node:child(1):child(2):child(1) -- lmao
 
     if mob.type == MOB_TYPE.VELKOOZ then
-        mob.states = {
+        mob.game_states = {
             pack_texture_into_sprite(TEXTURES.VELKOOZ, MOB_SIZE, MOB_SIZE):tag"velk_sprite",
             pack_texture_into_sprite(TEXTURES.VELKOOZ1, MOB_SIZE, MOB_SIZE):tag"velk_sprite",
             pack_texture_into_sprite(TEXTURES.VELKOOZ2, MOB_SIZE, MOB_SIZE):tag"velk_sprite",
@@ -354,7 +354,7 @@ local function make_and_register_mob(mob_type)
         }
     end
 
-    register_entity(state.mobs, mob)
+    register_entity(game_state.mobs, mob)
     return mob
 end
 
@@ -376,12 +376,12 @@ end
 
 local function can_spawn_mob()
     local MAX_SPAWN_RATE = 0.1
-    if not state.spawning or (state.time - state.last_mob_spawn_time) < MAX_SPAWN_RATE then
+    if not game_state.spawning or (game_state.time - game_state.last_mob_spawn_time) < MAX_SPAWN_RATE then
         return false
     end
 
-    if math.random() <= state.spawn_chance then
-        state.last_mob_spawn_time = state.time
+    if math.random() <= game_state.spawn_chance then
+        game_state.last_mob_spawn_time = game_state.time
         return true
     else
         return false
@@ -390,7 +390,7 @@ end
 
 function do_mob_spawning()
     if can_spawn_mob() then
-        if state.current_wave % 2 == 0 then
+        if game_state.current_wave % 2 == 0 then
             make_and_register_mob(MOB_TYPE.SPOODER)
         else
             make_and_register_mob(MOB_TYPE.BEEPER)
@@ -399,7 +399,7 @@ function do_mob_spawning()
 end
 
 function do_mob_updates()
-    for mob_index,mob in pairs(state.mobs) do
+    for mob_index,mob in pairs(game_state.mobs) do
         if mob and mob.update then
             mob.update(mob, mob_index)
         end

@@ -1,6 +1,6 @@
 
 game = false -- flag to tell if there is a game running
-state = {}
+game_state = {}
 
 -- top right display types
 -- f1 toggles what is displayed in the top right of the screen
@@ -48,10 +48,10 @@ local function get_initial_game_state(seed)
 end
 
 local function get_wave_timer_text()
-    if state.spawning then
-        return string.format("WAVE (%d) OVER: %.2f", state.current_wave, state.time_until_next_break)
+    if game_state.spawning then
+        return string.format("WAVE (%d) OVER: %.2f", game_state.current_wave, game_state.time_until_next_break)
     else
-        return string.format("NEXT WAVE (%d): %.2f", state.current_wave, state.time_until_next_wave)
+        return string.format("NEXT WAVE (%d): %.2f", game_state.current_wave, game_state.time_until_next_wave)
     end
 end
 
@@ -73,10 +73,10 @@ local function get_top_right_display_text(hex, evenq, centered_evenq, display_ty
         str = table.tostring(am.perf_stats())
 
     elseif display_type == TRDTS.SEED then
-        str = "SEED: " .. state.map.seed
+        str = "SEED: " .. game_state.map.seed
 
     elseif display_type == TRDTS.TILE then
-        str = table.tostring(hex_map_get(state.map, hex))
+        str = table.tostring(hex_map_get(game_state.map, hex))
     end
     return str
 end
@@ -91,14 +91,14 @@ end
 
 local BASE_BREAK_TIME = 20
 local function get_break_time(current_wave)
-    return BASE_BREAK_TIME - math.min(BASE_BREAK_TIME, BASE_BREAK_TIME / (1 / math.log(state.current_wave + 1)))
+    return BASE_BREAK_TIME - math.min(BASE_BREAK_TIME, BASE_BREAK_TIME / (1 / math.log(game_state.current_wave + 1)))
 end
 
 local function do_day_night_cycle()
     -- this is a bad idea, atleast with the current bad rendering strategy of not using a single draw call
     -- i get flickering as the light level increases
-    --local tstep = (math.sin(state.time * am.delta_time) + 1) / 100
-    --state.world"negative_mask".color = vec4(tstep){a=1}
+    --local tstep = (math.sin(game_state.time * am.delta_time) + 1) / 100
+    --game_state.world"negative_mask".color = vec4(tstep){a=1}
 end
 
 local function game_pause()
@@ -110,48 +110,48 @@ end
 local function game_deserialize(json_string)
     local new_state = am.parse_json(json_string)
 
-    if new_state.version ~= version then
+    if new_game_state.version ~= version then
         log("loading incompatible old save data. starting a fresh game instead.")
         return get_initial_game_state()
     end
 
-    new_state.map = random_map(new_state.seed)
-    new_state.world = make_hex_grid_scene(new_state.map)
-    new_state.seed = nil
+    new_game_state.map = random_map(new_game_state.seed)
+    new_game_state.world = make_hex_grid_scene(new_game_state.map)
+    new_game_state.seed = nil
 
-    for i,t in pairs(new_state.towers) do
+    for i,t in pairs(new_game_state.towers) do
         if t then
-            new_state.towers[i] = tower_deserialize(t)
+            new_game_state.towers[i] = tower_deserialize(t)
 
-            for _,h in pairs(new_state.towers[i].hexes) do
-                local tile = hex_map_get(new_state.map, h.x, h.y)
-                tile.elevation = tile.elevation + new_state.towers[i].height
+            for _,h in pairs(new_game_state.towers[i].hexes) do
+                local tile = hex_map_get(new_game_state.map, h.x, h.y)
+                tile.elevation = tile.elevation + new_game_state.towers[i].height
             end
 
             -- @STATEFUL, shouldn't be done here
-            new_state.world:append(new_state.towers[i].node)
+            new_game_state.world:append(new_game_state.towers[i].node)
         end
     end
 
     -- after we have re-constituted all of the towers and modified the map's elevations accordingly,
     -- we should re-calc the flow-field
-    apply_flow_field(new_state.map, generate_flow_field(new_state.map, HEX_GRID_CENTER), new_state.world)
+    apply_flow_field(new_game_state.map, generate_flow_field(new_game_state.map, HEX_GRID_CENTER), new_game_state.world)
 
-    for i,m in pairs(new_state.mobs) do
+    for i,m in pairs(new_game_state.mobs) do
         if m then
-            new_state.mobs[i] = mob_deserialize(m)
+            new_game_state.mobs[i] = mob_deserialize(m)
 
             -- @STATEFUL, shouldn't be done here
-            new_state.world:append(new_state.mobs[i].node)
+            new_game_state.world:append(new_game_state.mobs[i].node)
         end
     end
 
-    for i,p in pairs(new_state.projectiles) do
+    for i,p in pairs(new_game_state.projectiles) do
         if p then
-            new_state.projectiles[i] = projectile_deserialize(p)
+            new_game_state.projectiles[i] = projectile_deserialize(p)
 
             -- @STATEFUL, shouldn't be done here
-            new_state.world:append(new_state.projectiles[i].node)
+            new_game_state.world:append(new_game_state.projectiles[i].node)
         end
     end
 
@@ -162,7 +162,7 @@ local function game_serialize()
     local serialized = table.shallow_copy(state)
     serialized.version = version
 
-    serialized.seed = state.map.seed
+    serialized.seed = game_state.map.seed
     serialized.map = nil -- we re-generate the entire map from the seed on de-serialize
 
     -- in order to serialize the game state, we have to convert all relevant userdata into
@@ -174,21 +174,21 @@ local function game_serialize()
     -- this is dumb and if i forsaw this i would have probably used float arrays instead of vectors
 
     serialized.towers = {}
-    for i,t in pairs(state.towers) do
+    for i,t in pairs(game_state.towers) do
         if t then
             serialized.towers[i] = tower_serialize(t)
         end
     end
 
     serialized.mobs = {}
-    for i,m in pairs(state.mobs) do
+    for i,m in pairs(game_state.mobs) do
         if m then
             serialized.mobs[i] = mob_serialize(m)
         end
     end
 
     serialized.projectiles = {}
-    for i,p in pairs(state.projectiles) do
+    for i,p in pairs(game_state.projectiles) do
         if p then
             serialized.projectiles[i] = projectile_serialize(p)
         end
@@ -202,35 +202,35 @@ local function deselect_tile()
 end
 
 local function game_action(scene)
-    if state.score < 0 then game_end() return true end
+    if game_state.score < 0 then game_end() return true end
 
     local perf = am.perf_stats()
-    state.time = state.time + am.delta_time
-    state.score = state.score + am.delta_time
+    game_state.time = game_state.time + am.delta_time
+    game_state.score = game_state.score + am.delta_time
 
-    if state.spawning then
-        state.time_until_next_break = state.time_until_next_break - am.delta_time
+    if game_state.spawning then
+        game_state.time_until_next_break = game_state.time_until_next_break - am.delta_time
 
-        if state.time_until_next_break <= 0 then
-            state.time_until_next_break = 0
-            state.current_wave = state.current_wave + 1
+        if game_state.time_until_next_break <= 0 then
+            game_state.time_until_next_break = 0
+            game_state.current_wave = game_state.current_wave + 1
 
-            state.spawning = false
+            game_state.spawning = false
 
-            state.time_until_next_wave = get_break_time(state.current_wave)
+            game_state.time_until_next_wave = get_break_time(game_state.current_wave)
         end
     else
-        state.time_until_next_wave = state.time_until_next_wave - am.delta_time
+        game_state.time_until_next_wave = game_state.time_until_next_wave - am.delta_time
 
-        if state.time_until_next_wave <= 0 then
-            state.time_until_next_wave = 0
+        if game_state.time_until_next_wave <= 0 then
+            game_state.time_until_next_wave = 0
 
-            state.spawning = true
+            game_state.spawning = true
 
             -- calculate spawn chance for next wave
-            state.spawn_chance = math.log(state.current_wave)/80 + 0.002
+            game_state.spawn_chance = math.log(game_state.current_wave)/80 + 0.002
 
-            state.time_until_next_break = get_wave_time(state.current_wave)
+            game_state.time_until_next_break = get_wave_time(game_state.current_wave)
         end
     end
 
@@ -240,18 +240,18 @@ local function game_action(scene)
     local evenq          = hex_to_evenq(hex)
     local centered_evenq = evenq{ y = -evenq.y } - vec2(math.floor(HEX_GRID_WIDTH/2)
                                                       , math.floor(HEX_GRID_HEIGHT/2))
-    local tile = hex_map_get(state.map, hex)
+    local tile = hex_map_get(game_state.map, hex)
 
     local interactable = evenq_is_in_interactable_region(evenq{ y = -evenq.y })
-    local buildable = tower_type_is_buildable_on(hex, tile, state.selected_tower_type)
+    local buildable = tower_type_is_buildable_on(hex, tile, game_state.selected_tower_type)
 
     if win:mouse_pressed"left" then
         deselect_tile()
 
         if interactable then
             if buildable then
-                local broken, flow_field = building_tower_breaks_flow_field(state.selected_tower_type, hex)
-                local cost = get_tower_cost(state.selected_tower_type)
+                local broken, flow_field = building_tower_breaks_flow_field(game_state.selected_tower_type, hex)
+                local cost = get_tower_cost(game_state.selected_tower_type)
 
                 if broken then
                     local node = win.scene("cursor"):child(2)
@@ -260,7 +260,7 @@ local function game_action(scene)
                     play_sfx(SOUNDS.BIRD2)
                     alert("closes the circle")
 
-                elseif cost > state.money then
+                elseif cost > game_state.money then
                     local node = win.scene("cursor"):child(2)
                     node.color = COLORS.CLARET
                     node:action(am.tween(0.1, { color = COLORS.TRANSPARENT }))
@@ -269,10 +269,10 @@ local function game_action(scene)
 
                 else
                     update_money(-cost)
-                    build_tower(hex, state.selected_tower_type, flow_field)
+                    build_tower(hex, game_state.selected_tower_type, flow_field)
 
                     if flow_field then
-                        apply_flow_field(state.map, flow_field, state.world)
+                        apply_flow_field(game_state.map, flow_field, game_state.world)
                     end
                 end
             else
@@ -307,19 +307,19 @@ local function game_action(scene)
         game_pause()
 
     elseif win:key_pressed"f1" then
-        state.selected_top_right_display_type = (state.selected_top_right_display_type + 1) % #table.keys(TRDTS)
+        game_state.selected_top_right_display_type = (game_state.selected_top_right_display_type + 1) % #table.keys(TRDTS)
 
     elseif win:key_pressed"f2" then
-        state.world"flow_field".hidden = not state.world"flow_field".hidden
+        game_state.world"flow_field".hidden = not game_state.world"flow_field".hidden
 
     elseif win:key_pressed"f3" then
         game_save()
 
     elseif win:key_pressed"tab" then
         if win:key_down"lshift" then
-            select_toolbelt_button((state.selected_toolbelt_button + table.count(TOWER_TYPE) - 2) % table.count(TOWER_TYPE) + 1)
+            select_toolbelt_button((game_state.selected_toolbelt_button + table.count(TOWER_TYPE) - 2) % table.count(TOWER_TYPE) + 1)
         else
-            select_toolbelt_button((state.selected_toolbelt_button) % table.count(TOWER_TYPE) + 1)
+            select_toolbelt_button((game_state.selected_toolbelt_button) % table.count(TOWER_TYPE) + 1)
         end
     elseif win:key_pressed"1" then select_toolbelt_button( 1)
     elseif win:key_pressed"2" then select_toolbelt_button( 2)
@@ -336,7 +336,7 @@ local function game_action(scene)
     end
 
     do_entity_updates()
-    do_mob_spawning(state.spawn_chance)
+    do_mob_spawning(game_state.spawn_chance)
     do_day_night_cycle()
 
     -- update the cursor
@@ -344,7 +344,7 @@ local function game_action(scene)
         win.scene("cursor").hidden = true
 
     else
-        if state.selected_tower_type then
+        if game_state.selected_tower_type then
             if buildable then
                 win.scene("cursor").hidden = false
 
@@ -358,10 +358,10 @@ local function game_action(scene)
         win.scene("cursor_translate").position2d = rounded_mouse
     end
 
-    win.scene("score").text = string.format("SCORE: %.2f", state.score)
-    win.scene("money").text = string.format("MONEY: $%d", state.money)
+    win.scene("score").text = string.format("SCORE: %.2f", game_state.score)
+    win.scene("money").text = string.format("MONEY: $%d", game_state.money)
     win.scene("wave_timer").text = get_wave_timer_text()
-    win.scene("top_right_display").text = get_top_right_display_text(hex, evenq, centered_evenq, state.selected_top_right_display_type)
+    win.scene("top_right_display").text = get_top_right_display_text(hex, evenq, centered_evenq, game_state.selected_top_right_display_type)
 end
 
 local function make_game_toolbelt()
@@ -474,8 +474,8 @@ local function make_game_toolbelt()
                 end
             end
         else
-            if state.selected_tower_type then
-                win.scene:replace("tower_tooltip_text", get_tower_tooltip_text_node(state.selected_tower_type))
+            if game_state.selected_tower_type then
+                win.scene:replace("tower_tooltip_text", get_tower_tooltip_text_node(game_state.selected_tower_type))
             else
                 win.scene:replace("tower_tooltip_text", am.group():tag"tower_tooltip_text")
             end
@@ -506,7 +506,7 @@ local function make_game_toolbelt()
     )
 
     select_tower_type = function(tower_type)
-        state.selected_tower_type = tower_type
+        game_state.selected_tower_type = tower_type
 
         if get_tower_spec(tower_type) then
             win.scene:replace(
@@ -537,7 +537,7 @@ local function make_game_toolbelt()
     end
 
     select_toolbelt_button = function(i)
-        state.selected_toolbelt_button = i
+        game_state.selected_toolbelt_button = i
 
         if get_tower_spec(i) then
             select_tower_type(i)
@@ -581,20 +581,20 @@ local function game_scene()
                 self.color = COLORS.SUNRAY
 
                 if win:mouse_pressed("left") then
-                    if state.spawning then
+                    if game_state.spawning then
                         -- in this case, we don't exactly just send the next wave, we turn the current wave into the next
                         -- wave, and add the amount of time it would have lasted to the amount of remaining time in the
                         -- current wave
-                        state.current_wave = state.current_wave + 1
+                        game_state.current_wave = game_state.current_wave + 1
 
                         -- calculate spawn chance for next wave
-                        state.spawn_chance = math.log(state.current_wave)/100 + 0.002
+                        game_state.spawn_chance = math.log(game_state.current_wave)/100 + 0.002
 
-                        state.time_until_next_break = state.time_until_next_break + get_break_time(state.current_wave)
+                        game_state.time_until_next_break = game_state.time_until_next_break + get_break_time(game_state.current_wave)
 
                         play_sfx(SOUNDS.EXPLOSION4)
                     else
-                        state.time_until_next_wave = 0
+                        game_state.time_until_next_wave = 0
 
                         play_sfx(SOUNDS.EXPLOSION4)
                     end
@@ -620,7 +620,7 @@ local function game_scene()
     end))
 
     local scene = am.group(
-        am.scale(1):tag"world_scale" ^ state.world,
+        am.scale(1):tag"world_scale" ^ game_state.world,
         am.translate(HEX_GRID_CENTER):tag"cursor_translate" ^ make_hex_cursor(0, COLORS.TRANSPARENT):tag"cursor",
         score,
         money,
@@ -638,11 +638,11 @@ local function game_scene()
     return scene
 end
 
-function update_score(diff) state.score = state.score + diff end
-function update_money(diff) state.money = state.money + diff end
+function update_score(diff) game_state.score = game_state.score + diff end
+function update_money(diff) game_state.money = game_state.money + diff end
 
 function game_end()
-    state = {}
+    game_state = {}
     game = false
 end
 
@@ -653,7 +653,7 @@ end
 
 function game_init(saved_state)
     if saved_state then
-        state = game_deserialize(saved_state)
+        game_state = game_deserialize(saved_state)
 
         if not state then
             -- failed to load a save
@@ -665,7 +665,7 @@ function game_init(saved_state)
         -- but you don't have a built tower cursor node, so hovering a buildable tile throws an error
         select_tower_type(nil)
     else
-        state = get_initial_game_state()
+        game_state = get_initial_game_state()
     end
 
     game = true

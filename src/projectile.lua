@@ -75,7 +75,7 @@ local function update_projectile_shell(projectile, projectile_index)
         x2 = win.right,
         y2 = win.top
     }) then
-        delete_entity(state.projectiles, projectile_index)
+        delete_entity(game_state.projectiles, projectile_index)
         return true
     end
 
@@ -106,7 +106,7 @@ local function update_projectile_shell(projectile, projectile_index)
         end
     end
 
-    local tile = hex_map_get(state.map, projectile.hex)
+    local tile = hex_map_get(game_state.map, projectile.hex)
     if tile and tile.elevation >= projectile.props.z then
         --do_explode = true
 
@@ -120,7 +120,7 @@ local function update_projectile_shell(projectile, projectile_index)
             do_hit_mob(mob, damage, index)
         end
         win.scene:append(make_shell_explosion_node(projectile.position))
-        delete_entity(state.projectiles, projectile_index)
+        delete_entity(game_state.projectiles, projectile_index)
         return true
     end
 end
@@ -135,7 +135,7 @@ local function update_projectile_laser(projectile, projectile_index)
         x2 = win.right,
         y2 = win.top
     }) then
-        delete_entity(state.projectiles, projectile_index)
+        delete_entity(game_state.projectiles, projectile_index)
         return true
     end
 
@@ -192,7 +192,7 @@ local function update_projectile_bullet(projectile, projectile_index)
         x2 = win.right,
         y2 = win.top
     }) then
-        delete_entity(state.projectiles, projectile_index)
+        delete_entity(game_state.projectiles, projectile_index)
         return true
     end
 
@@ -275,7 +275,7 @@ function make_and_register_projectile(hex, projectile_type, vector)
     projectile.damage = spec.damage
     projectile.hitbox_radius = spec.hitbox_radius
 
-    register_entity(state.projectiles, projectile)
+    register_entity(game_state.projectiles, projectile)
     return projectile
 end
 
@@ -298,7 +298,7 @@ function projectile_deserialize(json_string)
 end
 
 function do_projectile_updates()
-    for projectile_index,projectile in pairs(state.projectiles) do
+    for projectile_index,projectile in pairs(game_state.projectiles) do
         if projectile and projectile.update then
             projectile.update(projectile, projectile_index)
         end

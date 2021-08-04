@@ -141,14 +141,14 @@ function make_tower_node(tower_type)
     elseif tower_type == TOWER_TYPE.GATTLER then
         return am.group{
                 am.circle(vec2(0), HEX_SIZE - 4, COLORS.VERY_DARK_GRAY, 5),
-                am.rotate(state.time or 0)
+                am.rotate(game_state.time or 0)
                 ^ pack_texture_into_sprite(TEXTURES.TOWER_HOWITZER, HEX_PIXEL_HEIGHT*1.5, HEX_PIXEL_WIDTH*2, COLORS.GREEN_YELLOW)
            }
 
     elseif tower_type == TOWER_TYPE.HOWITZER then
         return am.group{
             am.circle(vec2(0), HEX_SIZE - 4, COLORS.VERY_DARK_GRAY, 6),
-            am.rotate(state.time or 0) ^ am.group{
+            am.rotate(game_state.time or 0) ^ am.group{
                 pack_texture_into_sprite(TEXTURES.TOWER_HOWITZER, HEX_PIXEL_HEIGHT*1.5, HEX_PIXEL_WIDTH*2) -- CHONK
             }
         }
@@ -223,7 +223,7 @@ end
 
 local function update_tower_redeye(tower, tower_index)
     if not tower.target_index then
-        for index,mob in pairs(state.mobs) do
+        for index,mob in pairs(game_state.mobs) do
             if mob then
                 local d = math.distance(mob.hex, tower.hex)
                 if d <= tower.range then
@@ -233,11 +233,11 @@ local function update_tower_redeye(tower, tower_index)
             end
         end
     else
-        if not state.mobs[tower.target_index] then
+        if not game_state.mobs[tower.target_index] then
             tower.target_index = false
 
-        elseif (state.time - tower.last_shot_time) > tower.fire_rate then
-            local mob = state.mobs[tower.target_index]
+        elseif (game_state.time - tower.last_shot_time) > tower.fire_rate then
+            local mob = game_state.mobs[tower.target_index]
 
             make_and_register_projectile(
                 tower.hex,
@@ -245,7 +245,7 @@ local function update_tower_redeye(tower, tower_index)
                 math.normalize(mob.position - tower.position)
             )
 
-            tower.last_shot_time = state.time
+            tower.last_shot_time = game_state.time
             vplay_sfx(SOUNDS.LASER2)
         end
     end
@@ -254,7 +254,7 @@ end
 local function update_tower_gattler(tower, tower_index)
     if not tower.target_index then
         -- we should try and acquire a target
-        for index,mob in pairs(state.mobs) do
+        for index,mob in pairs(game_state.mobs) do
             if mob then
                 local d = math.distance(mob.hex, tower.hex)
                 if d <= tower.range then
@@ -268,23 +268,23 @@ local function update_tower_gattler(tower, tower_index)
         tower.node("rotate").angle = math.wrapf(tower.node("rotate").angle + 0.1 * am.delta_time, math.pi*2)
     else
         -- should have a target, so we should try and shoot it
-        if not state.mobs[tower.target_index] then
+        if not game_state.mobs[tower.target_index] then
             -- the target we have was invalidated
             tower.target_index = false
 
         else
             -- the target we have is valid
-            local mob = state.mobs[tower.target_index]
+            local mob = game_state.mobs[tower.target_index]
             local vector = math.normalize(mob.position - tower.position)
 
-            if (state.time - tower.last_shot_time) > tower.fire_rate then
+            if (game_state.time - tower.last_shot_time) > tower.fire_rate then
                 local projectile = make_and_register_projectile(
                     tower.hex,
                     PROJECTILE_TYPE.BULLET,
                     vector
                 )
 
-                tower.last_shot_time = state.time
+                tower.last_shot_time = game_state.time
                 play_sfx(SOUNDS.HIT1)
             end
 
@@ -300,7 +300,7 @@ end
 local function update_tower_howitzer(tower, tower_index)
     if not tower.target_index then
         -- we don't have a target
-        for index,mob in pairs(state.mobs) do
+        for index,mob in pairs(game_state.mobs) do
             if mob then
                 local d = math.distance(mob.hex, tower.hex)
                 if d <= tower.range then
@@ -315,16 +315,16 @@ local function update_tower_howitzer(tower, tower_index)
     else
         -- we should have a target
         -- @NOTE don't compare to false, empty indexes appear on game reload
-        if not state.mobs[tower.target_index] then
+        if not game_state.mobs[tower.target_index] then
             -- the target we have was invalidated
             tower.target_index = false
 
         else
             -- the target we have is valid
-            local mob = state.mobs[tower.target_index]
+            local mob = game_state.mobs[tower.target_index]
             local vector = math.normalize(mob.position - tower.position)
 
-            if (state.time - tower.last_shot_time) > tower.fire_rate then
+            if (game_state.time - tower.last_shot_time) > tower.fire_rate then
                 local projectile = make_and_register_projectile(
                     tower.hex,
                     PROJECTILE_TYPE.SHELL,
@@ -336,7 +336,7 @@ local function update_tower_howitzer(tower, tower_index)
                 -- if it's not enough the shell explodes before it leaves its spawning hex
                 projectile.props.z = tower.props.z + 0.1
 
-                tower.last_shot_time = state.time
+                tower.last_shot_time = game_state.time
                 play_sfx(SOUNDS.EXPLOSION2)
             end
 
@@ -360,7 +360,7 @@ local function update_tower_lighthouse(tower, tower_index)
                 -- is within some angle range...? if the mob is heading directly away from the tower, then
                 -- the lighthouse shouldn't do much
 
-                local path, made_it = hex_Astar(state.map, tower.hex, m.hex, grid_neighbours, grid_cost, grid_heuristic)
+                local path, made_it = hex_Astar(game_state.map, tower.hex, m.hex, grid_neighbours, grid_cost, grid_heuristic)
 
                 if made_it then
                     m.path = path
@@ -369,7 +369,7 @@ local function update_tower_lighthouse(tower, tower_index)
                     --[[
                     local area = spiral_map(tower.hex, tower.range)
                     for _,h in pairs(area) do
-                        local node = state.map[h.x][h.y].node"circle"
+                        local node = game_state.map[h.x][h.y].node"circle"
                         local initial_color = node.color
 
                         local d = math.distance(h, tower.hex)
@@ -426,7 +426,7 @@ end
 
 function towers_on_hex(hex)
     local t = {}
-    for tower_index,tower in pairs(state.towers) do
+    for tower_index,tower in pairs(game_state.towers) do
         if tower then
             for _,h in pairs(tower.hexes) do
                 if h == hex then
@@ -440,7 +440,7 @@ function towers_on_hex(hex)
 end
 
 function tower_on_hex(hex)
-    return table.find(state.towers, function(tower)
+    return table.find(game_state.towers, function(tower)
         for _,h in pairs(tower.hexes) do
             if h == hex then return true end
         end
@@ -464,7 +464,7 @@ function tower_type_is_buildable_on(hex, tile, tower_type)
         table.merge(blocking_towers, towers_on_hex(h))
         table.merge(blocking_mobs, mobs_on_hex(h))
 
-        local tile = hex_map_get(state.map, h)
+        local tile = hex_map_get(game_state.map, h)
         -- this should always be true, unless it is possible to place a tower
         -- where part of the tower overflows the edge of the map
         if tile then
@@ -488,7 +488,7 @@ function tower_type_is_buildable_on(hex, tile, tower_type)
         local has_mountain_neighbour = false
         local has_non_wall_non_moat_tower_neighbour = false
         for _,h in pairs(hex_neighbours(hex)) do
-            local tile = hex_map_get(state.map, h)
+            local tile = hex_map_get(game_state.map, h)
 
             if tile and tile.elevation >=  0.5 then
                 has_mountain_neighbour = true
@@ -518,7 +518,7 @@ function tower_type_is_buildable_on(hex, tile, tower_type)
                 break
             end
 
-            local tile = hex_map_get(state.map, h)
+            local tile = hex_map_get(game_state.map, h)
             if not wall_on_hex and tile and tile.elevation >= 0.5 then
                 has_mountain_neighbour = true
                 break
@@ -533,7 +533,7 @@ function tower_type_is_buildable_on(hex, tile, tower_type)
     elseif tower_type == TOWER_TYPE.LIGHTHOUSE then
         local has_water_neighbour = false
         for _,h in pairs(hex_neighbours(hex)) do
-            local tile = hex_map_get(state.map, h)
+            local tile = hex_map_get(game_state.map, h)
 
             if tile and tile.elevation < -0.5 then
                 has_water_neighbour = true
@@ -577,7 +577,7 @@ function make_and_register_tower(hex, tower_type)
     tower.height = spec.height
 
     for _,h in pairs(tower.hexes) do
-        local tile = hex_map_get(state.map, h.x, h.y)
+        local tile = hex_map_get(game_state.map, h.x, h.y)
         tile.elevation = tile.elevation + tower.height
     end
 
@@ -591,7 +591,7 @@ function make_and_register_tower(hex, tower_type)
         tower.perimeter = hex_ring_map(tower.hex, tower.range)
     end
 
-    register_entity(state.towers, tower)
+    register_entity(game_state.towers, tower)
     return tower
 end
 
@@ -603,7 +603,7 @@ function build_tower(hex, tower_type)
 end
 
 function do_tower_updates()
-    for tower_index,tower in pairs(state.towers) do
+    for tower_index,tower in pairs(game_state.towers) do
         if tower and tower.update then
             tower.update(tower, tower_index)
         end
