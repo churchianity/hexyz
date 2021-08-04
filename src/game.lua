@@ -2,24 +2,11 @@
 game = false -- flag to tell if there is a game running
 game_state = {}
 
--- top right display types
--- f1 toggles what is displayed in the top right of the screen
-local TRDTS = {
-    NOTHING        = 0,
-    CENTERED_EVENQ = 1,
-    EVENQ          = 2,
-    HEX            = 3,
-    PLATFORM       = 4,
-    PERF           = 5,
-    SEED           = 6,
-    TILE           = 7,
-}
-
 local function get_initial_game_state(seed)
     local STARTING_MONEY = 75
 
     local map = random_map(seed)
-    local world = make_hex_grid_scene(map)
+    local world = make_hex_grid_scene(map, true)
 
     return {
         map = map,              -- map of hex coords map[x][y] to a 'tile'
@@ -45,14 +32,6 @@ local function get_initial_game_state(seed)
         selected_toolbelt_button = false,
         selected_top_right_display_type = TRDTS.SEED,
     }
-end
-
-local function get_wave_timer_text()
-    if game_state.spawning then
-        return string.format("WAVE (%d) OVER: %.2f", game_state.current_wave, game_state.time_until_next_break)
-    else
-        return string.format("NEXT WAVE (%d): %.2f", game_state.current_wave, game_state.time_until_next_wave)
-    end
 end
 
 local function get_top_right_display_text(hex, evenq, centered_evenq, display_type)
@@ -81,6 +60,14 @@ local function get_top_right_display_text(hex, evenq, centered_evenq, display_ty
     return str
 end
 
+local function get_wave_timer_text()
+    if game_state.spawning then
+        return string.format("WAVE (%d) OVER: %.2f", game_state.current_wave, game_state.time_until_next_break)
+    else
+        return string.format("NEXT WAVE (%d): %.2f", game_state.current_wave, game_state.time_until_next_wave)
+    end
+end
+
 -- initialized later, as part of the init of the toolbelt
 local function select_tower_type(tower_type) end
 local function select_toolbelt_button(i) end
@@ -104,7 +91,64 @@ end
 local function game_pause()
     win.scene("game").paused = true
 
-    win.scene:append(main_scene(false, false))
+    local game_scene_options = {
+        false,
+        {
+            texture = TEXTURES.NEW_GAME_HEX,
+            action = function()
+                game_init()
+            end
+        },
+        false,
+        {
+            texture = TEXTURES.SAVE_GAME_HEX,
+            action = function()
+                game_save()
+                gui_alert("succesfully saved!")
+            end
+        },
+        false,
+        {
+            texture = TEXTURES.LOAD_GAME_HEX,
+            action = function()
+                local save = am.load_state("save", "json")
+
+                if save then
+                    game_init(save)
+                else
+                    gui_alert("no saved games")
+                end
+            end
+        },
+        {
+            texture = TEXTURES.MAP_EDITOR_HEX,
+            action = function()
+                win.scene:remove("game")
+                map_editor_init(game_state.map.seed)
+            end
+        },
+        {
+            texture = TEXTURES.UNPAUSE_HEX,
+            action = function()
+
+            end
+        },
+        {
+            texture = TEXTURES.SETTINGS_HEX,
+            action = function()
+                gui_alert("not yet :)")
+            end
+        },
+        {
+            texture = TEXTURES.QUIT_HEX,
+            action = function()
+                win:close()
+            end
+        },
+        false
+    }
+
+    win.scene:append(make_scene_menu(game_scene_options))
 end
 
 local function game_deserialize(json_string)
@@ -116,7 +160,7 @@ local function game_deserialize(json_string)
     end
 
     new_game_state.map = random_map(new_game_state.seed)
-    new_game_state.world = make_hex_grid_scene(new_game_state.map)
+    new_game_state.world = make_hex_grid_scene(new_game_state.map, true)
     new_game_state.seed = nil
 
     for i,t in pairs(new_game_state.towers) do
@@ -159,7 +203,7 @@ local function game_deserialize(json_string)
 end
 
 local function game_serialize()
-    local serialized = table.shallow_copy(state)
+    local serialized = table.shallow_copy(game_state)
     serialized.version = version
 
     serialized.seed = game_state.map.seed
@@ -172,6 +216,7 @@ local function game_serialize()
     -- and the scene graph needs to be re-constituted at load time
     --
     -- this is dumb and if i forsaw this i would have probably used float arrays instead of vectors
+    -- (the scene graph bit makes sense though)
 
     serialized.towers = {}
     for i,t in pairs(game_state.towers) do
@@ -201,10 +246,16 @@ local function deselect_tile()
     win.scene:remove("tile_select_box")
 end
 
-local function game_action(scene)
-    if game_state.score < 0 then game_end() return true end
+local function game_pause_menu()
 
-    local perf = am.perf_stats()
+end
+
+local function game_action(scene)
+    if game_state.score < 0 then
+        game_end()
+        return true
+    end
+
     game_state.time = game_state.time + am.delta_time
     game_state.score = game_state.score + am.delta_time
 
@@ -258,14 +309,14 @@ local function game_action(scene)
                     node.color = COLORS.CLARET
                     node:action(am.tween(0.1, { color = COLORS.TRANSPARENT }))
                     play_sfx(SOUNDS.BIRD2)
-                    alert("closes the circle")
+                    gui_alert("closes the circle")
 
                 elseif cost > game_state.money then
                     local node = win.scene("cursor"):child(2)
                     node.color = COLORS.CLARET
                     node:action(am.tween(0.1, { color = COLORS.TRANSPARENT }))
                     play_sfx(SOUNDS.BIRD2)
-                    alert("not enough money")
+                    gui_alert("not enough money")
 
                 else
                     update_money(-cost)
@@ -532,7 +583,7 @@ local function make_game_toolbelt()
             -- de-selecting currently selected tower if any
             toolbelt("toolbelt_select_square").hidden = true
 
-            win.scene:replace("cursor", make_hex_cursor(0, COLORS.TRANSPARENT):tag"cursor")
+            win.scene:replace("cursor", make_hex_cursor_node(0, COLORS.TRANSPARENT):tag"cursor")
         end
     end
 
@@ -604,14 +655,6 @@ local function game_scene()
             end
         end)
 
-    local top_right_display =
-        am.translate(win.right - 10, win.top - 15)
-        ^ am.text("", "right", "top"):tag"top_right_display"
-
-    local bottom_right_display =
-        am.translate(win.right - 10, win.bottom + win.height * 0.07 + 20)
-        ^ am.text("", "right", "bottom"):tag"bottom_right_display"
-
     local curtain = am.rect(win.left, win.bottom, win.right, win.top, COLORS.TRUE_BLACK)
     curtain:action(coroutine.create(function()
         am.wait(am.tween(curtain, 3, { color = vec4(0) }, am.ease.out(am.ease.hyperbola)))
@@ -621,12 +664,12 @@ local function game_scene()
 
     local scene = am.group(
         am.scale(1):tag"world_scale" ^ game_state.world,
-        am.translate(HEX_GRID_CENTER):tag"cursor_translate" ^ make_hex_cursor(0, COLORS.TRANSPARENT):tag"cursor",
+        am.translate(HEX_GRID_CENTER):tag"cursor_translate" ^ make_hex_cursor_node(0, COLORS.TRANSPARENT):tag"cursor",
         score,
         money,
         wave_timer,
         send_now_button,
-        top_right_display,
+        make_top_right_display_node(),
         make_game_toolbelt(),
         curtain
     )
@@ -638,17 +681,45 @@ local function game_scene()
     return scene
 end
 
+-- this is a stupid name, it just returns a scene node group of hexagons in a hexagonal shape centered at 0,0, of size |radius|
+-- |color_f| can be a function that takes a hex and returns a color, or just a color
+-- optionally, |action_f| is a function that operates on the group node every frame
+function make_hex_cursor_node(radius, color_f, action_f)
+    local color = type(color_f) == "userdata" and color_f or nil
+    local map = hex_spiral_map(vec2(0), radius)
+    local group = am.group()
+
+    for _,h in pairs(map) do
+        local hexagon = am.circle(hex_to_pixel(h, vec2(HEX_SIZE)), HEX_SIZE, color or color_f(h), 6)
+        group:append(hexagon)
+    end
+
+    if action_f then
+        group:action(action_f)
+    end
+
+    return group
+end
+
 function update_score(diff) game_state.score = game_state.score + diff end
 function update_money(diff) game_state.money = game_state.money + diff end
 
 function game_end()
+    local hmob = table.highest_index(game_state.mobs)
+    local htower = table.highest_index(game_state.towers)
+    local hprojectile = table.highest_index(game_state.projectiles)
+    gui_alert(string.format(
+        "\nmobs spawned: %d\ntowers built: %d\nprojectiles spawned: %d\n",
+        hmob, htower, hprojectile
+    ), COLORS.WHITE, 1000)
+
     game_state = {}
     game = false
 end
 
 function game_save()
     am.save_state("save", game_serialize(), "json")
-    alert("succesfully saved!")
+    gui_alert("succesfully saved!")
 end
 
 function game_init(saved_state)
@@ -671,25 +742,5 @@ function game_init(saved_state)
     game = true
     win.scene:remove("game")
     win.scene:append(game_scene())
-end
-
--- this is a stupid name, it just returns a scene node group of hexagons in a hexagonal shape centered at 0,0, of size |radius|
--- |color_f| can be a function that takes a hex and returns a color, or just a color
--- optionally, |action_f| is a function that operates on the group node every frame
-function make_hex_cursor(radius, color_f, action_f)
-    local color = type(color_f) == "userdata" and color_f or nil
-    local map = hex_spiral_map(vec2(0), radius)
-    local group = am.group()
-
-    for _,h in pairs(map) do
-        local hexagon = am.circle(hex_to_pixel(h, vec2(HEX_SIZE)), HEX_SIZE, color or color_f(h), 6)
-        group:append(hexagon)
-    end
-
-    if action_f then
-        group:action(action_f)
-    end
-
-    return group
 end
 

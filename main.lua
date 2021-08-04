@@ -69,6 +69,25 @@ win = am.window{
     show_cursor = true,
 }
 
+-- top right display types
+-- different scenes overlay different content in the top right of the screen
+-- f1 toggles what is displayed in the top right of the screen in some scenes
+TRDTS = {
+    NOTHING        = 0,
+    CENTERED_EVENQ = 1,
+    EVENQ          = 2,
+    HEX            = 3,
+    PLATFORM       = 4,
+    PERF           = 5,
+    SEED           = 6,
+    TILE           = 7,
+}
+
+function make_top_right_display_node()
+    return am.translate(win.right - 10, win.top - 15)
+           ^ am.text("", "right", "top"):tag"top_right_display"
+end
+
 -- asset interfaces and/or trivial code
 require "conf"
 require "color"
@@ -89,7 +108,7 @@ require "src/tower"
 require "src/map-editor"
 
 
-local sound_toggle_node_tag = "sound-on-off-icon"
+local sound_toggle_node_tag = "sound_on_off_icon"
 local function make_sound_toggle_node(on)
     local sprite
     if on then
@@ -101,7 +120,7 @@ local function make_sound_toggle_node(on)
     return (am.translate(win.right - 30, win.top - 60) ^ sprite)
     :tag(sound_toggle_node_tag)
     :action(function()
-
+        -- @TODO click me!
     end)
 end
 
@@ -126,22 +145,6 @@ local function toggle_mute()
     win.scene:replace(sound_toggle_node_tag, make_sound_toggle_node(settings.sound_on))
 end
 
--- text popup in the middle of the screen that dissapates, call from anywhere
-function alert(message, color)
-    win.scene:append(
-        am.scale(3) ^ am.text(message, color or COLORS.WHITE)
-        :action(coroutine.create(function(self)
-            am.wait(am.tween(self, 1, { color = vec4(0) }, am.ease_out))
-            win.scene:remove(self)
-        end))
-    )
-end
-
-function unpause(root_node)
-    win.scene("game").paused = false
-    win.scene:remove(root_node)
-end
-
 function main_action(self)
     if win:key_pressed("escape") then
         if game then
@@ -161,61 +164,7 @@ function main_action(self)
     end
 end
 
-function make_main_scene_toolbelt()
-    local include_save_option = game
-    local include_unpause_option = game
-    local options = {
-        false,
-        {
-            texture = TEXTURES.NEW_GAME_HEX,
-            action = function()
-                win.scene:remove"menu"
-                game_init()
-            end
-        },
-        false,
-        include_save_option and {
-            texture = TEXTURES.SAVE_GAME_HEX,
-            action = function()
-                game_save()
-                alert("succesfully saved!")
-            end
-        } or false,
-        false,
-        {
-            texture = TEXTURES.LOAD_GAME_HEX,
-            action = function()
-                local save = am.load_state("save", "json")
-
-                if save then
-                    win.scene:remove("menu")
-                    game_init(save)
-                else
-                    alert("no saved games")
-                end
-            end
-        },
-        {
-            texture = TEXTURES.MAP_EDITOR_HEX,
-            action = function()
-                win.scene:remove("menu")
-                map_editor_init()
-            end
-        },
-        include_unpause_option and {
-            texture = TEXTURES.UNPAUSE_HEX,
-            action = function() unpause(win.scene("menu")) end
-        } or false,
-        false and {
-            texture = TEXTURES.SETTINGS_HEX,
-            action = function() alert("not yet :)") end
-        },
-        {
-            texture = TEXTURES.QUIT_HEX,
-            action = function() win:close() end
-        },
-        false
-    }
+function make_scene_menu(scene_options)
 
     -- calculate the dimensions of the whole grid
     local spacing = 150
@@ -227,6 +176,7 @@ function make_main_scene_toolbelt()
     local grid_pixel_height = grid_height * hvs
     local pixel_offset = vec2(-grid_pixel_width/2, win.bottom + hex_height(spacing)/2 + 20)
 
+    -- generate a map of hexagons (the menu is made up of two rows of hexes) and populate their locations with buttons from the provided options
     local map = hex_rectangular_map(grid_width, grid_height, HEX_ORIENTATION.POINTY)
     local group = am.group()
     local option_index = 1
@@ -234,7 +184,7 @@ function make_main_scene_toolbelt()
         for j,_ in pairs(map[i]) do
             local hex = vec2(i, j)
             local position = hex_to_pixel(hex, vec2(spacing), HEX_ORIENTATION.POINTY)
-            local option = options[option_index]
+            local option = scene_options[option_index]
             local texture = option and option.texture or TEXTURES.SHADED_HEX
             local color = option and COLORS.TRANSPARENT or vec4(0.3)
             local node = am.translate(position)
@@ -276,7 +226,6 @@ function make_main_scene_toolbelt()
 
     return am.translate(pixel_offset) ^ group
 end
-
 
 function main_scene(do_backdrop, do_logo)
     local group = am.group()
@@ -338,15 +287,56 @@ function main_scene(do_backdrop, do_logo)
         group:append(logo)
     end
 
-    group:append(make_main_scene_toolbelt())
+    local main_scene_options = {
+        false,
+        {
+            texture = TEXTURES.NEW_GAME_HEX,
+            action = function()
+                win.scene:remove"map_editor"
+                win.scene:remove"menu"
+                game_init()
+            end
+        },
+        false,
+        false,
+        false,
+        {
+            texture = TEXTURES.LOAD_GAME_HEX,
+            action = function()
+                local save = am.load_state("save", "json")
+
+                if save then
+                    win.scene:remove("menu")
+                    game_init(save)
+                else
+                    gui_alert("no saved games")
+                end
+            end
+        },
+        {
+            texture = TEXTURES.MAP_EDITOR_HEX,
+            action = function()
+                win.scene:remove("menu")
+                map_editor_init()
+            end
+        },
+        false,
+        {
+            texture = TEXTURES.SETTINGS_HEX,
+            action = function() gui_alert("not yet :)") end
+        },
+        {
+            texture = TEXTURES.QUIT_HEX,
+            action = function() win:close() end
+        },
+        false
+    }
+
+    group:append(make_scene_menu(main_scene_options))
 
     group:action(main_action)
 
     return group:tag"menu"
-end
-
-function switch_scene(scene)
-    win.scene = am.group(scene)
 end
 
 win.scene = am.group(

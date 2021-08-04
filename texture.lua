@@ -26,6 +26,7 @@ TEXTURES = {
     ABOUT_HEX               = load_texture("res/abouthex.png"),
     QUIT_HEX                = load_texture("res/quithex.png"),
     UNPAUSE_HEX             = load_texture("res/unpausehex.png"),
+    MAIN_MENU_HEX           = load_texture("res/mainmenuhex.png"),
 
     CURTAIN                 = load_texture("res/curtain1.png"),
 

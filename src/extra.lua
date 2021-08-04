@@ -29,6 +29,20 @@ function table.count(t)
     return count
 end
 
+function table.highest_index(t)
+    local highest = nil
+    for i,v in pairs(t) do
+        if i and not highest then
+            highest = i
+        end
+
+        if i > highest then
+            highest = i
+        end
+    end
+    return highest
+end
+
 function table.find(t, predicate)
     for i,v in pairs(t) do
         if predicate(v) then

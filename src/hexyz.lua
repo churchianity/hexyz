@@ -1,5 +1,5 @@
 
--- this is a single file with no dependencies which is meant to perform a bunch of mathy stuff
+-- this is a single file which is meant to perform a bunch of mathy stuff
 -- related to hexagons, grids of them, and pathfinding on them
 --
 -- it basically owes its entire existence to this resource: https://www.redblobgames.com/grids/hexagons/

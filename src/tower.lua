@@ -211,7 +211,7 @@ do
         end)
 
         tower_cursors[i] = am.group{
-            make_hex_cursor(get_tower_range(i), vec4(0), coroutine_),
+            make_hex_cursor_node(get_tower_range(i), vec4(0), coroutine_),
             tower_sprite
         }
     end

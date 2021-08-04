@@ -1,4 +1,15 @@
 
+-- text popup in the middle of the screen that dissapates
+function gui_alert(message, color, decay_time)
+    win.scene:append(
+        am.scale(3) ^ am.text(message, color or COLORS.WHITE)
+        :action(coroutine.create(function(self)
+            am.wait(am.tween(self, decay_time or 1, { color = vec4(0) }, am.ease_in_out))
+            win.scene:remove(self)
+        end))
+    )
+end
+
 function gui_numberfield(dimensions, opts)
 
 end

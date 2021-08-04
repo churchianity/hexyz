@@ -53,6 +53,25 @@ function evenq_is_in_interactable_region(evenq)
     })
 end
 
+function map_elevation_to_tile_type(elevation)
+    if elevation < -0.5 then -- lowest elevation
+        return "Water"
+
+    elseif elevation < 0 then -- med-low elevation
+        return "Ground - Grass"
+
+    elseif elevation < 0.5 then -- med-high elevation
+        return "Ground - Dirt"
+
+    elseif elevation < 1 then     -- high elevation
+        return "Mountain"
+
+    else
+        -- not a normal elevation? not sure when this happens
+        return "n/a"
+    end
+end
+
 function is_water_elevation(elevation) return elevation < -0.5 end
 function is_mountain_elevation(elevation) return elevation >= 0.5 end
 
@@ -174,7 +193,22 @@ function map_elevation_color(elevation)
     end
 end
 
-function make_hex_grid_scene(map)
+function make_hex_node(hex, tile, color)
+    if not color then
+        local evenq = hex_to_evenq(vec2(hex.x, hex.y))
+
+        -- light shading on edge cells
+        local mask = vec4(0, 0, 0, math.max(((evenq.x - HEX_GRID_WIDTH/2) / HEX_GRID_WIDTH) ^ 2
+                                         , ((-evenq.y - HEX_GRID_HEIGHT/2) / HEX_GRID_HEIGHT) ^ 2))
+
+        color = map_elevation_color(tile.elevation) - mask
+    end
+
+    return am.translate(hex_to_pixel(vec2(hex.x, hex.y), vec2(HEX_SIZE)))
+           ^ am.circle(vec2(0), HEX_SIZE, color, 6)
+end
+
+function make_hex_grid_scene(map, do_generate_flow_field)
     -- the world's appearance relies largely on a backdrop which can be scaled in
     -- tone to give the appearance of light or darkness
     -- @NOTE replace this with a shader program
@@ -191,16 +225,7 @@ function make_hex_grid_scene(map)
     local world = am.group(neg_mask):tag"world"
     for i,_ in pairs(map) do
         for j,tile in pairs(map[i]) do
-            local evenq = hex_to_evenq(vec2(i, j))
-
-            -- light shading on edge cells
-            local mask = vec4(0, 0, 0, math.max(((evenq.x - HEX_GRID_WIDTH/2) / HEX_GRID_WIDTH) ^ 2
-                                             , ((-evenq.y - HEX_GRID_HEIGHT/2) / HEX_GRID_HEIGHT) ^ 2))
-
-            local color = map_elevation_color(tile.elevation) - mask
-
-            local node = am.translate(hex_to_pixel(vec2(i, j), vec2(HEX_SIZE)))
-                        ^ am.circle(vec2(0), HEX_SIZE, color, 6)
+            local node = make_hex_node(vec2(i, j), tile)
 
             hex_map_set(map, i, j, {
                 elevation = tile.elevation,
@@ -217,7 +242,9 @@ function make_hex_grid_scene(map)
         ^ pack_texture_into_sprite(TEXTURES.GEM1, HEX_SIZE, HEX_SIZE*1.1)
     )
 
-    apply_flow_field(map, generate_flow_field(map, HEX_GRID_CENTER), world)
+    if do_generate_flow_field then
+        apply_flow_field(map, generate_flow_field(map, HEX_GRID_CENTER), world)
+    end
 
     return am.translate(WORLDSPACE_COORDINATE_OFFSET) ^ world
 end
