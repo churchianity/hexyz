@@ -227,7 +227,8 @@ function random_map(seed)
         HEX_GRID_DIMENSIONS.x,
         HEX_GRID_DIMENSIONS.y,
         HEX_ORIENTATION.FLAT,
-        seed
+        seed,
+        true
     )
     math.randomseed(map.seed)
 
@@ -257,6 +258,31 @@ function random_map(seed)
 
             hex_map_set(map, i, j, {
                 elevation = noise,
+            })
+        end
+    end
+
+    return map
+end
+
+function default_map_editor_map(seed)
+    if seed then
+        return random_map(seed)
+    end
+
+    -- if there's no seed then we want a map w/ all noise values = 0
+    local map = hex_rectangular_map(
+        HEX_GRID_DIMENSIONS.x,
+        HEX_GRID_DIMENSIONS.y,
+        HEX_ORIENTATION.FLAT,
+        seed,
+        false
+    )
+
+    for i,_ in pairs(map) do
+        for j,noise in pairs(map[i]) do
+            hex_map_set(map, i, j, {
+                elevation = noise
             })
         end
     end

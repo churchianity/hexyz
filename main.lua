@@ -86,6 +86,7 @@ require "src/grid"
 require "src/mob"
 require "src/projectile"
 require "src/tower"
+require "src/map-editor"
 
 
 local sound_toggle_node_tag = "sound-on-off-icon"
@@ -194,9 +195,12 @@ function make_main_scene_toolbelt()
                 end
             end
         },
-        false and {
+        {
             texture = TEXTURES.MAP_EDITOR_HEX,
-            action = function() alert("not yet :)") end
+            action = function()
+                win.scene:remove("menu")
+                map_editor_init()
+            end
         },
         include_unpause_option and {
             texture = TEXTURES.UNPAUSE_HEX,
@@ -339,6 +343,10 @@ function main_scene(do_backdrop, do_logo)
     group:action(main_action)
 
     return group:tag"menu"
+end
+
+function switch_scene(scene)
+    win.scene = am.group(scene)
 end
 
 win.scene = am.group(

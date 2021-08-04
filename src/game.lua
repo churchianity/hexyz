@@ -26,7 +26,6 @@ local function get_initial_game_state(seed)
         world = world,          -- the root scene graph node for the game 'world'
         ui = nil,               -- unused, root scene graph node for the 'ui' stuff
 
-        perf = {},              -- result of call to am.perf_stats, called every frame
         time = 0,               -- real time since the *current* game started in seconds
         score = 0,              -- current game score
         money = STARTING_MONEY, -- current money
@@ -71,7 +70,7 @@ local function get_top_right_display_text(hex, evenq, centered_evenq, display_ty
         str = string.format("%s %s lang %s", am.platform, am.version, am.language())
 
     elseif display_type == TRDTS.PERF then
-        str = table.tostring(state.perf)
+        str = table.tostring(am.perf_stats())
 
     elseif display_type == TRDTS.SEED then
         str = "SEED: " .. state.map.seed
@@ -205,7 +204,7 @@ end
 local function game_action(scene)
     if state.score < 0 then game_end() return true end
 
-    state.perf = am.perf_stats()
+    local perf = am.perf_stats()
     state.time = state.time + am.delta_time
     state.score = state.score + am.delta_time
 

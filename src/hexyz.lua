@@ -387,7 +387,7 @@ function hex_hexagonal_map(radius, seed)
 end
 
 -- Returns Unordered Rectangular Map of |width| and |height| with Simplex Noise
-function hex_rectangular_map(width, height, orientation, seed)
+function hex_rectangular_map(width, height, orientation, seed, do_generate_noise)
     local orientation = orientation or HEX_DEFAULT_ORIENTATION
     local seed = seed or math.random(width * height)
 
@@ -397,26 +397,32 @@ function hex_rectangular_map(width, height, orientation, seed)
             map[i] = {}
             for j = 0, height - 1 do
 
-                -- begin to calculate noise
-                local idelta = i / width
-                local jdelta = j / height
-                local noise = 0
+                if do_generate_noise then
+                    -- begin to calculate noise
+                    local idelta = i / width
+                    local jdelta = j / height
+                    local noise = 0
 
-                for oct = 1, 6 do
-                    local f = 2/3^oct
-                    local l = 2^oct
-                    local pos = vec2(idelta + seed * width, jdelta + seed * height)
-                    noise = noise + f * math.simplex(pos * l)
+                    for oct = 1, 6 do
+                        local f = 2/3^oct
+                        local l = 2^oct
+                        local pos = vec2(idelta + seed * width, jdelta + seed * height)
+                        noise = noise + f * math.simplex(pos * l)
+                    end
+                    j = j - math.floor(i/2) -- this is what makes it rectangular
+
+                    hex_map_set(map, i, j, noise)
+                else
+                    j = j - math.floor(i/2) -- this is what makes it rectangular
+                    hex_map_set(map, i, j, 0)
                 end
-                j = j - math.floor(i/2) -- this is what makes it rectangular
-
-                map[i][j] = noise
             end
         end
     elseif orientation == HEX_ORIENTATION.POINTY then
         for i = 0, height - 1 do
             local i_offset = math.floor(i/2)
             for j = -i_offset, width - i_offset - 1 do
+                -- @TODO noise calculations
                 hex_map_set(map, j, i, 0)
             end
         end
