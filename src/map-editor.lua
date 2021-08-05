@@ -98,22 +98,22 @@ function map_editor_action()
     end
 
     if map_editor_state.selected_tile then
-        if win:key_pressed"a" then
+        if win:key_down"a" then
             -- make the selected tile 'mountain'
             map_editor_state.selected_tile.elevation = 0.75
             map_editor_state.selected_tile.node("circle").color = map_elevation_color(map_editor_state.selected_tile.elevation)
 
-        elseif win:key_pressed"w" then
+        elseif win:key_down"w" then
             -- make the selected tile 'water'
             map_editor_state.selected_tile.elevation = -0.75
             map_editor_state.selected_tile.node("circle").color = map_elevation_color(map_editor_state.selected_tile.elevation)
 
-        elseif win:key_pressed"d" then
+        elseif win:key_down"d" then
             -- make the selected tile 'dirt'
             map_editor_state.selected_tile.elevation = 0.25
             map_editor_state.selected_tile.node("circle").color = map_elevation_color(map_editor_state.selected_tile.elevation)
 
-        elseif win:key_pressed"g" then
+        elseif win:key_down"g" then
             -- make the selected tile 'grass'
             map_editor_state.selected_tile.elevation = -0.25
             map_editor_state.selected_tile.node("circle").color = map_elevation_color(map_editor_state.selected_tile.elevation)
