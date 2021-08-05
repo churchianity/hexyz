@@ -2,6 +2,63 @@
 game = false -- flag to tell if there is a game running
 game_state = {}
 
+local game_scene_options = {
+    false,
+    {
+        texture = TEXTURES.NEW_GAME_HEX,
+        action = function()
+            game_init()
+        end
+    },
+    false,
+    {
+        texture = TEXTURES.SAVE_GAME_HEX,
+        action = function()
+            game_save()
+            gui_alert("succesfully saved!")
+        end
+    },
+    false,
+    {
+        texture = TEXTURES.LOAD_GAME_HEX,
+        action = function()
+            local save = am.load_state("save", "json")
+
+            if save then
+                game_init(save)
+            else
+                gui_alert("no saved games")
+            end
+        end
+    },
+    {
+        texture = TEXTURES.MAP_EDITOR_HEX,
+        action = function()
+            win.scene:remove("game")
+            map_editor_init(game_state.map.seed)
+        end
+    },
+    {
+        texture = TEXTURES.UNPAUSE_HEX,
+        action = function()
+
+        end
+    },
+    {
+        texture = TEXTURES.SETTINGS_HEX,
+        action = function()
+            gui_alert("not yet :)")
+        end
+    },
+    {
+        texture = TEXTURES.QUIT_HEX,
+        action = function()
+            win:close()
+        end
+    },
+    false
+}
+
 local function get_initial_game_state(seed)
     local STARTING_MONEY = 75
 
@@ -91,68 +148,11 @@ end
 local function game_pause()
     win.scene("game").paused = true
 
-    local game_scene_options = {
-        false,
-        {
-            texture = TEXTURES.NEW_GAME_HEX,
-            action = function()
-                game_init()
-            end
-        },
-        false,
-        {
-            texture = TEXTURES.SAVE_GAME_HEX,
-            action = function()
-                game_save()
-                gui_alert("succesfully saved!")
-            end
-        },
-        false,
-        {
-            texture = TEXTURES.LOAD_GAME_HEX,
-            action = function()
-                local save = am.load_state("save", "json")
-
-                if save then
-                    game_init(save)
-                else
-                    gui_alert("no saved games")
-                end
-            end
-        },
-        {
-            texture = TEXTURES.MAP_EDITOR_HEX,
-            action = function()
-                win.scene:remove("game")
-                map_editor_init(game_state.map.seed)
-            end
-        },
-        {
-            texture = TEXTURES.UNPAUSE_HEX,
-            action = function()
-
-            end
-        },
-        {
-            texture = TEXTURES.SETTINGS_HEX,
-            action = function()
-                gui_alert("not yet :)")
-            end
-        },
-        {
-            texture = TEXTURES.QUIT_HEX,
-            action = function()
-                win:close()
-            end
-        },
-        false
-    }
-
     win.scene:append(make_scene_menu(game_scene_options))
 end
 
 local function game_deserialize(json_string)
-    local new_state = am.parse_json(json_string)
+    local new_game_state = am.parse_json(json_string)
 
     if new_game_state.version ~= version then
         log("loading incompatible old save data. starting a fresh game instead.")
@@ -199,7 +199,7 @@ local function game_deserialize(json_string)
         end
     end
 
-    return new_state
+    return new_game_state
 end
 
 local function game_serialize()
@@ -726,8 +726,9 @@ function game_init(saved_state)
     if saved_state then
         game_state = game_deserialize(saved_state)
 
-        if not state then
+        if not game_state then
             -- failed to load a save
+            log("failed to load a save :(")
             win.scene:append(main_scene(true, true))
             return
         end

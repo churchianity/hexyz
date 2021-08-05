@@ -2,8 +2,69 @@
 local map_editor_state = {
     map = {},
     world = {},
+    ui = {},
 
     selected_tile = false
+}
+
+local map_editor_scene_options = {
+    false,
+    {
+        texture = TEXTURES.NEW_GAME_HEX,
+        action = function()
+            win.scene:remove("menu")
+            game_init()
+        end
+    },
+    false,
+    {
+        texture = TEXTURES.SAVE_GAME_HEX,
+        action = function()
+            game_save()
+            gui_alert("succesfully saved!")
+        end
+    },
+    false,
+    {
+        texture = TEXTURES.LOAD_GAME_HEX,
+        action = function()
+            local save = am.load_state("save", "json")
+
+            if save then
+                win.scene:remove("menu")
+                game_init(save)
+            else
+                gui_alert("no saved games")
+            end
+        end
+    },
+    {
+        texture = TEXTURES.MAP_EDITOR_HEX,
+        action = function()
+            win.scene:remove("menu")
+            map_editor_init(game_state and game_state.map and game_state.map.seed)
+        end
+    },
+    {
+        texture = TEXTURES.UNPAUSE_HEX,
+        action = function()
+            win.scene:remove("menu")
+            win.scene("map_editor").paused = false
+        end
+    },
+    {
+        texture = TEXTURES.SETTINGS_HEX,
+        action = function()
+            gui_alert("not yet :)")
+        end
+    },
+    {
+        texture = TEXTURES.QUIT_HEX,
+        action = function()
+            win:close()
+        end
+    },
+    false
 }
 
 local function deselect_tile()
@@ -84,22 +145,25 @@ function map_editor_action()
 end
 
 function map_editor_init()
+    -- remove existing map_editor scene from the graph if it's there
+    win.scene:remove("map_editor")
+
     local map_editor_scene = am.group():tag"map_editor"
+    map_editor_scene:late_action(map_editor_action)
 
     map_editor_state.map = default_map_editor_map(1)
     map_editor_state.world = make_hex_grid_scene(map_editor_state.map, false)
-
-    map_editor_scene:append(map_editor_state.world)
-
-    win.scene:remove("map_editor")
-    win.scene:append(map_editor_scene)
-    win.scene:append(
+    map_editor_state.ui = am.group(
         am.translate(HEX_GRID_CENTER):tag"cursor_translate"
-        ^ make_hex_cursor_node(0, COLORS.TRANSPARENT):tag"cursor"
+        ^ make_hex_cursor_node(0, COLORS.TRANSPARENT):tag"cursor",
+        make_top_right_display_node()
     )
 
-    win.scene:append(make_top_right_display_node())
+    -- add the top level nodes to the scene
+    map_editor_scene:append(map_editor_state.world)
+    map_editor_scene:append(map_editor_state.ui)
 
-    win.scene:late_action(map_editor_action)
+    -- add the scene to the window
+    win.scene:append(map_editor_scene)
 end
 

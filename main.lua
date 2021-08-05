@@ -1,4 +1,5 @@
--- @TODO
+
+-- @TODO @TODO @TODO @TODO
 -- main
 --      -- scale menu hexes to window size, right now they look bad on smaller resolutions
 
@@ -164,7 +165,7 @@ function main_action(self)
     end
 end
 
-function make_scene_menu(scene_options)
+function make_scene_menu(scene_options, tag)
 
     -- calculate the dimensions of the whole grid
     local spacing = 150
@@ -178,7 +179,7 @@ function make_scene_menu(scene_options)
 
     -- generate a map of hexagons (the menu is made up of two rows of hexes) and populate their locations with buttons from the provided options
     local map = hex_rectangular_map(grid_width, grid_height, HEX_ORIENTATION.POINTY)
-    local group = am.group()
+    local group = am.group():tag(tag or "menu")
     local option_index = 1
     for i,_ in pairs(map) do
         for j,_ in pairs(map[i]) do
@@ -228,7 +229,7 @@ function make_scene_menu(scene_options)
 end
 
 function main_scene(do_backdrop, do_logo)
-    local group = am.group()
+    local group = am.group():tag"main_scene"
 
     if do_backdrop then
         local map = hex_hexagonal_map(30)
@@ -292,8 +293,7 @@ function main_scene(do_backdrop, do_logo)
         {
             texture = TEXTURES.NEW_GAME_HEX,
             action = function()
-                win.scene:remove"map_editor"
-                win.scene:remove"menu"
+                win.scene:remove"main_scene"
                 game_init()
             end
         },
@@ -306,7 +306,7 @@ function main_scene(do_backdrop, do_logo)
                 local save = am.load_state("save", "json")
 
                 if save then
-                    win.scene:remove("menu")
+                    win.scene:remove("main_scene")
                     game_init(save)
                 else
                     gui_alert("no saved games")
@@ -316,18 +316,22 @@ function main_scene(do_backdrop, do_logo)
         {
             texture = TEXTURES.MAP_EDITOR_HEX,
             action = function()
-                win.scene:remove("menu")
+                win.scene:remove("main_scene")
                 map_editor_init()
             end
         },
         false,
         {
             texture = TEXTURES.SETTINGS_HEX,
-            action = function() gui_alert("not yet :)") end
+            action = function()
+                gui_alert("not yet :)")
+            end
         },
         {
             texture = TEXTURES.QUIT_HEX,
-            action = function() win:close() end
+            action = function()
+                win:close()
+            end
         },
         false
     }
@@ -336,7 +340,7 @@ function main_scene(do_backdrop, do_logo)
 
     group:action(main_action)
 
-    return group:tag"menu"
+    return group
 end
 
 win.scene = am.group(
