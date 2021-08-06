@@ -7,7 +7,7 @@ local map_editor_state = {
     selected_tile = false
 }
 
-local map_editor_scene_options = {
+local map_editor_scene_menu_options = {
     false,
     {
         texture = TEXTURES.NEW_GAME_HEX,
@@ -82,7 +82,7 @@ function map_editor_action()
 
     if win:key_pressed"escape" then
         win.scene("map_editor").paused = true
-        win.scene:append(make_scene_menu(map_editor_scene_options))
+        win.scene:append(make_scene_menu(map_editor_scene_menu_options))
     end
 
     if win:mouse_down"left" then

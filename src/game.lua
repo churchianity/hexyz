@@ -2,7 +2,7 @@
 game = false -- flag to tell if there is a game running
 game_state = {}
 
-local game_scene_options = {
+local game_scene_menu_options = {
     false,
     {
         texture = TEXTURES.NEW_GAME_HEX,
@@ -70,6 +70,7 @@ local function get_initial_game_state(seed)
         world = world,          -- the root scene graph node for the game 'world'
         ui = nil,               -- unused, root scene graph node for the 'ui' stuff
 
+        frame_start_time = 0,   -- timestamp in seconds that this current frame began on
         time = 0,               -- real time since the *current* game started in seconds
         score = 0,              -- current game score
         money = STARTING_MONEY, -- current money
@@ -148,7 +149,7 @@ end
 local function game_pause()
     win.scene("game").paused = true
 
-    win.scene:append(make_scene_menu(game_scene_options))
+    win.scene:append(make_scene_menu(game_scene_menu_options))
 end
 
 local function game_deserialize(json_string)
@@ -251,6 +252,7 @@ local function game_pause_menu()
 end
 
 local function game_action(scene)
+    game_state.frame_start_time = am.current_time()
     if game_state.score < 0 then
         game_end()
         return true
@@ -413,6 +415,8 @@ local function game_action(scene)
     win.scene("money").text = string.format("MONEY: $%d", game_state.money)
     win.scene("wave_timer").text = get_wave_timer_text()
     win.scene("top_right_display").text = get_top_right_display_text(hex, evenq, centered_evenq, game_state.selected_top_right_display_type)
+
+    check_if_can_collect_garbage_for_free(game_state.frame_start_time, 60)
 end
 
 local function make_game_toolbelt()
@@ -491,19 +495,8 @@ local function make_game_toolbelt()
     tower_select_square.hidden = true
     toolbelt:append(tower_select_square)
 
-    -- it's important these are in the same order as integers assigned to the enum
-    -- TOWER_TYPE, and none are missing.
-    local toolbelt_options = {
-        TOWER_TYPE.WALL,
-        TOWER_TYPE.GATTLER,
-        TOWER_TYPE.HOWITZER,
-        TOWER_TYPE.REDEYE,
-        TOWER_TYPE.MOAT,
-        TOWER_TYPE.RADAR,
-        TOWER_TYPE.LIGHTHOUSE,
-    }
     local toolbelt_buttons = {}
-    for i,v in pairs(toolbelt_options) do
+    for i = 0, #TOWER_SPECS do
         local button, rect = toolbelt_button(i)
         table.insert(toolbelt_buttons, { node = button, rect = rect })
         toolbelt:append(button)
@@ -715,6 +708,7 @@ function game_end()
 
     game_state = {}
     game = false
+    collectgarbage("restart")
 end
 
 function game_save()
@@ -743,5 +737,6 @@ function game_init(saved_state)
     game = true
     win.scene:remove("game")
     win.scene:append(game_scene())
+    collectgarbage("stop")
 end
 

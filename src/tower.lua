@@ -1,103 +1,37 @@
 
-TOWER_TYPE = {
-    WALL       = 1,
-    GATTLER    = 2,
-    HOWITZER   = 3,
-    REDEYE     = 4,
-    --         = 5,
-    MOAT       = 5,
-    --         = 7,
-    RADAR      = 6,
-    --         = 9,
-    LIGHTHOUSE = 7
-}
+do
+    -- load tower data
+    local tfile = am.load_script("data/towers.lua")
+    local error_message
+    if tfile then
+        local status, result = pcall(tfile)
 
-local TOWER_SPECS = {
-    [TOWER_TYPE.WALL] = {
-        name = "Wall",
-        placement_rules_text = "Place on Ground",
-        short_description = "Restricts movement, similar to a mountain.",
-        texture = TEXTURES.TOWER_WALL,
-        icon_texture = TEXTURES.TOWER_WALL_ICON,
-        cost = 10,
-        range = 0,
-        fire_rate = 2,
-        size = 0,
-        height = 1,
-    },
-    [TOWER_TYPE.GATTLER] = {
-        name = "Gattler",
-        placement_rules_text = "Place on Ground",
-        short_description = "Short-range, fast-fire rate single-target tower.",
-        texture = TEXTURES.TOWER_GATTLER,
-        icon_texture = TEXTURES.TOWER_GATTLER_ICON,
-        cost = 20,
-        range = 4,
-        fire_rate = 0.5,
-        size = 0,
-        height = 1,
-    },
-    [TOWER_TYPE.HOWITZER] = {
-        name = "Howitzer",
-        placement_rules_text = "Place on Ground, with a 1 space gap between other towers and mountains - walls/moats don't count.",
-        short_description = "Medium-range, medium fire-rate area of effect artillery tower.",
-        texture = TEXTURES.TOWER_HOWITZER,
-        icon_texture = TEXTURES.TOWER_HOWITZER_ICON,
-        cost = 50,
-        range = 6,
-        fire_rate = 4,
-        size = 0,
-        height = 1,
-    },
-    [TOWER_TYPE.REDEYE] = {
-        name = "Redeye",
-        placement_rules_text = "Place on Mountains.",
-        short_description = "Long-range, penetrating high-velocity laser tower.",
-        texture = TEXTURES.TOWER_REDEYE,
-        icon_texture = TEXTURES.TOWER_REDEYE_ICON,
-        cost = 75,
-        range = 9,
-        fire_rate = 3,
-        size = 0,
-        height = 1,
-    },
-    [TOWER_TYPE.MOAT] = {
-        name = "Moat",
-        placement_rules_text = "Place on Ground",
-        short_description = "Restricts movement, similar to water.",
-        texture = TEXTURES.TOWER_MOAT,
-        icon_texture = TEXTURES.TOWER_MOAT_ICON,
-        cost = 10,
-        range = 0,
-        fire_rate = 2,
-        size = 0,
-        height = -1,
-    },
-    [TOWER_TYPE.RADAR] = {
-        name = "Radar",
-        placement_rules_text = "n/a",
-        short_description = "Doesn't do anything right now :(",
-        texture = TEXTURES.TOWER_RADAR,
-        icon_texture = TEXTURES.TOWER_RADAR_ICON,
-        cost = 100,
-        range = 0,
-        fire_rate = 1,
-        size = 0,
-        height = 1,
-    },
-    [TOWER_TYPE.LIGHTHOUSE] = {
-        name = "Lighthouse",
-        placement_rules_text = "Place on Ground, adjacent to Water or Moats",
-        short_description = "Attracts nearby mobs; temporarily redirects their path",
-        texture = TEXTURES.TOWER_LIGHTHOUSE,
-        icon_texture = TEXTURES.TOWER_LIGHTHOUSE_ICON,
-        cost = 150,
-        range = 7,
-        fire_rate = 1,
-        size = 0,
-        height = 1,
-    },
-}
+        if status then
+            -- lua managed to run the file without syntax/runtime errors
+            -- it's not garunteed to be what we want yet. check:
+            local type_ = type(result)
+            if type_ ~= "table" then
+                error_message = "tower spec file should return a table, but we got " .. type_
+                goto cleanup
+            end
+
+            TOWER_SPECS = result
+        else
+            -- runtime error - including syntax errors
+            error_message = result
+            goto cleanup
+        end
+    else
+        -- file system related error - couldn't load the file
+        error_message = "couldn't load the file"
+    end
+
+    ::cleanup::
+    if error_message then
+        log(error_message)
+        -- @TODO no matter what fucked up, we should load defaults
+    end
+end
 
 function get_tower_spec(tower_type)
     return TOWER_SPECS[tower_type]
@@ -130,29 +64,34 @@ function get_tower_size(tower_type)
     return TOWER_SPECS[tower_type].size
 end
 
+local function default_tower_weapon_target_acquirer(tower, tower_index)
+
+end
+
 local function make_tower_sprite(tower_type)
     return pack_texture_into_sprite(get_tower_texture(tower_type), HEX_PIXEL_WIDTH, HEX_PIXEL_HEIGHT)
 end
 
 function make_tower_node(tower_type)
-    if tower_type == TOWER_TYPE.REDEYE then
+    -- @TODO move to tower spec
+    if tower_type == 4 then
         return make_tower_sprite(tower_type)
 
-    elseif tower_type == TOWER_TYPE.GATTLER then
+    elseif tower_type == 2 then
         return am.group{
                 am.circle(vec2(0), HEX_SIZE - 4, COLORS.VERY_DARK_GRAY, 5),
                 am.rotate(game_state.time or 0)
                 ^ pack_texture_into_sprite(TEXTURES.TOWER_HOWITZER, HEX_PIXEL_HEIGHT*1.5, HEX_PIXEL_WIDTH*2, COLORS.GREEN_YELLOW)
            }
 
-    elseif tower_type == TOWER_TYPE.HOWITZER then
+    elseif tower_type == 3 then
         return am.group{
             am.circle(vec2(0), HEX_SIZE - 4, COLORS.VERY_DARK_GRAY, 6),
             am.rotate(game_state.time or 0) ^ am.group{
                 pack_texture_into_sprite(TEXTURES.TOWER_HOWITZER, HEX_PIXEL_HEIGHT*1.5, HEX_PIXEL_WIDTH*2) -- CHONK
             }
         }
-    elseif tower_type == TOWER_TYPE.LIGHTHOUSE then
+    elseif tower_type == 7 then
         return am.group{
             make_tower_sprite(tower_type),
             am.particles2d{
@@ -178,20 +117,20 @@ function make_tower_node(tower_type)
                 warmup_time = 5
             }
         }
-    elseif tower_type == TOWER_TYPE.WALL then
+    elseif tower_type == 1 then
         return am.circle(vec2(0), HEX_SIZE, COLORS.VERY_DARK_GRAY{a=0.75}, 6)
 
-    elseif tower_type == TOWER_TYPE.MOAT then
+    elseif tower_type == 5 then
         return am.circle(vec2(0), HEX_SIZE, COLORS.WATER{a=1}, 6)
 
-    elseif tower_type == TOWER_TYPE.RADAR then
+    elseif tower_type == 6 then
         return make_tower_sprite(tower_type)
     end
 end
 
 do
     local tower_cursors = {}
-    for _,i in pairs(TOWER_TYPE) do
+    for i = 1, #TOWER_SPECS do
         local tower_sprite = make_tower_node(i)
         tower_sprite.color = COLORS.TRANSPARENT
 
@@ -218,186 +157,6 @@ do
 
     function get_tower_cursor(tower_type)
         return tower_cursors[tower_type]
-    end
-end
-
-local function update_tower_redeye(tower, tower_index)
-    if not tower.target_index then
-        for index,mob in pairs(game_state.mobs) do
-            if mob then
-                local d = math.distance(mob.hex, tower.hex)
-                if d <= tower.range then
-                    tower.target_index = index
-                    break
-                end
-            end
-        end
-    else
-        if not game_state.mobs[tower.target_index] then
-            tower.target_index = false
-
-        elseif (game_state.time - tower.last_shot_time) > tower.fire_rate then
-            local mob = game_state.mobs[tower.target_index]
-
-            make_and_register_projectile(
-                tower.hex,
-                PROJECTILE_TYPE.LASER,
-                math.normalize(mob.position - tower.position)
-            )
-
-            tower.last_shot_time = game_state.time
-            vplay_sfx(SOUNDS.LASER2)
-        end
-    end
-end
-
-local function update_tower_gattler(tower, tower_index)
-    if not tower.target_index then
-        -- we should try and acquire a target
-        for index,mob in pairs(game_state.mobs) do
-            if mob then
-                local d = math.distance(mob.hex, tower.hex)
-                if d <= tower.range then
-                    tower.target_index = index
-                    break
-                end
-            end
-        end
-
-        -- passive animation
-        tower.node("rotate").angle = math.wrapf(tower.node("rotate").angle + 0.1 * am.delta_time, math.pi*2)
-    else
-        -- should have a target, so we should try and shoot it
-        if not game_state.mobs[tower.target_index] then
-            -- the target we have was invalidated
-            tower.target_index = false
-
-        else
-            -- the target we have is valid
-            local mob = game_state.mobs[tower.target_index]
-            local vector = math.normalize(mob.position - tower.position)
-
-            if (game_state.time - tower.last_shot_time) > tower.fire_rate then
-                local projectile = make_and_register_projectile(
-                    tower.hex,
-                    PROJECTILE_TYPE.BULLET,
-                    vector
-                )
-
-                tower.last_shot_time = game_state.time
-                play_sfx(SOUNDS.HIT1)
-            end
-
-            -- point the cannon at the dude
-            local theta = math.rad(90) - math.atan((tower.position.y - mob.position.y)/(tower.position.x - mob.position.x))
-            local diff = tower.node("rotate").angle - theta
-
-            tower.node("rotate").angle = -theta + math.pi/2
-        end
-    end
-end
-
-local function update_tower_howitzer(tower, tower_index)
-    if not tower.target_index then
-        -- we don't have a target
-        for index,mob in pairs(game_state.mobs) do
-            if mob then
-                local d = math.distance(mob.hex, tower.hex)
-                if d <= tower.range then
-                    tower.target_index = index
-                    break
-                end
-            end
-        end
-
-        -- passive animation
-        tower.node("rotate").angle = math.wrapf(tower.node("rotate").angle + 0.1 * am.delta_time, math.pi*2)
-    else
-        -- we should have a target
-        -- @NOTE don't compare to false, empty indexes appear on game reload
-        if not game_state.mobs[tower.target_index] then
-            -- the target we have was invalidated
-            tower.target_index = false
-
-        else
-            -- the target we have is valid
-            local mob = game_state.mobs[tower.target_index]
-            local vector = math.normalize(mob.position - tower.position)
-
-            if (game_state.time - tower.last_shot_time) > tower.fire_rate then
-                local projectile = make_and_register_projectile(
-                    tower.hex,
-                    PROJECTILE_TYPE.SHELL,
-                    vector
-                )
-
-                -- @HACK, the projectile will explode if it encounters something taller than it,
-                -- but the tower it spawns on quickly becomes taller than it, so we just pad it
-                -- if it's not enough the shell explodes before it leaves its spawning hex
-                projectile.props.z = tower.props.z + 0.1
-
-                tower.last_shot_time = game_state.time
-                play_sfx(SOUNDS.EXPLOSION2)
-            end
-
-            -- point the cannon at the dude
-            local theta = math.rad(90) - math.atan((tower.position.y - mob.position.y)/(tower.position.x - mob.position.x))
-            local diff = tower.node("rotate").angle - theta
-
-            tower.node("rotate").angle = -theta + math.pi/2
-        end
-    end
-end
-
-local function update_tower_lighthouse(tower, tower_index)
-    -- check if there's a mob on a hex in our perimeter
-    for _,h in pairs(tower.perimeter) do
-        local mobs = mobs_on_hex(h)
-
-        for _,m in pairs(mobs) do
-            if not m.path and not m.seen_lighthouse then
-                -- @TODO only attract the mob if its frame target (direction vector)
-                -- is within some angle range...? if the mob is heading directly away from the tower, then
-                -- the lighthouse shouldn't do much
-
-                local path, made_it = hex_Astar(game_state.map, tower.hex, m.hex, grid_neighbours, grid_cost, grid_heuristic)
-
-                if made_it then
-                    m.path = path
-                    m.seen_lighthouse = true -- right now mobs don't care about lighthouses if they've already seen one.
-
-                    --[[
-                    local area = spiral_map(tower.hex, tower.range)
-                    for _,h in pairs(area) do
-                        local node = game_state.map[h.x][h.y].node"circle"
-                        local initial_color = node.color
-
-                        local d = math.distance(h, tower.hex)
-                        local target_color = COLORS.SUNRAY{ a = 1/(d/tower.range) + 0.9 }
-                        node:late_action(am.series{
-                            am.tween(node, 0.3, { color = target_color }),
-                            am.tween(node, 0.3, { color = initial_color })
-                        })
-                    end
-                    ]]
-                end
-            end
-        end
-    end
-end
-
-local function get_tower_update_function(tower_type)
-    if tower_type == TOWER_TYPE.REDEYE then
-        return update_tower_redeye
-
-    elseif tower_type == TOWER_TYPE.GATTLER then
-        return update_tower_gattler
-
-    elseif tower_type == TOWER_TYPE.HOWITZER then
-        return update_tower_howitzer
-
-    elseif tower_type == TOWER_TYPE.LIGHTHOUSE then
-        return update_tower_lighthouse
     end
 end
 

@@ -1,9 +1,13 @@
+-- utility functions that don't below elsewhere go here,
+-- especially if they would be at home on the global 'math' or 'table' variables, or are otherwise extensions of standard lua features
+-- try to avoid too much amulet specific stuff, but vector types are probably ok.
 
 function fprofile(f, ...)
     local t1 = am.current_time()
     local result = { f(...) }
-    log("%f", am.current_time() - t1)
-    return unpack(result)
+    local time = am.current_time() - t1
+    --log("%f", time)
+    return time, unpack(result)
 end
 
 function math.wrapf(float, range)
