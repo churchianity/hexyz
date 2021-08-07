@@ -13,7 +13,7 @@ function run_garbage_collector_cycle()
     garbage_collector_average_cycle_time = total / #garbage_collector_cycle_timing_history
 end
 
-function check_if_can_collect_garbage_for_free(frame_start_time, min_goal_fps)
+function check_if_can_collect_garbage_for_free(frame_start_time, min_fps)
     -- often this will be polled at the end of a frame to see if we're running fast or slow,
     -- and if we have some time to kill before the start of the next frame, we could maybe run gc.
     --

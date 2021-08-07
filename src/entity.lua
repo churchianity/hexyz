@@ -14,7 +14,7 @@ entity structure:
     ...             - any       - a bunch of other shit depending on what entity type it is
 }
 --]]
-function make_basic_entity(hex, update, position)
+function make_basic_entity(hex, update_f, position)
     local entity = {}
 
     entity.TOB = game_state.time
@@ -31,7 +31,7 @@ function make_basic_entity(hex, update, position)
         entity.position = hex_to_pixel(hex, vec2(HEX_SIZE))
     end
 
-    entity.update = update
+    entity.update = update_f
     entity.node = false -- set by caller
     entity.type = false -- set by caller
     entity.props = {}

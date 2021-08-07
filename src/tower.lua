@@ -1,37 +1,128 @@
 
-do
-    -- load tower data
-    local tfile = am.load_script("data/towers.lua")
+function default_tower_placement_f(blocked, has_water, has_mountain, has_ground, hex)
+    return not (blocked or has_water or has_mountain)
+end
+
+function default_weapon_target_acquisition_f(tower, tower_index)
+    for index,mob in pairs(game_state.mobs) do
+        if mob then
+            local d = math.distance(mob.hex, tower.hex)
+            if d <= tower.range then
+                tower.target_index = index
+                break
+            end
+        end
+    end
+
+end
+
+function default_tower_target_acquisition_f(tower, tower_index)
+    -- first, find out if a tower even *should*, acquire a target.
+    -- a tower should try and acquire a target if atleast one of its weapons that could be shooting, isn't
+
+    if not tower.target_index then
+        for index,mob in pairs(game_state.mobs) do
+            if mob then
+                local d = math.distance(mob.hex, tower.hex)
+                if d <= tower.range then
+                    tower.target_index = index
+                    break
+                end
+            end
+        end
+    end
+end
+
+function default_tower_update_f(tower, tower_index)
+end
+
+function resolve_tower_specs(spec_file_path)
+    local spec_file = am.load_script(spec_file_path)
     local error_message
-    if tfile then
-        local status, result = pcall(tfile)
+    if spec_file then
+        local status, tower_specs = pcall(spec_file)
 
         if status then
             -- lua managed to run the file without syntax/runtime errors
             -- it's not garunteed to be what we want yet. check:
-            local type_ = type(result)
+            local type_ = type(tower_specs)
             if type_ ~= "table" then
                 error_message = "tower spec file should return a table, but we got " .. type_
-                goto cleanup
             end
 
-            TOWER_SPECS = result
+            -- if we're here, then we're going to assume the spec file is valid, no matter how weird it is
+            -- last thing to do before returning is fill in missing default values
+            for i,tower_spec in pairs(tower_specs) do
+
+                if not tower_spec.size then
+                    tower_spec.size = 1
+                end
+                if not tower_spec.height then
+                    tower_spec.height = 1
+                end
+
+                if not tower_spec.update_f then
+                    tower_spec.update_f = default_tower_update_f
+                end
+
+                if not tower_spec.weapons then
+                    tower_spec.weapons = {}
+                end
+                for i,w in pairs(tower_spec.weapons) do
+                    if not w.min_range then
+                        w.min_range = 0
+                    end
+                    if not w.target_acquisition_f then
+                        w.target_acquisition_f = default_weapon_target_acquisition_f
+                    end
+                end
+
+                if not tower_spec.placement_f then
+                    tower_spec.placement_f = default_tower_placement_f
+                end
+
+                -- resolve a tower's visual range - if not provided we should use the largest range among weapons it has
+                if not tower_spec.visual_range then
+                    local largest_range = 0
+                    for i,w in pairs(tower_spec.weapons) do
+                        if w.range > largest_range then
+                            largest_range = w.range
+                        end
+                    end
+                    tower_spec.visual_range = largest_range
+                end
+                -- do the same for the minimum visual range
+                if not tower_spec.min_visual_range then
+                    local largest_minimum_range = 0
+                    for i,w in pairs(tower_spec.weapons) do
+                        if w.min_range > largest_minimum_range then
+                            largest_minimum_range = w.min_range
+                        end
+                    end
+                    tower_spec.min_visual_range = largest_minimum_range
+                end
+            end
+
+            return tower_specs
         else
             -- runtime error - including syntax errors
             error_message = result
-            goto cleanup
         end
     else
-        -- file system related error - couldn't load the file
+        -- filesystem/permissions related error - couldn't load the file
         error_message = "couldn't load the file"
     end
 
-    ::cleanup::
-    if error_message then
-        log(error_message)
-        -- @TODO no matter what fucked up, we should load defaults
-    end
+    log(error_message)
+    -- @TODO no matter what fucked up, we should load defaults
+    return {}
 end
+
+
+-- load tower spec file
+TOWER_SPECS = resolve_tower_specs("data/towers.lua")
+
+
 
 function get_tower_spec(tower_type)
     return TOWER_SPECS[tower_type]
@@ -130,7 +221,7 @@ end
 
 do
     local tower_cursors = {}
-    for i = 1, #TOWER_SPECS do
+    for i,tower_spec in pairs(TOWER_SPECS) do
         local tower_sprite = make_tower_node(i)
         tower_sprite.color = COLORS.TRANSPARENT
 
@@ -150,7 +241,7 @@ do
         end)
 
         tower_cursors[i] = am.group{
-            make_hex_cursor_node(get_tower_range(i), vec4(0), coroutine_),
+            make_hex_cursor_node(tower_spec.visual_range, vec4(0), coroutine_, tower_spec.min_visual_range),
             tower_sprite
         }
     end
@@ -210,7 +301,7 @@ function tower_type_is_buildable_on(hex, tile, tower_type)
     -- this function gets polled a lot, and sometimes with nil/false tower types
     if not tower_type then return false end
 
-    -- you can't build anything in the center
+    -- you can't build anything in the center, probably ever?
     if hex == HEX_GRID_CENTER then return false end
 
     local blocking_towers = {}
@@ -218,6 +309,7 @@ function tower_type_is_buildable_on(hex, tile, tower_type)
     local has_water = false
     local has_mountain = false
     local has_ground = false
+    local tower_spec = get_tower_spec(tower_type)
 
     for _,h in pairs(hex_spiral_map(hex, get_tower_size(tower_type))) do
         table.merge(blocking_towers, towers_on_hex(h))
@@ -243,111 +335,35 @@ function tower_type_is_buildable_on(hex, tile, tower_type)
     local mobs_blocking = table.count(blocking_mobs) ~= 0
     local blocked = mobs_blocking or towers_blocking
 
-    if tower_type == TOWER_TYPE.GATTLER then
-        local has_mountain_neighbour = false
-        local has_non_wall_non_moat_tower_neighbour = false
-        for _,h in pairs(hex_neighbours(hex)) do
-            local tile = hex_map_get(game_state.map, h)
-
-            if tile and tile.elevation >=  0.5 then
-                has_mountain_neighbour = true
-                break
-            end
-        end
-        return not (blocked or has_water or has_mountain)
-
-    elseif tower_type == TOWER_TYPE.HOWITZER then
-        local has_mountain_neighbour = false
-        local has_non_wall_non_moat_tower_neighbour = false
-        for _,h in pairs(hex_neighbours(hex)) do
-            local towers = towers_on_hex(h)
-            local wall_on_hex = false
-            has_non_wall_non_moat_tower_neighbour = table.find(towers, function(tower)
-                if tower.type == TOWER_TYPE.WALL then
-                    wall_on_hex = true
-                    return false
-
-                elseif tower.type == TOWER_TYPE.MOAT then
-                    return false
-                end
-
-                return true
-            end)
-            if has_non_wall_non_moat_tower_neighbour then
-                break
-            end
-
-            local tile = hex_map_get(game_state.map, h)
-            if not wall_on_hex and tile and tile.elevation >= 0.5 then
-                has_mountain_neighbour = true
-                break
-            end
-        end
-        return not (blocked or has_water or has_mountain or has_mountain_neighbour or has_non_wall_non_moat_tower_neighbour)
-
-    elseif tower_type == TOWER_TYPE.REDEYE then
-        return not blocked
-               and has_mountain
-
-    elseif tower_type == TOWER_TYPE.LIGHTHOUSE then
-        local has_water_neighbour = false
-        for _,h in pairs(hex_neighbours(hex)) do
-            local tile = hex_map_get(game_state.map, h)
-
-            if tile and tile.elevation < -0.5 then
-                has_water_neighbour = true
-                break
-            end
-        end
-        return not blocked
-           and not has_mountain
-           and not has_water
-           and has_water_neighbour
-
-    elseif tower_type == TOWER_TYPE.WALL then
-        return not blocked and tile_is_medium_elevation(tile)
-
-    elseif tower_type == TOWER_TYPE.MOAT then
-        return not blocked and tile_is_medium_elevation(tile)
-    end
+    return tower_spec.placement_f(blocked, has_water, has_mountain, has_ground, hex)
 end
 
-
 function make_and_register_tower(hex, tower_type)
+    local spec = get_tower_spec(tower_type)
     local tower = make_basic_entity(
         hex,
-        get_tower_update_function(tower_type)
+        spec.update_f
     )
+
+    table.merge(tower, spec)
 
     tower.type = tower_type
     tower.node = am.translate(tower.position) ^ make_tower_node(tower_type)
 
-    local spec = get_tower_spec(tower_type)
-    tower.cost = spec.cost
-    tower.range = spec.range
-    tower.fire_rate = spec.fire_rate
-    tower.last_shot_time = -spec.fire_rate -- lets the tower fire immediately upon being placed
-    tower.size = spec.size
-    if tower.size == 0 then
+    for i,w in pairs(tower.weapons) do
+        w.last_shot_time = -tower.weapons[i].fire_rate -- lets the tower fire immediately upon being placed
+    end
+
+    if tower.size == 1 then
         tower.hexes = { tower.hex }
     else
-        tower.hexes = hex_spiral_map(tower.hex, tower.size)
+        tower.hexes = hex_spiral_map(tower.hex, tower.size - 1)
     end
-    tower.height = spec.height
 
+    -- should we be permuting the map here?
     for _,h in pairs(tower.hexes) do
         local tile = hex_map_get(game_state.map, h.x, h.y)
         tile.elevation = tile.elevation + tower.height
-    end
-
-    if tower.type == TOWER_TYPE.HOWITZER then
-        tower.props.z = tower.height
-
-    elseif tower.type == TOWER_TYPE.GATTLER then
-        tower.props.z = tower.height
-
-    elseif tower.type == TOWER_TYPE.LIGHTHOUSE then
-        tower.perimeter = hex_ring_map(tower.hex, tower.range)
     end
 
     register_entity(game_state.towers, tower)

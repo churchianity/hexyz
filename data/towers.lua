@@ -23,12 +23,16 @@
     |                           |          | order matters - two weapons share a 'choke' value, and both    |
     |                           |          | could acquire a target in a frame, the first one is choosen.   |
     |                           |          |                                                                |
-    | placement_rules           | table    | @TODO                                                          |
+    | placement_f               | function |
     |                           |          |                                                                |
     |                           |          |                                                                |
     |                           |          |                                                                |
     |                           |          |                                                                |
     |                           |          |                                                                |
+    | visual_range              | number   | when the tower has multiple weapons, what range represents the |
+    |                           |          | overall range of the tower. default is calculated on load as   |
+    |                           |          | the largest range among the weapons the tower has.             |
+    | min_visual_range          | number   | same as above but the largest minimum range among weapons      |
     |                           |          |                                                                |
     | update_f                  | function | default value is complicated @TODO                             |
     | grow_f                    | function | default value is false/nil. @TODO                              |
@@ -73,8 +77,6 @@ return {
         range = 0,
         fire_rate = 2,
         update = false,
-        placement_rules = {
-        }
     },
     {
         name = "Gattler",
@@ -83,20 +85,17 @@ return {
         texture = TEXTURES.TOWER_GATTLER,
         icon_texture = TEXTURES.TOWER_GATTLER_ICON,
         cost = 20,
-        range = 4,
-        fire_rate = 0.5,
+        weapons = {
+            {
+                range = 4,
+                fire_rate = 0.5,
+                projectile_type = 3,
+            }
+        },
         update = function(tower, tower_index)
             if not tower.target_index then
                 -- we should try and acquire a target
-                for index,mob in pairs(game_state.mobs) do
-                    if mob then
-                        local d = math.distance(mob.hex, tower.hex)
-                        if d <= tower.range then
-                            tower.target_index = index
-                            break
-                        end
-                    end
-                end
+
 
                 -- passive animation
                 tower.node("rotate").angle = math.wrapf(tower.node("rotate").angle + 0.1 * am.delta_time, math.pi*2)
@@ -138,8 +137,42 @@ return {
         texture = TEXTURES.TOWER_HOWITZER,
         icon_texture = TEXTURES.TOWER_HOWITZER_ICON,
         cost = 50,
-        range = 6,
-        fire_rate = 4,
+        weapons = {
+            {
+                range = 6,
+                fire_rate = 4,
+                projectile_type = 1,
+            }
+        },
+        placement_f = function(blocked, has_water, has_mountain, has_ground, hex)
+            local has_mountain_neighbour = false
+            local has_non_wall_non_moat_tower_neighbour = false
+            for _,h in pairs(hex_neighbours(hex)) do
+                local towers = towers_on_hex(h)
+                local wall_on_hex = false
+                has_non_wall_non_moat_tower_neighbour = table.find(towers, function(tower)
+                    if tower.type == TOWER_TYPE.WALL then
+                        wall_on_hex = true
+                        return false
+
+                    elseif tower.type == TOWER_TYPE.MOAT then
+                        return false
+                    end
+
+                    return true
+                end)
+                if has_non_wall_non_moat_tower_neighbour then
+                    break
+                end
+
+                local tile = hex_map_get(game_state.map, h)
+                if not wall_on_hex and tile and tile.elevation >= 0.5 then
+                    has_mountain_neighbour = true
+                    break
+                end
+            end
+            return not (blocked or has_water or has_mountain or has_mountain_neighbour or has_non_wall_non_moat_tower_neighbour)
+        end,
         update = function(tower, tower_index)
             if not tower.target_index then
                 -- we don't have a target
@@ -199,8 +232,16 @@ return {
         texture = TEXTURES.TOWER_REDEYE,
         icon_texture = TEXTURES.TOWER_REDEYE_ICON,
         cost = 75,
-        range = 9,
-        fire_rate = 3,
+        weapons = {
+            {
+                range = 9,
+                fire_rate = 3,
+                projectile_type = 2,
+            }
+        },
+        placement_f = function(blocked, has_water, has_mountain, has_ground, hex)
+            return not blocked and has_mountain
+        end,
         update = function(tower, tower_index)
             if not tower.target_index then
                 for index,mob in pairs(game_state.mobs) do
@@ -263,8 +304,20 @@ return {
         cost = 150,
         range = 7,
         fire_rate = 1,
-        target_aquisition_f = function(tower, tower_index)
+        placement_f = function(blocked, has_water, has_mountain, has_ground, hex)
+            local has_water_neighbour = false
+            for _,h in pairs(hex_neighbours(hex)) do
+                local tile = hex_map_get(game_state.map, h)
 
+                if tile and tile.elevation < -0.5 then
+                    has_water_neighbour = true
+                    break
+                end
+            end
+            return not blocked
+                and not has_mountain
+                and not has_water
+                and has_water_neighbour
         end,
         update = function(tower, tower_index)
             -- check if there's a mob on a hex in our perimeter
@@ -289,3 +342,4 @@ return {
         end
     },
 }
+

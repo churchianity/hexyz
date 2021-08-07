@@ -496,7 +496,7 @@ local function make_game_toolbelt()
     toolbelt:append(tower_select_square)
 
     local toolbelt_buttons = {}
-    for i = 0, #TOWER_SPECS do
+    for i = 1, #TOWER_SPECS do
         local button, rect = toolbelt_button(i)
         table.insert(toolbelt_buttons, { node = button, rect = rect })
         toolbelt:append(button)
@@ -677,14 +677,25 @@ end
 -- this is a stupid name, it just returns a scene node group of hexagons in a hexagonal shape centered at 0,0, of size |radius|
 -- |color_f| can be a function that takes a hex and returns a color, or just a color
 -- optionally, |action_f| is a function that operates on the group node every frame
-function make_hex_cursor_node(radius, color_f, action_f)
+function make_hex_cursor_node(radius, color_f, action_f, min_radius)
     local color = type(color_f) == "userdata" and color_f or nil
-    local map = hex_spiral_map(vec2(0), radius)
     local group = am.group()
 
-    for _,h in pairs(map) do
-        local hexagon = am.circle(hex_to_pixel(h, vec2(HEX_SIZE)), HEX_SIZE, color or color_f(h), 6)
-        group:append(hexagon)
+    if not min_radius then
+        local map = hex_spiral_map(vec2(0), radius)
+
+        for _,h in pairs(map) do
+            local hexagon = am.circle(hex_to_pixel(h, vec2(HEX_SIZE)), HEX_SIZE, color or color_f(h), 6)
+            group:append(hexagon)
+        end
+    else
+        for i = min_radius, radius do
+            local map = hex_ring_map(vec2(0), i)
+            for _,h in pairs(map) do
+                local hexagon = am.circle(hex_to_pixel(h, vec2(HEX_SIZE)), HEX_SIZE, color or color_f(h), 6)
+                group:append(hexagon)
+            end
+        end
     end
 
     if action_f then
