@@ -47,7 +47,8 @@ local map_editor_scene_menu_options = {
     {
         texture = TEXTURES.UNPAUSE_HEX,
         action = function()
-            win.scene("map_editor").paused = false
+            win.scene:remove("menu")
+            win.scene("context").paused = false
         end
     },
     {
