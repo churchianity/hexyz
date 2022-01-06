@@ -40,7 +40,8 @@ local game_scene_menu_options = {
     {
         texture = TEXTURES.UNPAUSE_HEX,
         action = function()
-
+            win.scene("context").paused = false
+            win.scene:remove("menu")
         end
     },
     {
