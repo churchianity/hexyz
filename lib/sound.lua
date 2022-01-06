@@ -21,31 +21,32 @@ SOUNDS = {
     RANDOM5         = 36680709,
 
     -- audio buffers
-    MAIN_THEME = am.track(am.load_audio("res/maintheme.ogg"), true, 1, settings.music_volume)
+    MAIN_THEME = am.track(am.load_audio("res/ogg/main_theme.ogg"), true, 1, SETTINGS.music_volume)
 }
 
--- doesn't get unset when a track is 'done' playing automatically
-CURRENT_TRACK = nil
-
-function update_sfx_volume() end
+CURRENT_TRACKS = {}
 function update_music_volume(volume)
-    if CURRENT_TRACK then
-        CURRENT_TRACK.volume = math.clamp(volume, 0, 1)
+    for _,track in pairs(CURRENT_TRACKS) do
+        track.volume = math.clamp(volume, 0, 1)
     end
 end
 
 -- play sound effect with variable pitch
 function vplay_sfx(sound, pitch_range)
     local pitch = (math.random() + 0.5)/(pitch_range and 1/pitch_range or 2)
-    win.scene:action(am.play(sound, false, pitch, settings.sfx_volume))
+    win.scene:action(am.play(sound, false, pitch, SETTINGS.sfx_volume))
 end
 
 function play_sfx(sound)
-    win.scene:action(am.play(sound, false, 1, settings.sfx_volume))
+    win.scene:action(am.play(sound, false, 1, SETTINGS.sfx_volume))
 end
 
-function play_track(track, loop)
-    CURRENT_TRACK = track
-    win.scene:action(am.play(track, loop or true))
+function stop_track()
+
+end
+
+function play_track(track, do_loop)
+    table.insert(CURRENT_TRACKS, track)
+    win.scene:action(am.play(track, do_loop or true))
 end
 

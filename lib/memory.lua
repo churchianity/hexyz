@@ -1,4 +1,14 @@
 
+-- the garbage collector decides when to run its cycles on its own, and this can cause frame spikes in your game.
+-- lua provides some amount of control over its garbage collector.
+--
+-- by storing the average time it takes for a full gc cycle to run, we can check at the end of a frame if we have enough time
+-- to run it for 'free'
+--
+-- if you wish, you can call 'collectgarbage("stop")', and then:
+--  at the start of each game frame, call and cache the results of 'am.current_time()' - am.frame_time doesn't seem to work as well
+--  at the end of each game frame, call 'check_if_can_collect_garbage_for_free()' with the cached frame time and a desired minimum fps
+--
 local garbage_collector_cycle_timing_history = {}
 local garbage_collector_average_cycle_time = 0
 function run_garbage_collector_cycle()

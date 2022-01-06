@@ -7,6 +7,7 @@
 -- (vec2, mat2)
 -- and some utility functions not present in your standard lua, like:
 --  table.append
+-- @TODO we probably shouldn't return vec2's at all. it's annoying to serialize vec2s, which is stupid because they should be easy
 
 -- @TODO
 if not table.append then end
@@ -35,6 +36,11 @@ local HEX_DEFAULT_ORIENTATION = HEX_ORIENTATION.FLAT
 -- whenever |size| for a hexagon appears as an argument, if it isn't provided, use this
 -- 'size' here is distance from the centerpoint to any vertex in pixel
 local HEX_DEFAULT_SIZE = vec2(26)
+
+-- if you need to dynamically calculate the default hexagon size, you can pass it here after
+function hex_set_default_size(size)
+    HEX_DEFAULT_SIZE = size
+end
 
 -- actual width (longest contained horizontal line) of the hexagon
 function hex_width(size, orientation)
@@ -302,12 +308,18 @@ function hex_parallelogram_map(width, height, seed)
         end
     end
     return setmetatable(map, { __index = {
+        seed = seed,
+        get = function(hex, y)
+            return hex_map_get(map, hex, y)
+        end,
+        set = function(hex, y, v)
+            hex_map_set(map, hex, y, v)
+        end,
         width = width,
         height = height,
-        seed = seed,
         neighbours = function(hex)
-            return table.filter(hex_neighbours(hex), function(_hex)
-                return hex_map_get(map, _hex)
+            return table.filter(hex_neighbours(hex), function(hex_)
+                return map.get(hex_)
             end)
         end
     }})
@@ -337,11 +349,17 @@ function hex_triangular_map(size, seed)
         end
     end
     return setmetatable(map, { __index = {
-        size = size,
         seed = seed,
+        size = size,
+        get = function(hex, y)
+            return hex_map_get(map, hex, y)
+        end,
+        set = function(hex, y, v)
+            hex_map_set(map, hex, y, v)
+        end,
         neighbours = function(hex)
-            return table.filter(hex_neighbours(hex), function(_hex)
-                return hex_map_get(map, _hex)
+            return table.filter(hex_neighbours(hex), function(hex_)
+                return map.get(hex_)
             end)
         end
     }})
@@ -349,8 +367,11 @@ end
 
 -- Returns Unordered Hexagonal Map of |radius| with Simplex Noise
 function hex_hexagonal_map(radius, seed)
-    local seed = seed or math.random(radius * 2 * math.pi)
+    -- @NOTE usually i try and generate a seed within the range of the area of the map, but for lua's math.random starts to exhibit some really weird behavior
+    -- when you seed it with a high integer value, so I changed 'radius^2' to just 'radius' here.
+    local seed = seed or math.random(math.floor(2 * math.pi * radius))
 
+    local size = 0
     local map = {}
     for i = -radius, radius do
         map[i] = {}
@@ -373,14 +394,22 @@ function hex_hexagonal_map(radius, seed)
                 noise = noise + f * math.simplex(pos * l)
             end
             map[i][j] = noise
+            size = size + 1
         end
     end
     return setmetatable(map, { __index = {
-        radius = radius,
         seed = seed,
+        get = function(hex, y)
+            return hex_map_get(map, hex, y)
+        end,
+        set = function(hex, y, v)
+            hex_map_set(map, hex, y, v)
+        end,
+        radius = radius,
+        size = size,
         neighbours = function(hex)
-            return table.filter(hex_neighbours(hex), function(_hex)
-                return hex_map_get(map, _hex.x, _hex.y)
+            return table.filter(hex_neighbours(hex), function(hex_)
+                return map.get(hex_)
             end)
         end
     }})
@@ -410,7 +439,6 @@ function hex_rectangular_map(width, height, orientation, seed, do_generate_noise
                         noise = noise + f * math.simplex(pos * l)
                     end
                     j = j - math.floor(i/2) -- this is what makes it rectangular
-
                     hex_map_set(map, i, j, noise)
                 else
                     j = j - math.floor(i/2) -- this is what makes it rectangular
@@ -431,12 +459,19 @@ function hex_rectangular_map(width, height, orientation, seed, do_generate_noise
     end
 
     return setmetatable(map, { __index = {
+        seed = seed,
+        get = function(hex, y)
+            return hex_map_get(map, hex, y)
+        end,
+        set = function(hex, y, v)
+            hex_map_set(map, hex, y, v)
+        end,
         width = width,
         height = height,
-        seed = seed,
+        size = width * height,
         neighbours = function(hex)
-            return table.filter(hex_neighbours(hex), function(_hex)
-                return hex_map_get(map, _hex)
+            return table.filter(hex_neighbours(hex), function(hex_)
+                return map.get(hex_)
             end)
         end
     }})
@@ -477,7 +512,7 @@ end
 
 function hex_dijkstra(map, start, goal, neighbour_f, cost_f)
     local frontier = {}
-    frontier[1] = { hex = start, priority = 0 }
+    table.insert(frontier, { hex = start, priority = 0 })
 
     local came_from = {}
     hex_map_set(came_from, start, false)

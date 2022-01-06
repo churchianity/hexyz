@@ -1,4 +1,3 @@
-
 --[[
     the following is a list of tower specifications, which are declarations of a variety of properties describing what a tower is, and how it functions
     this a lua file. a quick run-down of what writing code in lua looks like: https://www.amulet.xyz/doc/#lua-primer
@@ -68,6 +67,7 @@
 
 return {
     {
+        id = "WALL",
         name = "Wall",
         placement_rules_text = "Place on Ground",
         short_description = "Restricts movement, similar to a mountain.",
@@ -79,6 +79,7 @@ return {
         update = false,
     },
     {
+        id = "GATTLER",
         name = "Gattler",
         placement_rules_text = "Place on Ground",
         short_description = "Short-range, fast-fire rate single-target tower.",
@@ -131,6 +132,7 @@ return {
         end
     },
     {
+        id = "HOWITZER",
         name = "Howitzer",
         placement_rules_text = "Place on Ground, with a 1 space gap between other towers and mountains - walls/moats don't count.",
         short_description = "Medium-range, medium fire-rate area of effect artillery tower.",
@@ -226,6 +228,7 @@ return {
         end
     },
     {
+        id = "REDEYE",
         name = "Redeye",
         placement_rules_text = "Place on Mountains.",
         short_description = "Long-range, penetrating high-velocity laser tower.",
@@ -273,6 +276,7 @@ return {
         end
     },
     {
+        id = "MOAT",
         name = "Moat",
         placement_rules_text = "Place on Ground",
         short_description = "Restricts movement, similar to water.",
@@ -285,6 +289,7 @@ return {
         update = false
     },
     {
+        id = "RADAR",
         name = "Radar",
         placement_rules_text = "n/a",
         short_description = "Doesn't do anything right now :(",
@@ -296,6 +301,7 @@ return {
         update = false
     },
     {
+        id = "LIGHTHOUSE",
         name = "Lighthouse",
         placement_rules_text = "Place on Ground, adjacent to Water or Moats",
         short_description = "Attracts nearby mobs; temporarily redirects their path",

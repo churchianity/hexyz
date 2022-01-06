@@ -34,7 +34,6 @@ local game_scene_menu_options = {
     {
         texture = TEXTURES.MAP_EDITOR_HEX,
         action = function()
-            win.scene:remove("game")
             map_editor_init(game_state.map.seed)
         end
     },
@@ -75,8 +74,8 @@ local function get_initial_game_state(seed)
         score = 0,              -- current game score
         money = STARTING_MONEY, -- current money
 
-        towers = {},            -- list of tower entities
         mobs = {},              -- list of mob entities
+        towers = {},            -- list of tower entities
         projectiles = {},       -- list of projectile entities
 
         current_wave = 1,
@@ -147,7 +146,7 @@ local function do_day_night_cycle()
 end
 
 local function game_pause()
-    win.scene("game").paused = true
+    win.scene("context").paused = true
 
     win.scene:append(make_scene_menu(game_scene_menu_options))
 end
@@ -156,7 +155,7 @@ local function game_deserialize(json_string)
     local new_game_state = am.parse_json(json_string)
 
     if new_game_state.version ~= version then
-        log("loading incompatible old save data. starting a fresh game instead.")
+        gui_alert("loading incompatible old save data.\nstarting a fresh game instead.", nil, 10)
         return get_initial_game_state()
     end
 
@@ -247,10 +246,6 @@ local function deselect_tile()
     win.scene:remove("tile_select_box")
 end
 
-local function game_pause_menu()
-
-end
-
 local function game_action(scene)
     game_state.frame_start_time = am.current_time()
     if game_state.score < 0 then
@@ -309,14 +304,14 @@ local function game_action(scene)
                 if broken then
                     local node = win.scene("cursor"):child(2)
                     node.color = COLORS.CLARET
-                    node:action(am.tween(0.1, { color = COLORS.TRANSPARENT }))
+                    node:action(am.tween(0.1, { color = COLORS.TRANSPARENT3 }))
                     play_sfx(SOUNDS.BIRD2)
                     gui_alert("closes the circle")
 
                 elseif cost > game_state.money then
                     local node = win.scene("cursor"):child(2)
                     node.color = COLORS.CLARET
-                    node:action(am.tween(0.1, { color = COLORS.TRANSPARENT }))
+                    node:action(am.tween(0.1, { color = COLORS.TRANSPARENT3 }))
                     play_sfx(SOUNDS.BIRD2)
                     gui_alert("not enough money")
 
@@ -483,7 +478,7 @@ local function make_game_toolbelt()
 
     local toolbelt = am.group(
         am.group():tag"tower_tooltip_text",
-        am.rect(win.left, win.bottom, win.right, win.bottom + toolbelt_height, COLORS.TRANSPARENT)
+        am.rect(win.left, win.bottom, win.right, win.bottom + toolbelt_height, COLORS.TRANSPARENT3)
     )
     :tag"toolbelt"
 
@@ -513,7 +508,6 @@ local function make_game_toolbelt()
                     if win:mouse_pressed("left") then
                         select_toolbelt_button(i)
                     end
-
                     break
                 end
             end
@@ -576,7 +570,7 @@ local function make_game_toolbelt()
             -- de-selecting currently selected tower if any
             toolbelt("toolbelt_select_square").hidden = true
 
-            win.scene:replace("cursor", make_hex_cursor_node(0, COLORS.TRANSPARENT):tag"cursor")
+            win.scene:replace("cursor", make_hex_cursor_node(0, COLORS.TRANSPARENT3):tag"cursor")
         end
     end
 
@@ -657,7 +651,7 @@ local function game_scene()
 
     local scene = am.group(
         am.scale(1):tag"world_scale" ^ game_state.world,
-        am.translate(HEX_GRID_CENTER):tag"cursor_translate" ^ make_hex_cursor_node(0, COLORS.TRANSPARENT):tag"cursor",
+        am.translate(HEX_GRID_CENTER):tag"cursor_translate" ^ make_hex_cursor_node(0, COLORS.TRANSPARENT3):tag"cursor",
         score,
         money,
         wave_timer,
@@ -671,14 +665,15 @@ local function game_scene()
     -- dangling actions run before the main action
     scene:late_action(game_action)
 
+    play_track(SOUNDS.MAIN_THEME)
+
     return scene
 end
 
--- this is a stupid name, it just returns a scene node group of hexagons in a hexagonal shape centered at 0,0, of size |radius|
 -- |color_f| can be a function that takes a hex and returns a color, or just a color
 -- optionally, |action_f| is a function that operates on the group node every frame
 function make_hex_cursor_node(radius, color_f, action_f, min_radius)
-    local color = type(color_f) == "userdata" and color_f or nil
+    local color = type(color_f) == "userdata" and color_f or COLORS.TRANSPARENT3
     local group = am.group()
 
     if not min_radius then
@@ -712,6 +707,7 @@ function game_end()
     local hmob = table.highest_index(game_state.mobs)
     local htower = table.highest_index(game_state.towers)
     local hprojectile = table.highest_index(game_state.projectiles)
+
     gui_alert(string.format(
         "\nmobs spawned: %d\ntowers built: %d\nprojectiles spawned: %d\n",
         hmob, htower, hprojectile
@@ -746,8 +742,8 @@ function game_init(saved_state)
     end
 
     game = true
-    win.scene:remove("game")
-    win.scene:append(game_scene())
+    switch_context(game_scene())
+
     collectgarbage("stop")
 end
 

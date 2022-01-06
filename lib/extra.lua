@@ -57,7 +57,18 @@ function table.find(t, predicate)
     return nil
 end
 
-function quicksort(t, low_index, high_index, comparator)
+-- don't use with sparse arrays or hash tables.
+-- only arrays.
+-- mutates the array in place.
+function table.reverse(t)
+    local n = #t
+    for i,v in pairs(t) do
+        t[i], t[n] = t[n], t[i]
+        n = n - 1
+    end
+end
+
+function table.quicksort(t, low_index, high_index, comparator)
     local function partition(t, low_index, high_index)
         local i = low_index - 1
         local pivot = t[high_index]

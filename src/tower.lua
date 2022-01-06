@@ -20,6 +20,7 @@ function default_tower_target_acquisition_f(tower, tower_index)
     -- first, find out if a tower even *should*, acquire a target.
     -- a tower should try and acquire a target if atleast one of its weapons that could be shooting, isn't
 
+
     if not tower.target_index then
         for index,mob in pairs(game_state.mobs) do
             if mob then
@@ -34,6 +35,41 @@ function default_tower_target_acquisition_f(tower, tower_index)
 end
 
 function default_tower_update_f(tower, tower_index)
+end
+
+-- load tower spec file
+TOWER_SPECS = {}
+TOWER_TYPE = {}
+
+function get_tower_spec(tower_type)
+    return TOWER_SPECS[tower_type]
+end
+function get_tower_name(tower_type)
+    return TOWER_SPECS[tower_type].name
+end
+function get_tower_placement_rules_text(tower_type)
+    return TOWER_SPECS[tower_type].placement_rules_text
+end
+function get_tower_short_description(tower_type)
+    return TOWER_SPECS[tower_type].short_description
+end
+function get_tower_texture(tower_type)
+    return TOWER_SPECS[tower_type].texture
+end
+function get_tower_icon_texture(tower_type)
+    return TOWER_SPECS[tower_type].icon_texture
+end
+function get_tower_cost(tower_type)
+    return TOWER_SPECS[tower_type].cost
+end
+function get_tower_range(tower_type)
+    return TOWER_SPECS[tower_type].range
+end
+function get_tower_fire_rate(tower_type)
+    return TOWER_SPECS[tower_type].fire_rate
+end
+function get_tower_size(tower_type)
+    return TOWER_SPECS[tower_type].size
 end
 
 function resolve_tower_specs(spec_file_path)
@@ -103,7 +139,12 @@ function resolve_tower_specs(spec_file_path)
                 end
             end
 
-            return tower_specs
+            TOWER_SPECS = tower_specs
+            for i,t in pairs(TOWER_SPECS) do
+                TOWER_TYPE[t.id] = i
+            end
+            build_tower_cursors()
+            return
         else
             -- runtime error - including syntax errors
             error_message = result
@@ -115,44 +156,8 @@ function resolve_tower_specs(spec_file_path)
 
     log(error_message)
     -- @TODO no matter what fucked up, we should load defaults
-    return {}
-end
-
-
--- load tower spec file
-TOWER_SPECS = resolve_tower_specs("data/towers.lua")
-
-
-
-function get_tower_spec(tower_type)
-    return TOWER_SPECS[tower_type]
-end
-function get_tower_name(tower_type)
-    return TOWER_SPECS[tower_type].name
-end
-function get_tower_placement_rules_text(tower_type)
-    return TOWER_SPECS[tower_type].placement_rules_text
-end
-function get_tower_short_description(tower_type)
-    return TOWER_SPECS[tower_type].short_description
-end
-function get_tower_texture(tower_type)
-    return TOWER_SPECS[tower_type].texture
-end
-function get_tower_icon_texture(tower_type)
-    return TOWER_SPECS[tower_type].icon_texture
-end
-function get_tower_cost(tower_type)
-    return TOWER_SPECS[tower_type].cost
-end
-function get_tower_range(tower_type)
-    return TOWER_SPECS[tower_type].range
-end
-function get_tower_fire_rate(tower_type)
-    return TOWER_SPECS[tower_type].fire_rate
-end
-function get_tower_size(tower_type)
-    return TOWER_SPECS[tower_type].size
+    TOWER_SPECS = {}
+    build_tower_cursors()
 end
 
 local function default_tower_weapon_target_acquirer(tower, tower_index)
@@ -219,11 +224,11 @@ function make_tower_node(tower_type)
     end
 end
 
-do
+function build_tower_cursors()
     local tower_cursors = {}
     for i,tower_spec in pairs(TOWER_SPECS) do
         local tower_sprite = make_tower_node(i)
-        tower_sprite.color = COLORS.TRANSPARENT
+        tower_sprite.color = COLORS.TRANSPARENT3
 
         local coroutine_ = coroutine.create(function(node)
             local flash_on = {}

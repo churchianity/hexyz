@@ -41,14 +41,12 @@ local map_editor_scene_menu_options = {
     {
         texture = TEXTURES.MAP_EDITOR_HEX,
         action = function()
-            win.scene:remove("menu")
             map_editor_init(game_state and game_state.map and game_state.map.seed)
         end
     },
     {
         texture = TEXTURES.UNPAUSE_HEX,
         action = function()
-            win.scene:remove("menu")
             win.scene("map_editor").paused = false
         end
     },
@@ -101,29 +99,29 @@ function map_editor_action()
         if win:key_down"a" then
             -- make the selected tile 'mountain'
             map_editor_state.selected_tile.elevation = 0.75
-            map_editor_state.selected_tile.node("circle").color = map_elevation_color(map_editor_state.selected_tile.elevation)
+            --map_editor_state.selected_tile.node("circle").color = map_elevation_color(map_editor_state.selected_tile.elevation)
 
         elseif win:key_down"w" then
             -- make the selected tile 'water'
             map_editor_state.selected_tile.elevation = -0.75
-            map_editor_state.selected_tile.node("circle").color = map_elevation_color(map_editor_state.selected_tile.elevation)
+            --map_editor_state.selected_tile.node("circle").color = map_elevation_color(map_editor_state.selected_tile.elevation)
 
         elseif win:key_down"d" then
             -- make the selected tile 'dirt'
             map_editor_state.selected_tile.elevation = 0.25
-            map_editor_state.selected_tile.node("circle").color = map_elevation_color(map_editor_state.selected_tile.elevation)
+            --map_editor_state.selected_tile.node("circle").color = map_elevation_color(map_editor_state.selected_tile.elevation)
 
         elseif win:key_down"g" then
             -- make the selected tile 'grass'
             map_editor_state.selected_tile.elevation = -0.25
-            map_editor_state.selected_tile.node("circle").color = map_elevation_color(map_editor_state.selected_tile.elevation)
+            --map_editor_state.selected_tile.node("circle").color = map_elevation_color(map_editor_state.selected_tile.elevation)
         end
 
         -- fine tune tile's elevation with mouse wheel
         local mouse_wheel_delta = win:mouse_wheel_delta().y / 100
         if map_editor_state.selected_tile and mouse_wheel_delta ~= 0 then
             map_editor_state.selected_tile.elevation = math.clamp(map_editor_state.selected_tile.elevation + mouse_wheel_delta, -1, 1)
-            map_editor_state.selected_tile.node("circle").color = map_elevation_color(map_editor_state.selected_tile.elevation)
+            --map_editor_state.selected_tile.node("circle").color = map_elevation_color(map_editor_state.selected_tile.elevation)
         end
     end
 
@@ -146,8 +144,6 @@ end
 
 function map_editor_init()
     -- remove existing map_editor scene from the graph if it's there
-    win.scene:remove("map_editor")
-
     local map_editor_scene = am.group():tag"map_editor"
     map_editor_scene:late_action(map_editor_action)
 
@@ -164,6 +160,6 @@ function map_editor_init()
     map_editor_scene:append(map_editor_state.ui)
 
     -- add the scene to the window
-    win.scene:append(map_editor_scene)
+    switch_context(map_editor_scene)
 end
 

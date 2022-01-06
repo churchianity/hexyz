@@ -58,6 +58,10 @@ function do_entity_updates()
     do_projectile_updates()
 end
 
+function load_entity_specs()
+    resolve_tower_specs("data/towers.lua")
+end
+
 function entity_basic_devectored_copy(entity)
     local copy = table.shallow_copy(entity)
     copy.position = { copy.position.x, copy.position.y }

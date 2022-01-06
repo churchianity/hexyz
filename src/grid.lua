@@ -19,6 +19,7 @@ do
     -- given a grid width gx, and window width wx, what's the smallest size a hex can be to fill the whole screen?
     -- wx / (gx * 3 / 2)
     HEX_SIZE = win.width / ((HEX_GRID_WIDTH - padding) * 3 / 2)
+    hex_set_default_size(vec2(HEX_SIZE))
 
     HEX_PIXEL_WIDTH = hex_width(HEX_SIZE, HEX_ORIENTATION.FLAT)
     HEX_PIXEL_HEIGHT = hex_height(HEX_SIZE, HEX_ORIENTATION.FLAT)
@@ -88,13 +89,7 @@ HEX_GRID_MAXIMUM_ELEVATION = 1
 function grid_cost(map, from, to)
     local t1, t2 = hex_map_get(map, from), hex_map_get(map, to)
 
-    local elevation_epsilon = HEX_GRID_MAXIMUM_ELEVATION - HEX_GRID_MINIMUM_ELEVATION + 0.2
-    local elevation_cost = 2 + math.abs(t1.elevation)^0.5 - math.abs(t2.elevation)^0.5
-
-    local epsilon = elevation_epsilon
-    local cost = elevation_cost
-
-    return cost
+    return 2 + math.abs(t1.elevation)^0.5 - math.abs(t2.elevation)^0.5
 end
 
 function grid_neighbours(map, hex)
@@ -173,7 +168,7 @@ function building_tower_breaks_flow_field(tower_type, hex)
     return result, flow_field
 end
 
-function map_elevation_color(elevation)
+function map_elevation_to_color(elevation)
     if elevation < -0.5 then -- lowest elevation
         return COLORS.WATER{ a = (elevation + 1.4) / 2 + 0.2 }
 
@@ -201,40 +196,97 @@ function make_hex_node(hex, tile, color)
         local mask = vec4(0, 0, 0, math.max(((evenq.x - HEX_GRID_WIDTH/2) / HEX_GRID_WIDTH) ^ 2
                                          , ((-evenq.y - HEX_GRID_HEIGHT/2) / HEX_GRID_HEIGHT) ^ 2))
 
-        color = map_elevation_color(tile.elevation) - mask
+        color = map_elevation_to_color(tile.elevation) - mask
     end
 
     return am.translate(hex_to_pixel(vec2(hex.x, hex.y), vec2(HEX_SIZE)))
            ^ am.circle(vec2(0), HEX_SIZE, color, 6)
 end
-
 function make_hex_grid_scene(map, do_generate_flow_field)
-    -- the world's appearance relies largely on a backdrop which can be scaled in
-    -- tone to give the appearance of light or darkness
-    -- @NOTE replace this with a shader program
-    -- interestingly, if it's colored white, it almost gives the impression of a winter biome
-    local neg_mask = am.rect(
-        0,
-        0,
-        HEX_GRID_PIXEL_WIDTH,
-        HEX_GRID_PIXEL_HEIGHT,
-        COLORS.TRUE_BLACK
-    )
-    :tag"negative_mask"
+    local world = am.group():tag"world"
 
-    local world = am.group(neg_mask):tag"world"
+    local texture = TEXTURES.WHITE
+
+    local quads = am.quads(map.size * 2, {"vert", "vec2", "uv", "vec2", "color", "vec4"})
+    quads.usage = "static" -- see am.buffer documentation, hint to gpu
+    local prog = am.program([[
+        precision highp float;
+
+        attribute vec2 uv;
+        attribute vec2 vert;
+        attribute vec4 color;
+
+        uniform mat4 MV;
+        uniform mat4 P;
+
+        varying vec2 v_uv;
+        varying vec4 v_color;
+
+        void main() {
+            v_uv = uv;
+            v_color = color;
+            gl_Position = P * MV * vec4(vert, 0.0, 1.0);
+        }
+    ]], [[
+        precision mediump float;
+
+        uniform sampler2D texture;
+
+        varying vec2 v_uv;
+        varying vec4 v_color;
+
+        void main() {
+            gl_FragColor = texture2D(texture, v_uv) * v_color;
+        }
+    ]])
+
+    local s60 = math.sin(math.rad(60))
+    local c60 = math.cos(math.rad(60))
     for i,_ in pairs(map) do
         for j,tile in pairs(map[i]) do
-            local node = make_hex_node(vec2(i, j), tile)
+            local v = vec2(i, j)
+            local p = hex_to_pixel(v)
+            local d = math.distance(p, vec2(0)) -- distance to center
 
-            hex_map_set(map, i, j, {
-                elevation = tile.elevation,
-                node = node
-            })
+            -- light shading on edge cells, scaled by distance to center
+            local mask = vec4(0, 0, 0, 1/d)
+            local color = map_elevation_to_color(tile.elevation) - mask
 
-            world:append(node)
+            local radius = HEX_SIZE
+            quads:add_quad{
+                vert = {
+                    p.x - c60 * radius, p.y + s60 * radius,
+                    p.x - radius, p.y,
+                    p.x + radius, p.y,
+                    p.x + c60 * radius, p.y + s60 * radius
+                },
+                uv = am.vec2_array{
+                    vec2(0, 0),
+                    vec2(1, 0),
+                    vec2(1, 1),
+                    vec2(0, 1)
+                },
+                color = color,
+            }
+            quads:add_quad{
+                vert = {
+                    p.x - radius, p.y,
+                    p.x - c60 * radius, p.y - s60 * radius,
+                    p.x + c60 * radius, p.y - s60 * radius,
+                    p.x + radius, p.y
+                },
+                uv = am.vec2_array{
+                    vec2(0, 0),
+                    vec2(1, 0),
+                    vec2(1, 1),
+                    vec2(0, 1)
+                },
+                color = color,
+            }
         end
     end
+
+    world:append(am.blend("alpha") ^ am.use_program(prog) ^ am.bind{ texture = texture } ^ quads)
 
     -- add the magenta diamond that represents 'home'
     world:append(
@@ -284,7 +336,7 @@ function random_map(seed)
             end
 
             hex_map_set(map, i, j, {
-                elevation = noise,
+                elevation = noise
             })
         end
     end
