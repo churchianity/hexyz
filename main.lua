@@ -94,7 +94,7 @@ function main_action(self)
 end
 
 function main_scene(do_backdrop, do_logo)
-    local group = am.group():tag"main_scene"
+    local group = am.group()
 
     if do_backdrop then
         local map = hex_hexagonal_map(30)
@@ -173,7 +173,6 @@ function main_scene(do_backdrop, do_logo)
         {
             texture = TEXTURES.MAP_EDITOR_HEX,
             action = function()
-                win.scene:remove("main_scene")
                 map_editor_init()
             end
         },
