@@ -42,7 +42,10 @@ local game_scene_menu_options = {
         action = function()
             win.scene("context").paused = false
             win.scene:remove("menu")
-        end
+        end,
+        keys = {
+            "escape"
+        }
     },
     {
         texture = TEXTURES.SETTINGS_HEX,
@@ -149,12 +152,11 @@ end
 local function game_pause()
     win.scene("context").paused = true
 
-    win.scene:append(make_scene_menu(game_scene_menu_options))
+    win.scene:append(make_scene_menu(game_scene_menu_options, nil, true))
 end
 
 local function game_deserialize(json_string)
     local new_game_state = am.parse_json(json_string)
-    log(new_game_state.RANDOM_CALLS_COUNT)
 
     if new_game_state.version ~= version then
         gui_alert("loading incompatible old save data.\nstarting a fresh game instead.", nil, 10)
@@ -167,10 +169,11 @@ local function game_deserialize(json_string)
     -- in order to restore the state of the random number generator on game deserialize, we first
     -- seed it with the same seed used in the original state. then, we discard N calls, where N
     -- is the number of calls we counted since seeding the generator last time.
-    for i = 0, new_game_state.RANDOM_CALLS_COUNT do
+    --
+    -- this means it's important that deserializing the rest of the game state doesn't cause any math.random() calls.
+    for i = 1, new_game_state.RANDOM_CALLS_COUNT do
         math.random()
     end
-    log(RANDOM_CALLS_COUNT)
     new_game_state.world = make_hex_grid_scene(new_game_state.map, true)
     new_game_state.seed = nil
 

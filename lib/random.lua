@@ -1,4 +1,6 @@
 
+RANDOM_CALLS_COUNT = 0
+
 -- https://stackoverflow.com/a/32387452/12464892
 local function bitwise_and(a, b)
     local result = 0
@@ -26,39 +28,46 @@ local function rand()
     X2 = V - X1*D20
     return V/D40
 end
-local SEED_BOUNDS = 2^20 - 1
-math.randomseed = function(seed)
-    RANDOM_CALLS_COUNT = 0
 
+local SEED_BOUNDS = 2^20 - 1
+local function randomseed2(seed)
     -- 0 <= X1 <= 2^20-1, 1 <= X2 <= 2^20-1 (must be odd!)
-    -- ensure the number is odd, and within the bounds of
+    -- ensure the number is odd, and within bounds of the generator
     local seed = bitwise_and(seed, 1)
     local v = math.clamp(math.abs(seed), 0, SEED_BOUNDS)
     X1 = v
     X2 = v + 1
 end
-RANDOM_CALLS_COUNT = 0
+
+local RS = math.randomseed
+math.randomseed = function(seed)
+    RANDOM_CALLS_COUNT = 0
+    RS(seed)
+end
 
 local R = math.random
 local function random(n, m)
     RANDOM_CALLS_COUNT = RANDOM_CALLS_COUNT + 1
 
+    local r
     if n then
         if m then
-            return (rand() + n) * m
+            r = R(n, m)
         else
-            return rand() * n
+            r = R(n)
         end
     else
-      return rand()
+        r = R()
     end
+
+    return r
 end
 
 -- whenever we refer to math.random, actually use the function 'random' above
 math.random = random
 
 function g_octave_noise(x, y, num_octaves, seed)
-    local seed = seed or os.clock()
+    local seed = seed or os.time()
     local noise = 0
 
     for oct = 1, num_octaves do
@@ -71,21 +80,21 @@ function g_octave_noise(x, y, num_octaves, seed)
     return noise
 end
 
----- @TODO test, fix
---function poisson_knuth(lambda)
---    local e = 2.71828
---
---    local L = e^-lambda
---    local k = 0
---    local p = 1
---
---    while p > L do
---        k = k + 1
---        p = p * math.random()
---    end
---
---    return k - 1
---end
+-- @TODO test, fix
+function poisson_knuth(lambda)
+    local e = 2.71828
+
+    local L = e^-lambda
+    local k = 0
+    local p = 1
+
+    while p > L do
+        k = k + 1
+        p = p * math.random()
+    end
+
+    return k - 1
+end
 
 -- seed the random number generator with the current time
 -- os.clock() is better if the program has been running for a little bit.

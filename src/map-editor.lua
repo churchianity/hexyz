@@ -81,7 +81,7 @@ function map_editor_action()
 
     if win:key_pressed"escape" then
         win.scene("map_editor").paused = true
-        win.scene:append(make_scene_menu(map_editor_scene_menu_options))
+        win.scene:append(make_scene_menu(map_editor_scene_menu_options, nil, true))
     end
 
     if win:mouse_down"left" then

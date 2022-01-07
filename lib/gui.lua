@@ -216,6 +216,7 @@ function gui_make_textfield(
                 if self"text".text:len() ~= 0 then
                     self"text".text = self"text".text:sub(1, self"text".text:len() - 1)
                     self"cursor".position2d = self"cursor".position2d - vec2(9 * 2, 0)
+                    self"cursor".hidden = false
                 end
             elseif k == "tab" then
                 -- @TODO
@@ -230,9 +231,13 @@ function gui_make_textfield(
 
         for _,c in pairs(chars) do
             if validate(self"text".text .. c) then
-                if self"text".text:len() <= max then
+                local len = self"text".text:len()
+                if len <= max then
                     self"text".text = self"text".text .. c
                     self"cursor".position2d = self"cursor".position2d + vec2(9 * 2, 0)
+                    if len == max then
+                        self"cursor".hidden = true
+                    end
                 end
             end
         end

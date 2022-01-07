@@ -30,6 +30,8 @@ TEXTURES = {
     UNPAUSE_HEX             = load_texture("unpausehex.png"),
     MAIN_MENU_HEX           = load_texture("mainmenuhex.png"),
 
+    SEED_COLON_TEXT         = load_texture("seed_colon_text.png"),
+
     CURTAIN                 = load_texture("curtain1.png"),
 
     SOUND_ON1               = load_texture("sound-on.png"),

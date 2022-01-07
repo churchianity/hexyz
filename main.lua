@@ -151,15 +151,18 @@ function main_scene(do_backdrop, do_logo)
     end
 
     local seed_textfield, get_seed_textfield_value = gui_make_textfield{
-        position = vec2(win.left + 150, 50),
-        dimensions = vec2(200, 40),
-        max = 9,
+        position = vec2(win.left + 500, 50),
+        dimensions = vec2(90, 40),
+        max = math.ceil(math.log(HEX_GRID_WIDTH * HEX_GRID_HEIGHT, 10)),
         validate = function(string)
             return not string.match(string, "%D")
         end,
     }
     group:append(
         seed_textfield
+    )
+    group:append(
+        am.translate(win.left + 220, 50) ^ pack_texture_into_sprite(TEXTURES.SEED_COLON_TEXT)
     )
 
     local main_scene_options = {
@@ -213,7 +216,7 @@ function main_scene(do_backdrop, do_logo)
     return group
 end
 
-function make_scene_menu(scene_options, tag)
+function make_scene_menu(scene_options, tag, do_curtain)
     -- calculate the dimensions of the whole grid
     local spacing = 150
     local grid_width = 6
@@ -227,6 +230,11 @@ function make_scene_menu(scene_options, tag)
     -- generate a map of hexagons (the menu is made up of two rows of hexes) and populate their locations with buttons from the provided options
     local map = hex_rectangular_map(grid_width, grid_height, HEX_ORIENTATION.POINTY)
     local group = am.group():tag(tag or "menu")
+    if do_curtain then
+        group:append(pack_texture_into_sprite(TEXTURES.CURTAIN, win.width, win.height))
+    end
+
+    local menu = am.group()
     local option_index = 1
     for i,_ in pairs(map) do
         for j,_ in pairs(map[i]) do
@@ -250,6 +258,14 @@ function make_scene_menu(scene_options, tag)
                 local hex_ = pixel_to_hex(mouse - pixel_offset, vec2(spacing), HEX_ORIENTATION.POINTY)
 
                 if tile.option then
+                    if tile.option.keys and tile.option.action then
+
+                        for _,key in pairs(win:keys_pressed()) do
+                            if table.find(tile.option.keys, function(_key) return _key == key end) then
+                                tile.option.action()
+                            end
+                        end
+                    end
                     if hex == hex_ then
                         if not selected then
                             play_sfx(SOUNDS.SELECT1)
@@ -267,12 +283,13 @@ function make_scene_menu(scene_options, tag)
                 end
             end)
 
-            group:append(node)
+            menu:append(node)
             option_index = option_index + 1
         end
     end
+    group:append(am.translate(pixel_offset) ^ menu)
 
-    return am.translate(pixel_offset) ^ group
+    return group
 end
 
 function switch_context(scene, action)

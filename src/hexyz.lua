@@ -384,7 +384,7 @@ end
 
 -- Returns Unordered Hexagonal Map of |radius| with Simplex Noise
 function hex_hexagonal_map(radius, seed)
-    local seed = seed or os.time()
+    local seed = seed or math.floor(math.random() * (2 * math.pi * radius^2))
 
     local size = 0
     local map = {}
@@ -435,7 +435,7 @@ end
 -- Returns Unordered Rectangular Map of |width| and |height| with Simplex Noise
 function hex_rectangular_map(width, height, orientation, seed, do_generate_noise)
     local orientation = orientation or HEX_DEFAULT_ORIENTATION
-    local seed = seed or os.time()
+    local seed = seed or math.floor(math.random() * (width * height))
 
     local map = {}
     if orientation == HEX_ORIENTATION.FLAT then
