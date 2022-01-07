@@ -57,7 +57,10 @@ local game_scene_menu_options = {
         texture = TEXTURES.QUIT_HEX,
         action = function()
             win:close()
-        end
+        end,
+        keys = {
+            "f4"
+        }
     },
     false
 }

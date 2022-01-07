@@ -99,7 +99,10 @@ end
 --  max number
 --  padding number
 --  validate function(string) -> bool
---  onchange function(new_value) -> void
+--
+--  font {
+--    color vec4
+--  }
 -- }
 function gui_make_textfield(
     args
@@ -107,10 +110,14 @@ function gui_make_textfield(
     local args = args or {}
     local position = args.position or vec2(0)
     local dimensions = args.dimensions or vec2(100, 40)
-    local validate = args.validate or function(string) return true end
-    local width, height = dimensions.x, dimensions.y
-    local max = args.max or 10
+    local max = args.max or math.floor(dimensions.x / 18)
     local padding = args.padding or 6
+    local validate = args.validate or function(string) return true end
+    local font = args.font or {
+        color = vec4(1)
+    }
+
+    local width, height = dimensions.x, dimensions.y
     local half_width = width/2
     local half_height = height/2
 
@@ -127,7 +134,7 @@ function gui_make_textfield(
             am.wait(am.delay(0.4))
             cursor.color = vec4(0)
             am.wait(am.delay(0.4))
-            cursor.color = vec4(0, 0, 0, 1)
+            cursor.color = font.color
         end
     end
 
@@ -135,8 +142,8 @@ function gui_make_textfield(
         back_rect,
         front_rect,
         am.translate(position + vec2(-width/2 + padding, 0)) ^ am.group(
-            am.scale(2) ^ am.text("", vec4(0, 0, 0, 1), "left"),
-            (am.translate(0, -8) ^ am.line(vec2(0, 0), vec2(16, 0), 2, vec4(0, 0, 0, 1)):action(coroutine.create(blink_cursor))):tag"cursor"
+            am.scale(2) ^ am.text("", font.color, "left"),
+            (am.translate(0, -12) ^ am.line(vec2(0, 0), vec2(16, 0), 2, font.color):action(coroutine.create(blink_cursor))):tag"cursor"
         )
     }
 

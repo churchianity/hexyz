@@ -130,7 +130,7 @@ function main_scene(do_backdrop, do_logo)
         local position = vec2(0, win.top - 20 - TEXTURES.LOGO.height/2)
         local logo =
             am.translate(position)
-            ^ pack_texture_into_sprite(TEXTURES.LOGO, TEXTURES.LOGO.width, TEXTURES.LOGO.height)
+            ^ pack_texture_into_sprite(TEXTURES.LOGO)
 
         local selected = false
         logo:action(function(self)
@@ -151,7 +151,7 @@ function main_scene(do_backdrop, do_logo)
     end
 
     local seed_textfield, get_seed_textfield_value = gui_make_textfield{
-        position = vec2(win.left + 500, 50),
+        position = vec2(win.left + 190, 50),
         dimensions = vec2(90, 40),
         max = math.ceil(math.log(HEX_GRID_WIDTH * HEX_GRID_HEIGHT, 10)),
         validate = function(string)
@@ -162,7 +162,7 @@ function main_scene(do_backdrop, do_logo)
         seed_textfield
     )
     group:append(
-        am.translate(win.left + 220, 50) ^ pack_texture_into_sprite(TEXTURES.SEED_COLON_TEXT)
+        am.translate(win.left + 80, 50) ^ pack_texture_into_sprite(TEXTURES.SEED_COLON_TEXT)
     )
 
     local main_scene_options = {
