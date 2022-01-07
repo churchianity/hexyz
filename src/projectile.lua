@@ -81,7 +81,6 @@ local function update_projectile_shell(projectile, projectile_index)
 
     projectile.node.position2d = projectile.position
     projectile.hex = pixel_to_hex(projectile.position, vec2(HEX_SIZE))
-    projectile.props.z = projectile.props.z - SHELL_GRAVITY * am.delta_time
 
     -- check if we hit something
     -- get a list of hexes that could have something we could hit on them
@@ -104,14 +103,6 @@ local function update_projectile_shell(projectile, projectile_index)
                 end
             end
         end
-    end
-
-    local tile = hex_map_get(game_state.map, projectile.hex)
-    if tile and tile.elevation >= projectile.props.z then
-        --do_explode = true
-
-    elseif projectile.props.z <= 0 then
-        --do_explode = true
     end
 
     if do_explode then

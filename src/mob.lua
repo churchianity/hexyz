@@ -263,7 +263,7 @@ local function update_mob_spooder(mob, mob_index)
 
     if mob.frame_target then
         -- do movement
-        -- it's totally possible that the target we have was invalidated by a tower placed this frame,
+        -- it's possible that the target we have was invalidated by a tower placed this frame,
         -- or between when we last calculated this target and now
         -- check for that now
         if mob_can_pass_through(mob, mob.frame_target) then

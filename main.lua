@@ -113,6 +113,7 @@ function main_scene(do_backdrop, do_logo)
             end
         end
         group:append(hex_backdrop)
+
     else
         group:append(
             pack_texture_into_sprite(TEXTURES.CURTAIN, win.width, win.height)
@@ -149,11 +150,25 @@ function main_scene(do_backdrop, do_logo)
         group:append(logo)
     end
 
+    local seed_textfield, get_seed_textfield_value = gui_make_textfield{
+        position = vec2(win.left + 150, 50),
+        dimensions = vec2(200, 40),
+        max = 9,
+        validate = function(string)
+            return not string.match(string, "%D")
+        end,
+    }
+    group:append(
+        seed_textfield
+    )
+
     local main_scene_options = {
         false,
         {
             texture = TEXTURES.NEW_GAME_HEX,
-            action = game_init
+            action = function()
+                game_init(nil, tonumber(get_seed_textfield_value()))
+            end
         },
         false,
         false,
@@ -192,10 +207,9 @@ function main_scene(do_backdrop, do_logo)
         false
     }
 
-    group:append(make_scene_menu(main_scene_options))
+    group:append(make_scene_menu(main_scene_options, "main_menu"))
 
     group:action(main_action)
-
     return group
 end
 
@@ -272,8 +286,7 @@ function switch_context(scene, action)
 end
 
 function init()
-    load_entity_specs()
-
+    init_entity_specs()
     switch_context(main_scene(true, true))
 end
 

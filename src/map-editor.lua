@@ -121,7 +121,7 @@ function map_editor_action()
         -- fine tune tile's elevation with mouse wheel
         local mouse_wheel_delta = win:mouse_wheel_delta().y / 100
         if map_editor_state.selected_tile and mouse_wheel_delta ~= 0 then
-            map_editor_state.selected_tile.elevation = math.clamp(map_editor_state.selected_tile.elevation + mouse_wheel_delta, -1, 1)
+            map_editor_state.selected_tile.elevation = math.clamp(map_editor_state.selected_tile.elevation + mouse_wheel_delta, -1, 1 - math.SMALLEST_NUMBER_ABOVE_0)
             --map_editor_state.selected_tile.node("circle").color = map_elevation_color(map_editor_state.selected_tile.elevation)
         end
     end

@@ -93,16 +93,24 @@ function gui_make_button(args)
     return scene
 end
 
-function gui_textfield(
-    position,
-    dimensions,
-    max,
-    disallowed_chars
+-- args {
+--  position vec2
+--  dimensions vec2
+--  max number
+--  padding number
+--  validate function(string) -> bool
+--  onchange function(new_value) -> void
+-- }
+function gui_make_textfield(
+    args
 )
+    local args = args or {}
+    local position = args.position or vec2(0)
+    local dimensions = args.dimensions or vec2(100, 40)
+    local validate = args.validate or function(string) return true end
     local width, height = dimensions.x, dimensions.y
-    local disallowed_chars = disallowed_chars or {}
-    local max = max or 10
-    local padding = padding or 6
+    local max = args.max or 10
+    local padding = args.padding or 6
     local half_width = width/2
     local half_height = height/2
 
@@ -114,12 +122,25 @@ function gui_textfield(
     local back_rect = am.rect(x1 - padding/2, y1, x2, y2 + padding/2, vec4(0, 0, 0, 1))
     local front_rect = am.rect(x1, y1, x2, y2, vec4(0.4))
 
+    local function blink_cursor(cursor)
+        while true do
+            am.wait(am.delay(0.4))
+            cursor.color = vec4(0)
+            am.wait(am.delay(0.4))
+            cursor.color = vec4(0, 0, 0, 1)
+        end
+    end
+
     local group = am.group{
         back_rect,
         front_rect,
-        am.translate(-width/2 + padding, 0) ^ am.scale(2) ^ am.text("", vec4(0, 0, 0, 1), "left"),
-        am.translate(-width/2 + padding, -8) ^ am.line(vec2(0, 0), vec2(16, 0), 2, vec4(0, 0, 0, 1))
+        am.translate(position + vec2(-width/2 + padding, 0)) ^ am.group(
+            am.scale(2) ^ am.text("", vec4(0, 0, 0, 1), "left"),
+            (am.translate(0, -8) ^ am.line(vec2(0, 0), vec2(16, 0), 2, vec4(0, 0, 0, 1)):action(coroutine.create(blink_cursor))):tag"cursor"
+        )
     }
+
+    group"text".text = "";
 
     group:action(function(self)
         local keys = win:keys_pressed()
@@ -192,8 +213,10 @@ function gui_textfield(
                 -- @NOTE this doesn't preserve the order of chars in the array so if
                 -- someone presses a the key "a" then the backspace key in the same frame, in that order
                 -- the backspace occurs first
-                self"text".text = self"text".text:sub(1, self"text".text:len() - 1)
-
+                if self"text".text:len() ~= 0 then
+                    self"text".text = self"text".text:sub(1, self"text".text:len() - 1)
+                    self"cursor".position2d = self"cursor".position2d - vec2(9 * 2, 0)
+                end
             elseif k == "tab" then
                 -- @TODO
 
@@ -206,15 +229,20 @@ function gui_textfield(
         end
 
         for _,c in pairs(chars) do
-            if not disallowed_chars[c] then
+            if validate(self"text".text .. c) then
                 if self"text".text:len() <= max then
                     self"text".text = self"text".text .. c
+                    self"cursor".position2d = self"cursor".position2d + vec2(9 * 2, 0)
                 end
             end
         end
     end)
 
-    return group
+    function get_value()
+        return group"text".text
+    end
+
+    return group, get_value
 end
 
 function gui_open_modal()

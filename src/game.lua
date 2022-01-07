@@ -154,6 +154,7 @@ end
 
 local function game_deserialize(json_string)
     local new_game_state = am.parse_json(json_string)
+    log(new_game_state.RANDOM_CALLS_COUNT)
 
     if new_game_state.version ~= version then
         gui_alert("loading incompatible old save data.\nstarting a fresh game instead.", nil, 10)
@@ -161,6 +162,15 @@ local function game_deserialize(json_string)
     end
 
     new_game_state.map = random_map(new_game_state.seed)
+    -- after generating a random map, the random number generator is seeded with the map's seed
+    -- additionally, we keep track of how many times we make calls to math.random during runtime
+    -- in order to restore the state of the random number generator on game deserialize, we first
+    -- seed it with the same seed used in the original state. then, we discard N calls, where N
+    -- is the number of calls we counted since seeding the generator last time.
+    for i = 0, new_game_state.RANDOM_CALLS_COUNT do
+        math.random()
+    end
+    log(RANDOM_CALLS_COUNT)
     new_game_state.world = make_hex_grid_scene(new_game_state.map, true)
     new_game_state.seed = nil
 
@@ -206,6 +216,7 @@ end
 local function game_serialize()
     local serialized = table.shallow_copy(game_state)
     serialized.version = version
+    serialized.RANDOM_CALLS_COUNT = RANDOM_CALLS_COUNT
 
     serialized.seed = game_state.map.seed
     serialized.map = nil -- we re-generate the entire map from the seed on de-serialize
@@ -218,7 +229,6 @@ local function game_serialize()
     --
     -- this is dumb and if i forsaw this i would have probably used float arrays instead of vectors
     -- (the scene graph bit makes sense though)
-
     serialized.towers = {}
     for i,t in pairs(game_state.towers) do
         if t then
@@ -562,7 +572,7 @@ local function make_game_toolbelt()
                 toolbelt("toolbelt_select_square"):action(am.tween(0.1, { position2d = new_position }))
             end
 
-            win.scene:replace("cursor", get_tower_cursor(tower_type):tag"cursor")
+            win.scene:replace("cursor", get_tower_cursor(tower_type))
 
             play_sfx(SOUNDS.SELECT1)
         else
@@ -571,7 +581,7 @@ local function make_game_toolbelt()
             -- de-selecting currently selected tower if any
             toolbelt("toolbelt_select_square").hidden = true
 
-            win.scene:replace("cursor", make_hex_cursor_node(0, COLORS.TRANSPARENT3):tag"cursor")
+            win.scene:replace("cursor", make_hex_cursor_node(0, COLORS.TRANSPARENT3))
         end
     end
 
@@ -652,7 +662,7 @@ local function game_scene()
 
     local scene = am.group(
         am.scale(1):tag"world_scale" ^ game_state.world,
-        am.translate(HEX_GRID_CENTER):tag"cursor_translate" ^ make_hex_cursor_node(0, COLORS.TRANSPARENT3):tag"cursor",
+        am.translate(HEX_GRID_CENTER):tag"cursor_translate" ^ make_hex_cursor_node(0, COLORS.TRANSPARENT3),
         score,
         money,
         wave_timer,
@@ -698,7 +708,7 @@ function make_hex_cursor_node(radius, color_f, action_f, min_radius)
         group:action(action_f)
     end
 
-    return group
+    return group:tag"cursor"
 end
 
 function update_score(diff) game_state.score = game_state.score + diff end
@@ -724,7 +734,7 @@ function game_save()
     gui_alert("succesfully saved!")
 end
 
-function game_init(saved_state)
+function game_init(saved_state, seed)
     if saved_state then
         game_state = game_deserialize(saved_state)
 
@@ -739,7 +749,7 @@ function game_init(saved_state)
         -- but you don't have a built tower cursor node, so hovering a buildable tile throws an error
         select_tower_type(nil)
     else
-        game_state = get_initial_game_state()
+        game_state = get_initial_game_state(seed)
     end
 
     game = true

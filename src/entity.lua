@@ -8,10 +8,8 @@ entity structure:
     update          - function  - runs every frame with itself and its index in some array as an argument
     node            - node      - scene graph node - should be initialized by caller after, though all entities have a node
 
-    type            - enum      - sub type - unset if 'basic' entity
+    type            - enum      - sub type
     props           - table     - table of properties specific to this entity subtype
-
-    ...             - any       - a bunch of other shit depending on what entity type it is
 }
 --]]
 function make_basic_entity(hex, update_f, position)
@@ -32,8 +30,6 @@ function make_basic_entity(hex, update_f, position)
     end
 
     entity.update = update_f
-    entity.node = false -- set by caller
-    entity.type = false -- set by caller
     entity.props = {}
 
     return entity
@@ -58,10 +54,6 @@ function do_entity_updates()
     do_projectile_updates()
 end
 
-function load_entity_specs()
-    resolve_tower_specs("data/towers.lua")
-end
-
 function entity_basic_devectored_copy(entity)
     local copy = table.shallow_copy(entity)
     copy.position = { copy.position.x, copy.position.y }
@@ -76,5 +68,9 @@ function entity_basic_json_parse(json_string)
     entity.hex = vec2(entity.hex[1], entity.hex[2])
 
     return entity
+end
+
+function init_entity_specs()
+    init_tower_specs()
 end
 

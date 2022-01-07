@@ -285,8 +285,9 @@ function hex_map_set(map, hex, y, v)
 end
 
 -- Returns Unordered Parallelogram-Shaped Map of |width| and |height| with Simplex Noise
+-- note that this is the default behavior if you just iterate two dimensions and place hexes naively
 function hex_parallelogram_map(width, height, seed)
-    local seed = seed or math.random(width * height)
+    local seed = seed or os.time()
 
     local map = {}
     for i = 0, width - 1 do
@@ -327,7 +328,7 @@ end
 
 -- Returns Unordered Triangular (Equilateral) Map of |size| with Simplex Noise
 function hex_triangular_map(size, seed)
-    local seed = seed or math.random(size * math.cos(size) / 2)
+    local seed = seed or os.time()
 
     local map = {}
     for i = 0, size do
@@ -365,11 +366,25 @@ function hex_triangular_map(size, seed)
     }})
 end
 
+function hex_hexagonal_map_noise(i, j, radius, seed)
+    local idelta = i / radius
+    local jdelta = j / radius
+    local noise = 0
+
+    for oct = 1, 6 do
+        local f = 2/3^oct
+        local l = 2^oct
+        local pos = vec2(idelta + seed * radius, jdelta + seed * radius)
+
+        noise = noise + f * math.simplex(pos * l)
+    end
+
+    return noise
+end
+
 -- Returns Unordered Hexagonal Map of |radius| with Simplex Noise
 function hex_hexagonal_map(radius, seed)
-    -- @NOTE usually i try and generate a seed within the range of the area of the map, but for lua's math.random starts to exhibit some really weird behavior
-    -- when you seed it with a high integer value, so I changed 'radius^2' to just 'radius' here.
-    local seed = seed or math.random(math.floor(2 * math.pi * radius))
+    local seed = seed or os.time()
 
     local size = 0
     local map = {}
@@ -380,20 +395,7 @@ function hex_hexagonal_map(radius, seed)
         local j2 = math.min(radius, -i + radius)
 
         for j = j1, j2 do
-
-            -- Calculate Noise
-            local idelta = i / radius
-            local jdelta = j / radius
-            local noise = 0
-
-            for oct = 1, 6 do
-                local f = 2/3^oct
-                local l = 2^oct
-                local pos = vec2(idelta + seed * radius, jdelta + seed * radius)
-
-                noise = noise + f * math.simplex(pos * l)
-            end
-            map[i][j] = noise
+            map[i][j] = hex_hexagonal_map_noise(i, j, radius, seed)
             size = size + 1
         end
     end
@@ -415,10 +417,25 @@ function hex_hexagonal_map(radius, seed)
     }})
 end
 
+function hex_rectangular_map_noise(i, j, width, height, seed)
+    local idelta = i / width
+    local jdelta = j / height
+    local noise = 0
+
+    for oct = 1, 6 do
+        local f = 2/3^oct
+        local l = 2^oct
+        local pos = vec2(idelta + seed * width, jdelta + seed * height)
+        noise = noise + f * math.simplex(pos * l)
+    end
+
+    return noise
+end
+
 -- Returns Unordered Rectangular Map of |width| and |height| with Simplex Noise
 function hex_rectangular_map(width, height, orientation, seed, do_generate_noise)
     local orientation = orientation or HEX_DEFAULT_ORIENTATION
-    local seed = seed or math.random(width * height)
+    local seed = seed or os.time()
 
     local map = {}
     if orientation == HEX_ORIENTATION.FLAT then
@@ -426,24 +443,13 @@ function hex_rectangular_map(width, height, orientation, seed, do_generate_noise
             map[i] = {}
             for j = 0, height - 1 do
 
+                local noise = 0
                 if do_generate_noise then
-                    -- begin to calculate noise
-                    local idelta = i / width
-                    local jdelta = j / height
-                    local noise = 0
-
-                    for oct = 1, 6 do
-                        local f = 2/3^oct
-                        local l = 2^oct
-                        local pos = vec2(idelta + seed * width, jdelta + seed * height)
-                        noise = noise + f * math.simplex(pos * l)
-                    end
-                    j = j - math.floor(i/2) -- this is what makes it rectangular
-                    hex_map_set(map, i, j, noise)
-                else
-                    j = j - math.floor(i/2) -- this is what makes it rectangular
-                    hex_map_set(map, i, j, 0)
+                    noise = hex_rectangular_map_noise(i, j, width, height, seed)
                 end
+
+                j = j - math.floor(i/2) -- this is what makes it rectangular
+                hex_map_set(map, i, j, noise)
             end
         end
     elseif orientation == HEX_ORIENTATION.POINTY then

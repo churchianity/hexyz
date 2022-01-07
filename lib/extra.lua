@@ -19,6 +19,10 @@ function math.lerp(v1, v2, t)
     return v1 * t + v2 * (1 - t)
 end
 
+-- manually found the smallest number, doesn't make sense to me why, but hey it's one less than a power of two which is probably significant
+-- pretty sure IEEE-754's smallest value is less than this, 32bit or 64bit
+math.SMALLEST_NUMBER_ABOVE_0 = 2 ^ (-1023)
+
 -- don't use this with sparse arrays
 function table.rchoice(t)
     return t[math.floor(math.random() * #t) + 1]

@@ -64,7 +64,7 @@ function map_elevation_to_tile_type(elevation)
     elseif elevation < 0.5 then -- med-high elevation
         return "Ground - Dirt"
 
-    elseif elevation < 1 then     -- high elevation
+    elseif elevation <= 1 then     -- high elevation
         return "Mountain"
 
     else
@@ -134,7 +134,7 @@ end
 function building_tower_breaks_flow_field(tower_type, hex)
     local original_elevations = {}
     local all_impassable = true
-    local hexes = hex_spiral_map(hex, get_tower_size(tower_type))
+    local hexes = hex_spiral_map(hex, get_tower_size(tower_type) - 1)
     for _,h in pairs(hexes) do
         local tile = hex_map_get(game_state.map, h)
 
@@ -178,7 +178,7 @@ function map_elevation_to_color(elevation)
     elseif elevation < 0.5 then -- med-high elevation
         return math.lerp(COLORS.DIRT, COLORS.GRASS, elevation + 0.5){ a = (elevation + 1.6) / 2 + 0.3 }
 
-    elseif elevation < 1 then     -- high elevation
+    elseif elevation <= 1 then     -- high elevation
         return COLORS.MOUNTAIN{ ra = elevation }
 
     else

@@ -1,43 +1,56 @@
 
--- seed the random number generator with the current time
-math.randomseed(os.clock())
+-- https://stackoverflow.com/a/32387452/12464892
+local function bitwise_and(a, b)
+    local result = 0
+    local bit = 1
+    while a > 0 and b > 0 do
+        if a % 2 == 1 and b % 2 == 1 then
+            result = result + bit
+        end
+        bit = bit * 2       -- shift left
+        a = math.floor(a/2) -- shift-right
+        b = math.floor(b/2)
+    end
+    return result
+end
 
 -- https://stackoverflow.com/a/20177466/12464892
---local A1, A2 = 727595, 798405  -- 5^17=D20*A1+A2
---local D20, D40 = 1048576, 1099511627776  -- 2^20, 2^40
---local X1, X2 = 0, 1
---local function rand()
---    local U = X2*A2
---    local V = (X1*A2 + X2*A1) % D20
---    V = (V*D20 + U) % D40
---    X1 = math.floor(V/D20)
---    X2 = V - X1*D20
---    return V/D40
---end
---
---local SEED_BOUNDS = 2^20 - 1
---math.randomseed = function(seed)
---    local v = math.clamp(math.abs(seed), 0, SEED_BOUNDS)
---    X1 = v
---    X2 = v + 1
---end
+local A1, A2 = 727595, 798405  -- 5^17=D20*A1+A2
+local D20, D40 = 1048576, 1099511627776  -- 2^20, 2^40
+local X1, X2 = 0, 1
+local function rand()
+    local U = X2*A2
+    local V = (X1*A2 + X2*A1) % D20
+    V = (V*D20 + U) % D40
+    X1 = math.floor(V/D20)
+    X2 = V - X1*D20
+    return V/D40
+end
+local SEED_BOUNDS = 2^20 - 1
+math.randomseed = function(seed)
+    RANDOM_CALLS_COUNT = 0
 
--- to enable allowing the random number generator's state to be restored post-load (game-deserialize),
--- we count the number of times we call math.random(), and on deserialize, seed the random
--- number generator, and then discard |count| calls.
-local R = math.random
+    -- 0 <= X1 <= 2^20-1, 1 <= X2 <= 2^20-1 (must be odd!)
+    -- ensure the number is odd, and within the bounds of
+    local seed = bitwise_and(seed, 1)
+    local v = math.clamp(math.abs(seed), 0, SEED_BOUNDS)
+    X1 = v
+    X2 = v + 1
+end
 RANDOM_CALLS_COUNT = 0
+
+local R = math.random
 local function random(n, m)
     RANDOM_CALLS_COUNT = RANDOM_CALLS_COUNT + 1
 
     if n then
         if m then
-            return R(n, m)
+            return (rand() + n) * m
         else
-            return R(n)
+            return rand() * n
         end
     else
-      return R()
+      return rand()
     end
 end
 
@@ -73,4 +86,8 @@ end
 --
 --    return k - 1
 --end
+
+-- seed the random number generator with the current time
+-- os.clock() is better if the program has been running for a little bit.
+math.randomseed(os.time())
 
