@@ -435,7 +435,11 @@ end
 
 function tower_deserialize(json_string)
     local tower = entity_basic_json_parse(json_string)
+
+    -- @HACK weapons.last_shot_time field gets overrided with this merge, which we don't want
+    local weapons = tower.weapons
     table.merge(tower, get_tower_spec(tower.type))
+    tower.weapons = weapons
 
     for i,h in pairs(tower.hexes) do
         tower.hexes[i] = vec2(tower.hexes[i][1], tower.hexes[i][2])

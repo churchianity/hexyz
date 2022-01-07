@@ -49,7 +49,10 @@ local map_editor_scene_menu_options = {
         action = function()
             win.scene:remove("menu")
             win.scene("context").paused = false
-        end
+        end,
+        keys = {
+            "escape"
+        }
     },
     {
         texture = TEXTURES.SETTINGS_HEX,
@@ -61,7 +64,10 @@ local map_editor_scene_menu_options = {
         texture = TEXTURES.QUIT_HEX,
         action = function()
             win:close()
-        end
+        end,
+        keys = {
+            "f4"
+        }
     },
     false
 }
