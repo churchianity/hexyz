@@ -120,6 +120,9 @@ local function get_top_right_display_text(hex, evenq, centered_evenq, display_ty
 
     elseif display_type == TRDTS.TILE then
         str = table.tostring(hex_map_get(game_state.map, hex))
+
+    elseif display_type == TRDTS.MOUSE then
+        str = win:mouse_position()
     end
     return str
 end
@@ -682,7 +685,7 @@ local function game_scene()
     -- dangling actions run before the main action
     scene:late_action(game_action)
 
-    play_track(SOUNDS.MAIN_THEME)
+    --play_track(SOUNDS.MAIN_THEME)
 
     return scene
 end
@@ -727,7 +730,7 @@ function game_end()
 
     gui_alert(string.format(
         "\nmobs spawned: %d\ntowers built: %d\nprojectiles spawned: %d\n",
-        hmob, htower, hprojectile
+        hmob or 0, htower or 0, hprojectile or 0
     ), COLORS.WHITE, 1000)
 
     game_state = {}

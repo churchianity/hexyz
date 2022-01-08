@@ -45,6 +45,7 @@ TRDTS = {
     PERF           = 5,
     SEED           = 6,
     TILE           = 7,
+    MOUSE          = 8
 }
 
 function make_top_right_display_node()

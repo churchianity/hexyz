@@ -75,8 +75,47 @@ function init_tower_specs()
             range = 0,
             fire_rate = 2,
             update_f = false,
-            make_node_f = function(self)
-                return am.circle(vec2(0), HEX_SIZE, COLORS.TAN1{a=0.6}, 6)
+            make_node_f = function(self, hex, cause_repaint)
+                local group = am.group(am.circle(vec2(0), HEX_SIZE, COLORS.VERY_DARK_GRAY, 6))
+                if not hex then
+                    -- should only happen when making the hex-cursor for the wall
+                    return group
+                end
+
+                local wall_neighbours = {}
+                local lines = am.rotate(math.rad(-30)) ^ am.group()
+                for i,n in pairs(hex_neighbours(hex)) do
+                    local no_towers_adjacent = true
+                    for _,t in pairs(towers_on_hex(n)) do
+                        no_towers_adjacent = false
+                        break
+                    end
+
+                    if no_towers_adjacent then
+                        local center = hex_to_pixel(hex, vec2(HEX_SIZE))
+                        lines:append(am.circle(center, 4, COLORS.WATER))
+                        local p1 = hex_corner_offset(center, i)
+                        local j = i == 6 and 1 or i + 1
+                        local p2 = hex_corner_offset(center, j)
+                        lines:append(
+                            am.line(p1, p2, 3, vec4(1, 0, 0, 1))
+                        )
+                    end
+                end
+
+                group:append(lines)
+
+                if cause_repaint then
+                    -- building a wall could change the adjacency between other walls, so we have to re-render them
+                    -- (or atleast check if we need to)
+                    for _,t in pairs(game_state.towers) do
+                        if not t.completed_render and t.type == TOWER_TYPE.WALL then
+                            t.node:replace("group", t.make_node_f(t, t.hex, false))
+                        end
+                    end
+                end
+
+                return group
             end
         },
         {
@@ -451,6 +490,8 @@ function tower_deserialize(json_string)
     return tower
 end
 
+-- note that the table returned has towers at their index into the global towers table,
+-- so #t will often not work correctly (the table will often be sparse)
 function towers_on_hex(hex)
     local t = {}
     for tower_index,tower in pairs(game_state.towers) do
@@ -524,7 +565,7 @@ function make_and_register_tower(hex, tower_type)
 
     table.merge(tower, spec)
     tower.type = tower_type
-    tower.node = am.translate(tower.position) ^ tower.make_node_f(tower)
+    tower.node = am.translate(tower.position) ^ tower.make_node_f(tower, hex, true)
 
     -- initialize each weapons' last shot time to the negation of the fire rate -
     -- this lets the tower fire immediately upon being placed
@@ -539,18 +580,19 @@ function make_and_register_tower(hex, tower_type)
         tower.hexes = hex_spiral_map(tower.hex, tower.size - 1)
     end
 
-    -- should we be permuting the map here?
-    for _,h in pairs(tower.hexes) do
-        local tile = hex_map_get(game_state.map, h.x, h.y)
-        tile.elevation = tile.elevation + tower.height
-    end
-
     register_entity(game_state.towers, tower)
     return tower
 end
 
 function build_tower(hex, tower_type)
     local tower = make_and_register_tower(hex, tower_type)
+
+    -- modify the hexes the tower sits atop to be impassable (actually just taller by the tower's height value)
+    for _,h in pairs(tower.hexes) do
+        local tile = hex_map_get(game_state.map, h.x, h.y)
+        tile.elevation = tile.elevation + tower.height
+    end
+
     vplay_sfx(SOUNDS.EXPLOSION4)
 
     return tower

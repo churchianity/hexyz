@@ -19,25 +19,28 @@ HEX_ORIENTATION = {
     FLAT = {
         M = mat2(3.0/2.0, 0.0, 3.0^0.5/2.0, 3.0^0.5    ),
         W = mat2(2.0/3.0, 0.0, -1.0/3.0   , 3.0^0.5/3.0),
-        angle = 0.0
+        angle = 30 -- degrees
     },
     -- Forward & Inverse Matrices used for the Pointy Orientation
     POINTY = {
         M = mat2(3.0^0.5,     3.0^0.5/2.0, 0.0, 3.0/2.0),
         W = mat2(3.0^0.5/3.0,    -1.0/3.0, 0.0, 2.0/3.0),
-        angle = 0.5
+        angle = 0 -- degrees
     }
 }
 
 -- whenever |orientation| appears as an argument, if it isn't provided, this is used instead.
 -- this is useful because most of the time you will only care about one orientation
 local HEX_DEFAULT_ORIENTATION = HEX_ORIENTATION.FLAT
+-- if you need to dynamically calculate the default hexagon orientation (or use a non-standard one), you can pass it here
+function hex_set_default_orientation(orientation)
+    HEX_DEFAULT_ORIENTATION = orientation
+end
 
 -- whenever |size| for a hexagon appears as an argument, if it isn't provided, use this
 -- 'size' here is distance from the centerpoint to any vertex in pixel
 local HEX_DEFAULT_SIZE = vec2(26)
-
--- if you need to dynamically calculate the default hexagon size, you can pass it here after
+-- if you need to dynamically calculate the default hexagon size, you can pass it here
 function hex_set_default_size(size)
     HEX_DEFAULT_SIZE = size
 end
@@ -170,21 +173,21 @@ function pixel_to_hex(pix, size, orientation)
     return hex_round(x, y, -x - y)
 end
 
--- TODO test, learn am.draw
-function hex_corner_offset(corner, size, orientation)
+-- you should provide |center| in pixels, not hexes, or any other coordinate system
+function hex_corner_offset(center, corner, size, orientation)
     local orientation = orientation or HEX_DEFAULT_ORIENTATION
-    local angle = 2.0 * math.pi * orientation.angle + corner / 6
-    return vec2(size[1] * math.cos(angle), size[2] * math.sin(angle))
+    local size = size or HEX_DEFAULT_SIZE
+    local angle_rad = math.rad((60 * corner) - orientation.angle)
+    return vec2(center[1] + size[1] * math.cos(angle_rad), center[2] + size[2] * math.sin(angle_rad))
 end
 
--- TODO test this thing
-function hex_corners(hex, size, orientation)
+function hex_corners(hex, center, size, orientation)
     local orientation = orientation or HEX_DEFAULT_ORIENTATION
+    local size = size or HEX_DEFAULT_SIZE
     local corners = {}
-    local center = hex_to_pixel(hex, size, orientation)
-    for i = 0, 5 do
-        local offset = hex_corner_offset(i, size, orientation)
-        table.insert(corners, center + offset)
+    for i = 1, 6 do
+        local offset = hex_corner_offset(center, i, size, orientation)
+        table.insert(corners, offset)
     end
     return corners
 end

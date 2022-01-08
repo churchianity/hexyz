@@ -44,6 +44,8 @@ TEXTURES = {
 
     SELECT_BOX              = load_texture("select_box.png"),
 
+    TOWER_WALL0             = load_texture("wall0.png"),
+
     -- tower stuff
     TOWER_WALL              = load_texture("tower_wall.png"),
     TOWER_WALL_ICON         = load_texture("tower_wall_icon.png"),
