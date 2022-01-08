@@ -75,45 +75,31 @@ function init_tower_specs()
             range = 0,
             fire_rate = 2,
             update_f = false,
-            make_node_f = function(self, hex, cause_repaint)
+            make_node_f = function(self, hex)
                 local group = am.group(am.circle(vec2(0), HEX_SIZE, COLORS.VERY_DARK_GRAY, 6))
                 if not hex then
                     -- should only happen when making the hex-cursor for the wall
                     return group
                 end
 
-                local wall_neighbours = {}
                 local lines = am.rotate(math.rad(-30)) ^ am.group()
                 for i,n in pairs(hex_neighbours(hex)) do
                     local no_towers_adjacent = true
+
                     for _,t in pairs(towers_on_hex(n)) do
                         no_towers_adjacent = false
-                        break
                     end
 
                     if no_towers_adjacent then
-                        local center = hex_to_pixel(hex, vec2(HEX_SIZE))
-                        lines:append(am.circle(center, 4, COLORS.WATER))
-                        local p1 = hex_corner_offset(center, i)
+                        local p1 = hex_corner_offset(vec2(0), i)
                         local j = i == 6 and 1 or i + 1
-                        local p2 = hex_corner_offset(center, j)
+                        local p2 = hex_corner_offset(vec2(0), j)
                         lines:append(
-                            am.line(p1, p2, 3, vec4(1, 0, 0, 1))
+                            am.line(p1, p2, HEX_SIZE/4, COLORS.VERY_DARK_GRAY/vec4(vec3((i % 2) == 0 and 2 or 4), 1))
                         )
                     end
                 end
-
                 group:append(lines)
-
-                if cause_repaint then
-                    -- building a wall could change the adjacency between other walls, so we have to re-render them
-                    -- (or atleast check if we need to)
-                    for _,t in pairs(game_state.towers) do
-                        if not t.completed_render and t.type == TOWER_TYPE.WALL then
-                            t.node:replace("group", t.make_node_f(t, t.hex, false))
-                        end
-                    end
-                end
 
                 return group
             end
@@ -586,6 +572,15 @@ end
 
 function build_tower(hex, tower_type)
     local tower = make_and_register_tower(hex, tower_type)
+
+    -- building a wall can change the adjancencies between towers, which affects what we should render
+    -- check for that now
+    for _,t in pairs(game_state.towers) do
+        if t ~= tower and t.type == TOWER_TYPE.WALL then
+            log('replacin')
+            t.node:replace("group", t.make_node_f(t, t.hex))
+        end
+    end
 
     -- modify the hexes the tower sits atop to be impassable (actually just taller by the tower's height value)
     for _,h in pairs(tower.hexes) do
