@@ -188,108 +188,116 @@ function map_elevation_to_color(elevation)
     end
 end
 
-function make_hex_node(hex, tile, color)
-    if not color then
-        local evenq = hex_to_evenq(vec2(hex.x, hex.y))
+do
+    local s60 = math.sin(math.rad(60))
+    local c60 = math.cos(math.rad(60))
+    local radius = HEX_SIZE
 
-        -- light shading on edge cells
-        local mask = vec4(0, 0, 0, math.max(((evenq.x - HEX_GRID_WIDTH/2) / HEX_GRID_WIDTH) ^ 2
-                                         , ((-evenq.y - HEX_GRID_HEIGHT/2) / HEX_GRID_HEIGHT) ^ 2))
+    -- adds a pair of quads constructed to quads via quads:add_quad that draws a hexagon
+    function make_hex_quads_node(quads, position, color, uvs)
+        local p = position or vec2(0)
 
-        color = map_elevation_to_color(tile.elevation) - mask
+        quads:add_quad{
+            vert = {
+                p.x - c60 * radius, p.y + s60 * radius,
+                p.x - radius, p.y,
+                p.x + radius, p.y,
+                p.x + c60 * radius, p.y + s60 * radius
+            },
+            uv = am.vec2_array{
+                vec2(0, 0),
+                vec2(0, 0.5),
+                vec2(1, 0.5),
+                vec2(1, 0)
+            },
+            color = color or vec4(1),
+        }
+        quads:add_quad{
+            vert = {
+                p.x - radius, p.y,
+                p.x - c60 * radius, p.y - s60 * radius,
+                p.x + c60 * radius, p.y - s60 * radius,
+                p.x + radius, p.y
+            },
+            uv = am.vec2_array{
+                vec2(0, 0.5),
+                vec2(0, 1),
+                vec2(1, 1),
+                vec2(1, 0.5)
+            },
+            color = color or vec4(1),
+        }
     end
+end
 
-    return am.translate(hex_to_pixel(vec2(hex.x, hex.y), vec2(HEX_SIZE)))
-           ^ am.circle(vec2(0), HEX_SIZE, color, 6)
+local HEX_VSHADER_PROGRAM = [[
+    precision highp float;
+
+    attribute vec2 uv;
+    attribute vec2 vert;
+    attribute vec4 color;
+
+    uniform mat4 MV;
+    uniform mat4 P;
+
+    varying vec2 v_uv;
+    varying vec4 v_color;
+
+    void main() {
+        v_uv = uv;
+        v_color = color;
+        gl_Position = P * MV * vec4(vert, 0.0, 1.0);
+    }
+]]
+local HEX_FSHADER_PROGRAM = [[
+    precision mediump float;
+
+    uniform sampler2D texture;
+
+    varying vec2 v_uv;
+    varying vec4 v_color;
+
+    void main() {
+        gl_FragColor = texture2D(texture, v_uv) * v_color;
+    }
+]]
+function make_hex_shader_program_node()
+    return am.program(HEX_VSHADER_PROGRAM, HEX_FSHADER_PROGRAM)
+end
+function world_layer_tag(i)
+    return string.format("layer-%d", i)
 end
 function make_hex_grid_scene(map, do_generate_flow_field)
     local world = am.group():tag"world"
 
-    local texture = TEXTURES.WHITE
+    for i = 0, 10 do
+        world:append(am.group():tag(world_layer_tag(i)))
+    end
 
+    local floor = world(world_layer_tag(0))
     local quads = am.quads(map.size * 2, {"vert", "vec2", "uv", "vec2", "color", "vec4"})
     quads.usage = "static" -- see am.buffer documentation, hint to gpu
-    local prog = am.program([[
-        precision highp float;
+    local prog = make_hex_shader_program_node()
 
-        attribute vec2 uv;
-        attribute vec2 vert;
-        attribute vec4 color;
-
-        uniform mat4 MV;
-        uniform mat4 P;
-
-        varying vec2 v_uv;
-        varying vec4 v_color;
-
-        void main() {
-            v_uv = uv;
-            v_color = color;
-            gl_Position = P * MV * vec4(vert, 0.0, 1.0);
-        }
-    ]], [[
-        precision mediump float;
-
-        uniform sampler2D texture;
-
-        varying vec2 v_uv;
-        varying vec4 v_color;
-
-        void main() {
-            gl_FragColor = texture2D(texture, v_uv) * v_color;
-        }
-    ]])
-
-    local s60 = math.sin(math.rad(60))
-    local c60 = math.cos(math.rad(60))
     for i,_ in pairs(map) do
         for j,tile in pairs(map[i]) do
             local v = vec2(i, j)
             local p = hex_to_pixel(v)
-            local d = math.distance(p, vec2(0)) -- distance to center
+            local d = math.distance(p, hex_to_pixel(HEX_GRID_CENTER)) -- distance to center
 
             -- light shading on edge cells, scaled by distance to center
-            local mask = vec4(0, 0, 0, 1/d)
+            local mask = vec4(d/(HEX_GRID_PIXEL_WIDTH * 6))
             local color = map_elevation_to_color(tile.elevation) - mask
 
-            local radius = HEX_SIZE
-            quads:add_quad{
-                vert = {
-                    p.x - c60 * radius, p.y + s60 * radius,
-                    p.x - radius, p.y,
-                    p.x + radius, p.y,
-                    p.x + c60 * radius, p.y + s60 * radius
-                },
-                uv = am.vec2_array{
-                    vec2(0, 0),
-                    vec2(1, 0),
-                    vec2(1, 1),
-                    vec2(0, 1)
-                },
-                color = color,
-            }
-            quads:add_quad{
-                vert = {
-                    p.x - radius, p.y,
-                    p.x - c60 * radius, p.y - s60 * radius,
-                    p.x + c60 * radius, p.y - s60 * radius,
-                    p.x + radius, p.y
-                },
-                uv = am.vec2_array{
-                    vec2(0, 0),
-                    vec2(1, 0),
-                    vec2(1, 1),
-                    vec2(0, 1)
-                },
-                color = color,
-            }
+            make_hex_quads_node(quads, p, color)
         end
     end
 
-    world:append(am.blend("alpha") ^ am.use_program(prog) ^ am.bind{ texture = texture } ^ quads)
+    local texture = TEXTURES.WHITE
+    floor:append((am.blend("alpha") ^ am.use_program(prog) ^ am.bind{ texture = texture } ^ quads))
 
     -- add the magenta diamond that represents 'home'
-    world:append(
+    floor:append(
         am.translate(hex_to_pixel(HEX_GRID_CENTER, vec2(HEX_SIZE)))
         ^ pack_texture_into_sprite(TEXTURES.GEM1, HEX_SIZE, HEX_SIZE*1.1)
     )

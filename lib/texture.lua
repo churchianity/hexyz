@@ -61,6 +61,8 @@ TEXTURES = {
     TOWER_RADAR_ICON        = load_texture("tower_radar_icon.png"),
     TOWER_LIGHTHOUSE        = load_texture("tower_lighthouse.png"),
     TOWER_LIGHTHOUSE_ICON   = load_texture("tower_lighthouse_icon.png"),
+    TOWER_FARM              = load_texture("farm2.png"),
+    TOWER_FARM_ICON         = load_texture("farm2.png"),
 
     -- mob stuff
     MOB_BEEPER              = load_texture("mob_beeper.png"),

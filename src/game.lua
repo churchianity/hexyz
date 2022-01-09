@@ -67,6 +67,7 @@ local game_scene_menu_options = {
 
 local function get_initial_game_state(seed)
     local STARTING_MONEY = 75
+    --local STARTING_MONEY = 10000
 
     local map = random_map(seed)
     local world = make_hex_grid_scene(map, true)
@@ -122,7 +123,8 @@ local function get_top_right_display_text(hex, evenq, centered_evenq, display_ty
         str = table.tostring(hex_map_get(game_state.map, hex))
 
     elseif display_type == TRDTS.MOUSE then
-        str = win:mouse_position()
+        local mouse = win:mouse_position()
+        str = mouse.x .. "," .. mouse.y .. " (mouse)"
     end
     return str
 end

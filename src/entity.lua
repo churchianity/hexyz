@@ -8,11 +8,16 @@ entity structure:
     update          - function  - runs every frame with itself and its index in some array as an argument
     node            - node      - scene graph node - should be initialized by caller after, though all entities have a node
 
+    z               - number    - z-index of the scene node, what layer should this node be rendered at?
+                                  we currently reserve z index 0 for just the 'floor', no towers or mobs or anything.
+                                  most things will set this to 1 (or leave it unset, 1 is the default)
+                                  we might use index -1 for underwater shit at some point
+
     type            - enum      - sub type
     props           - table     - table of properties specific to this entity subtype
 }
 --]]
-function make_basic_entity(hex, update_f, position)
+function make_basic_entity(hex, update_f, position, z)
     local entity = {}
 
     entity.TOB = game_state.time
@@ -30,6 +35,7 @@ function make_basic_entity(hex, update_f, position)
     end
 
     entity.update = update_f
+    entity.z = z or 1
     entity.props = {}
 
     return entity
@@ -37,7 +43,8 @@ end
 
 function register_entity(t, entity)
     table.insert(t, entity)
-    game_state.world:append(entity.node)
+
+    game_state.world(world_layer_tag(entity.z)):append(entity.node)
 end
 
 -- |t| is the source table, probably game_state.mobs, game_state.towers, or game_state.projectiles

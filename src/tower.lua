@@ -84,13 +84,16 @@ function init_tower_specs()
 
                 local lines = am.rotate(math.rad(-30)) ^ am.group()
                 for i,n in pairs(hex_neighbours(hex)) do
-                    local no_towers_adjacent = true
+                    local no_walls_adjacent = true
 
                     for _,t in pairs(towers_on_hex(n)) do
-                        no_towers_adjacent = false
+                        if t.type == TOWER_TYPE.WALL then
+                            no_walls_adjacent = false
+                            break
+                        end
                     end
 
-                    if no_towers_adjacent then
+                    if no_walls_adjacent then
                         local p1 = hex_corner_offset(vec2(0), i)
                         local j = i == 6 and 1 or i + 1
                         local p2 = hex_corner_offset(vec2(0), j)
@@ -112,6 +115,7 @@ function init_tower_specs()
             texture = TEXTURES.TOWER_GATTLER,
             icon_texture = TEXTURES.TOWER_GATTLER_ICON,
             cost = 20,
+            height = 2,
             weapons = {
                 {
                     projectile_type = PROJECTILE_TYPE.BULLET,
@@ -161,6 +165,7 @@ function init_tower_specs()
             texture = TEXTURES.TOWER_HOWITZER,
             icon_texture = TEXTURES.TOWER_HOWITZER_ICON,
             cost = 50,
+            height = 2,
             weapons = {
                 {
                     projectile_type = PROJECTILE_TYPE.SHELL,
@@ -242,6 +247,7 @@ function init_tower_specs()
             texture = TEXTURES.TOWER_REDEYE,
             icon_texture = TEXTURES.TOWER_REDEYE_ICON,
             cost = 75,
+            height = 2,
             weapons = {
                 {
                     projectile_type = PROJECTILE_TYPE.LASER,
@@ -299,6 +305,7 @@ function init_tower_specs()
             cost = 150,
             range = 7,
             fire_rate = 1,
+            height = 2,
             make_node_f = function(self)
                 return am.group(
                     make_tower_sprite(self),
@@ -361,6 +368,27 @@ function init_tower_specs()
                         end
                     end
                 end
+            end
+        },
+        {
+            id = "FARM",
+            name = "Farm",
+            placement_rules_text = "Place on Ground",
+            short_description = "Increases income gained over time. Mobs can trample farms, reducing their income (never completely nullifying it).",
+            texture = TEXTURES.TOWER_FARM,
+            icon_texture = TEXTURES.TOWER_FARM_ICON,
+            cost = 50,
+            size = 2,
+            height = 0,
+            make_node_f = function(self)
+                local quads = am.quads(2*7, {"vert", "vec2", "uv", "vec2", "color", "vec4"})
+
+                local map = hex_spiral_map(vec2(0), 1)
+                for _,h in pairs(map) do
+                    make_hex_quads_node(quads, hex_to_pixel(h))
+                end
+
+                return am.blend("alpha") ^ am.use_program(make_hex_shader_program_node()) ^ am.bind{ texture = TEXTURES.TOWER_FARM } ^ quads
             end
         }
     }
@@ -516,6 +544,8 @@ function tower_type_is_buildable_on(hex, tile, tower_type)
     local tower_spec = get_tower_spec(tower_type)
 
     for _,h in pairs(hex_spiral_map(hex, get_tower_size(tower_type) - 1)) do
+        if h == HEX_GRID_CENTER then return false end
+
         table.merge(blocking_towers, towers_on_hex(h))
         table.merge(blocking_mobs, mobs_on_hex(h))
 
@@ -551,7 +581,7 @@ function make_and_register_tower(hex, tower_type)
 
     table.merge(tower, spec)
     tower.type = tower_type
-    tower.node = am.translate(tower.position) ^ tower.make_node_f(tower, hex, true)
+    tower.node = am.translate(tower.position) ^ tower.make_node_f(tower, hex)
 
     -- initialize each weapons' last shot time to the negation of the fire rate -
     -- this lets the tower fire immediately upon being placed
@@ -577,7 +607,6 @@ function build_tower(hex, tower_type)
     -- check for that now
     for _,t in pairs(game_state.towers) do
         if t ~= tower and t.type == TOWER_TYPE.WALL then
-            log('replacin')
             t.node:replace("group", t.make_node_f(t, t.hex))
         end
     end
