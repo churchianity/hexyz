@@ -72,8 +72,6 @@ function init_tower_specs()
             texture = TEXTURES.TOWER_WALL,
             icon_texture = TEXTURES.TOWER_WALL_ICON,
             cost = 10,
-            range = 0,
-            fire_rate = 2,
             update_f = false,
             make_node_f = function(self, hex)
                 local group = am.group(am.circle(vec2(0), HEX_SIZE, COLORS.VERY_DARK_GRAY, 6))
@@ -288,8 +286,6 @@ function init_tower_specs()
             texture = TEXTURES.TOWER_MOAT,
             icon_texture = TEXTURES.TOWER_MOAT_ICON,
             cost = 10,
-            range = 0,
-            fire_rate = 2,
             height = -1,
             make_node_f = function(self)
                 return am.circle(vec2(0), HEX_SIZE, COLORS.WATER{a=1}, 6)
@@ -305,7 +301,6 @@ function init_tower_specs()
             icon_texture = TEXTURES.TOWER_LIGHTHOUSE_ICON,
             cost = 150,
             range = 7,
-            fire_rate = 1,
             height = 2,
             make_node_f = function(self, hex)
                 if hex then
