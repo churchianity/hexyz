@@ -687,7 +687,7 @@ local function game_scene()
     -- dangling actions run before the main action
     scene:late_action(game_action)
 
-    --play_track(SOUNDS.MAIN_THEME)
+    play_track(SOUNDS.MAIN_THEME)
 
     return scene
 end

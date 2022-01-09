@@ -262,7 +262,23 @@ function init_tower_specs()
             placement_f = function(blocked, has_water, has_mountain, has_ground, hex)
                 return not blocked and has_mountain
             end,
-            update_f = default_tower_update_f
+            update_f = function(tower, tower_index)
+                if not tower.target_index then
+                    -- try and acquire a target
+                    default_weapon_target_acquisition_f(tower, tower_index)
+
+                else
+                    -- check if our current target is invalidated
+                    local mob = game_state.mobs[tower.target_index]
+                    if not mob then
+                        tower.target_index = false
+
+                    else
+                        -- do what we should do with the target
+                        default_handle_target_f(tower, tower_index, mob)
+                    end
+                end
+            end
         },
         {
             id = "MOAT",
@@ -404,6 +420,7 @@ function init_tower_specs()
         if not t.height then    t.height = 1 end
 
         if not t.update_f then
+            -- is this good?
             t.update_f = default_tower_update_f
         end
         if not t.placement_f then
