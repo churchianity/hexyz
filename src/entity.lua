@@ -51,7 +51,8 @@ end
 function delete_entity(t, index)
     if not t then error("splat!") end
 
-    game_state.world:remove(t[index].node)
+    local entity = t[index]
+    game_state.world(world_layer_tag(entity.z)):remove(entity.node)
     t[index] = false -- leave empty indexes so other entities can learn that this entity was deleted
 end
 

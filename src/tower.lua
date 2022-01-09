@@ -281,21 +281,6 @@ function init_tower_specs()
             update_f = false
         },
         {
-            id = "RADAR",
-            name = "Radar",
-            placement_rules_text = "n/a",
-            short_description = "Doesn't do anything right now :(",
-            texture = TEXTURES.TOWER_RADAR,
-            icon_texture = TEXTURES.TOWER_RADAR_ICON,
-            cost = 100,
-            range = 0,
-            fire_rate = 1,
-            make_node_f = function(self)
-                return make_tower_sprite(self)
-            end,
-            update_f = false
-        },
-        {
             id = "LIGHTHOUSE",
             name = "Lighthouse",
             placement_rules_text = "Place on Ground, adjacent to Water or Moats",
@@ -306,7 +291,11 @@ function init_tower_specs()
             range = 7,
             fire_rate = 1,
             height = 2,
-            make_node_f = function(self)
+            make_node_f = function(self, hex)
+                if hex then
+                    self.perimeter = hex_spiral_map(hex, 6)
+                end
+
                 return am.group(
                     make_tower_sprite(self),
                     am.particles2d{
@@ -380,6 +369,9 @@ function init_tower_specs()
             cost = 50,
             size = 2,
             height = 0,
+            props = {
+                income = 1
+            },
             make_node_f = function(self)
                 local quads = am.quads(2*7, {"vert", "vec2", "uv", "vec2", "color", "vec4"})
 
@@ -389,6 +381,16 @@ function init_tower_specs()
                 end
 
                 return am.blend("alpha") ^ am.use_program(make_hex_shader_program_node()) ^ am.bind{ texture = TEXTURES.TOWER_FARM } ^ quads
+            end,
+            update_f = function(tower, tower_index)
+                for _,h in pairs(tower.hexes) do
+                    for _,m in pairs(mobs_on_hex(h)) do
+                        if m then
+                            tower.props.income = tower.props.income * 0.7
+                        end
+                    end
+                end
+                game_state.money = game_state.money + tower.props.income * am.delta_time
             end
         }
     }
@@ -576,7 +578,9 @@ function make_and_register_tower(hex, tower_type)
     local spec = get_tower_spec(tower_type)
     local tower = make_basic_entity(
         hex,
-        spec.update_f
+        spec.update_f,
+        false,
+        math.clamp(spec.height, 0, 10)
     )
 
     table.merge(tower, spec)
