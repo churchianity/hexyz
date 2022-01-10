@@ -48,9 +48,9 @@ local function random(n, m)
     local r
     if n then
         if m then
-            r = R(n, m)
+            r = math.floor(R() * (m - n) + n)
         else
-            r = R(n)
+            r = math.floor(R() * n)
         end
     else
         r = R()

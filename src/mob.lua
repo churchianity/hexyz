@@ -283,7 +283,7 @@ local function update_mob_spooder(mob, mob_index)
 
     -- passive animation
     if math.random() < 0.1 then
-        mob.node"rotate":action(am.tween(0.3, { angle = math.random(math.rad(0, -180))}))
+        mob.node"rotate":action(am.tween(0.3, { angle = math.random() * math.rad(0, -180)}))
     end
 end
 
