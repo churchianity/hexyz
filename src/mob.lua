@@ -269,6 +269,10 @@ local function update_mob_spooder(mob, mob_index)
         if mob_can_pass_through(mob, mob.frame_target) then
             local from = hex_map_get(game_state.map, mob.hex)
             local to = hex_map_get(game_state.map, mob.frame_target)
+            if not from or not to then
+                -- @TODO this happens rarely, why? when?
+                return
+            end
             local spider_speed = ((math.simplex(mob.hex) + 1.5) * 1.5) ^ 2
             local rate = (spider_speed * mob.speed - math.abs(to.elevation - from.elevation)) * am.delta_time
 
