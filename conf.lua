@@ -9,5 +9,5 @@ copyright_message = "Copyright © nick hayashi"
 dev_region = "en"
 supported_languages = "en"
 
-luavm = "luajit"
+--luavm = "lua51"
 

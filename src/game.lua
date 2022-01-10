@@ -66,8 +66,8 @@ local game_scene_menu_options = {
 }
 
 local function get_initial_game_state(seed)
-    --local STARTING_MONEY = 75
-    local STARTING_MONEY = 10000
+    local STARTING_MONEY = 75
+    --local STARTING_MONEY = 10000
 
     local map = random_map(seed)
     local world = make_hex_grid_scene(map, true)

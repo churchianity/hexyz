@@ -39,13 +39,9 @@ local function randomseed2(seed)
     X2 = v + 1
 end
 
-local RS = math.randomseed
-math.randomseed = function(seed)
-    RANDOM_CALLS_COUNT = 0
-    RS(seed)
-end
-
 local R = math.random
+local RS = math.randomseed
+
 local function random(n, m)
     RANDOM_CALLS_COUNT = RANDOM_CALLS_COUNT + 1
 
@@ -61,6 +57,12 @@ local function random(n, m)
     end
 
     return r
+end
+
+math.randomseed = function(seed)
+    RANDOM_CALLS_COUNT = 0
+    R = am.rand(seed)
+    math.random = random
 end
 
 -- whenever we refer to math.random, actually use the function 'random' above
