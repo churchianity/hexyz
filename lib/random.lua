@@ -46,6 +46,8 @@ local function random(n, m)
 
     local r
     if n then
+        -- @TODO there are some bugs with calling math.random or am.rand
+        -- with n or m values, so usually we should just avoid it... not sure what's it about yet
         log('calling random with "n" %g', n)
         if m then
             r = math.floor(R() * (m - n) + n)
