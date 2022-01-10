@@ -131,7 +131,7 @@ end
 
 local function get_spawn_hex()
     -- ensure we spawn on an random tile along the map's edges
-    local roll = math.random(HEX_GRID_WIDTH * 2 + HEX_GRID_HEIGHT * 2) - 1
+    local roll = math.floor(math.random() * (HEX_GRID_WIDTH * 2 + HEX_GRID_HEIGHT * 2) - 1)
     local x, y
 
     if roll < HEX_GRID_HEIGHT then
@@ -298,6 +298,11 @@ local function update_mob_beeper(mob, mob_index)
         if mob_can_pass_through(mob, mob.frame_target) then
             local from = hex_map_get(game_state.map, mob.hex)
             local to = hex_map_get(game_state.map, mob.frame_target)
+
+            if not from or not to then
+                -- @TODO this happens rarely, why? when?
+                return
+            end
             local rate = (4 * mob.speed - math.abs(to.elevation - from.elevation)) * am.delta_time
 
             mob.position = mob.position + math.normalize(hex_to_pixel(mob.frame_target, vec2(HEX_SIZE)) - mob.position) * rate

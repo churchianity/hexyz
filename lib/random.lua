@@ -41,12 +41,12 @@ end
 
 local R = math.random
 local RS = math.randomseed
-
 local function random(n, m)
     RANDOM_CALLS_COUNT = RANDOM_CALLS_COUNT + 1
 
     local r
     if n then
+        log('calling random with "n" %g', n)
         if m then
             r = math.floor(R() * (m - n) + n)
         else
