@@ -24,7 +24,7 @@ SETTINGS = am.load_state("settings", "json") or {
 win = am.window{
     width     = SETTINGS.window_width,
     height    = SETTINGS.window_height,
-    title     = "",
+    title     = "hexyz",
     mode      = SETTINGS.fullscreen and "fullscreen" or "windowed",
     resizable = true, -- as long as the aspect ratio is maintained via letterboxing
     highdpi   = true,
@@ -84,9 +84,6 @@ function main_action(self)
         end
     elseif win:key_pressed("f4") then
         win:close()
-
-    elseif win:key_pressed("m") then
-        toggle_mute()
     end
 
     if self"hex_backdrop" then
@@ -243,7 +240,7 @@ function make_scene_menu(scene_options, tag, do_curtain)
             local position = hex_to_pixel(hex, vec2(spacing), HEX_ORIENTATION.POINTY)
             local option = scene_options[option_index]
             local texture = option and option.texture or TEXTURES.SHADED_HEX
-            local color = option and COLORS.TRANSPARENT3 or vec4(0.3)
+            local color = COLORS.TRANSPARENT3
             local node = am.translate(position)
                          ^ pack_texture_into_sprite(texture, texture.width, texture.height, color)
 
