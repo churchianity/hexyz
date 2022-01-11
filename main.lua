@@ -177,7 +177,7 @@ function main_scene(do_backdrop, do_logo)
         {
             texture = TEXTURES.LOAD_GAME_HEX,
             action = function()
-                local save = am.load_state("save", "json")
+                local save = am.load_state("save", "lua")
 
                 if save then
                     game_init(save)
