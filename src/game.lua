@@ -22,7 +22,7 @@ local game_scene_menu_options = {
     {
         texture = TEXTURES.LOAD_GAME_HEX,
         action = function()
-            local save = am.load_state("save", "lua")
+            local save = am.load_state("save", "json")
 
             if save then
                 game_init(save)
@@ -741,7 +741,7 @@ function game_end()
 end
 
 function game_save()
-    am.save_state("save", game_serialize(), "lua")
+    am.save_state("save", game_serialize(), "json")
     gui_alert("succesfully saved!")
 end
 

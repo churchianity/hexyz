@@ -137,7 +137,7 @@ function main_scene(do_backdrop, do_logo)
                 selected = true
                 self"sprite".color = vec4(1)
                 if win:mouse_pressed("left") then
-                    vplay_sfx(math.random(1000000000))
+                    vplay_sfx(math.floor(math.random() * 1000000000))
                 end
             else
                 selected = false
@@ -148,10 +148,16 @@ function main_scene(do_backdrop, do_logo)
         group:append(logo)
     end
 
+    local max
+    if not math.log10 then
+        max = math.ceil(math.log(HEX_GRID_WIDTH * HEX_GRID_HEIGHT, 10))
+    else
+        max = math.ceil(math.log10(HEX_GRID_WIDTH * HEX_GRID_HEIGHT))
+    end
     local seed_textfield, get_seed_textfield_value = gui_make_textfield{
         position = vec2(win.left + 190, 50),
         dimensions = vec2(90, 40),
-        max = math.ceil(math.log(HEX_GRID_WIDTH * HEX_GRID_HEIGHT, 10)),
+        max = max,
         validate = function(string)
             return not string.match(string, "%D")
         end,
@@ -177,7 +183,7 @@ function main_scene(do_backdrop, do_logo)
         {
             texture = TEXTURES.LOAD_GAME_HEX,
             action = function()
-                local save = am.load_state("save", "lua")
+                local save = am.load_state("save", "json")
 
                 if save then
                     game_init(save)
